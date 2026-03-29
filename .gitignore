@@ -1,0 +1,4 @@
+build/
+cmake-build-*/
+output/
+third_party/
