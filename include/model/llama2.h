@@ -1,8 +1,6 @@
-//
-// Created by wensisi.0427 on 3/29/26.
-//
+#ifndef MICROLLM_INCLUDE_MODEL_LLAMA2_H
+#define MICROLLM_INCLUDE_MODEL_LLAMA2_H
 
-#ifndef MICROLLM_LLAMA2_H
-#define MICROLLM_LLAMA2_H
+class LLamaModel {};
 
-#endif  // MICROLLM_LLAMA2_H
+#endif  // MICROLLM_INCLUDE_MODEL_LLAMA2_H

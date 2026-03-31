@@ -26,9 +26,7 @@ inline std::size_t DataTypeSize(DataType type) {
 
 class Noncopyable {
  public:
-  Noncopyable() =
-
-      default;
+  Noncopyable() = default;
 
   ~Noncopyable() = default;
 

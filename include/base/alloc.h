@@ -18,7 +18,7 @@ class DeviceAllocator {
 
 class CPUDeviceAllocator : public DeviceAllocator {
  public:
-  CPUDeviceAllocator() : DeviceAllocator(DeviceType::kDeviceCPU) {}
+  explicit CPUDeviceAllocator();
 
   void release(void *ptr) override;
 

@@ -18,6 +18,17 @@ message(STATUS "Found gflags: ${gflags_DIR}")
 find_package(glog REQUIRED)
 message(STATUS "Found glog: ${glog_DIR}")
 
+file(GLOB_RECURSE HEADER_DIRS_FILES LIST_DIRECTORIES true CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*")
+set(ALL_HEADER_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include")
+foreach(path IN LISTS HEADER_DIRS_FILES)
+    if(IS_DIRECTORY "${path}")
+        list(APPEND ALL_HEADER_DIRS "${path}")
+    endif()
+endforeach()
 
-add_executable(MicroLLM main.cpp)
-target_link_libraries(MicroLLM PRIVATE glog::glog gflags_shared)
+
+file(GLOB_RECURSE ALL_SRC_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*")
+
+add_executable(MicroLLM main.cpp ${ALL_SRC_FILES})
+target_include_directories(MicroLLM PRIVATE ${ALL_HEADER_DIRS})
+target_link_libraries(MicroLLM PRIVATE glog::glog)
