@@ -81,7 +81,9 @@ class ParamLayerFp32 : public Layer {
 
  private:
   std::vector<Tensor> weights_;
+
   std::vector<Tensor> inputs_;
+
   std::vector<Tensor> outputs_;
 };
 
