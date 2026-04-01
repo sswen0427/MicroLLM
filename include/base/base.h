@@ -14,6 +14,11 @@ enum class DataType : uint8_t {
   kDataTypeInt8 = 2,  // 8-bit integer
 };
 
+enum class ModelType : uint8_t {
+  kModelTypeUnknown = 0,
+  kModelTypeLLama2 = 1,
+};
+
 inline std::size_t DataTypeSize(DataType type) {
   if (type == DataType::kDataTypeFp32) {
     return sizeof(float);
@@ -23,6 +28,14 @@ inline std::size_t DataTypeSize(DataType type) {
     return 0;
   }
 }
+
+enum class Status : uint8_t {
+  kSuccess = 0,
+  kFunctionUnImplemented = 1,
+  kPathNotValid = 2,
+  kParamReadError = 3,
+  kWeightReadError = 4,
+};
 
 class Noncopyable {
  public:
