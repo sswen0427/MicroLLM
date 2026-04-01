@@ -10,6 +10,7 @@ list(APPEND CMAKE_PREFIX_PATH
         "${THIRD_PARTY_DIR}/glog"
         "${THIRD_PARTY_DIR}/gtest"
         "${THIRD_PARTY_DIR}/unwind"
+        "${THIRD_PARTY_DIR}/sentencepiece"
 )
 
 find_package(gflags REQUIRED)
