@@ -14,16 +14,17 @@ Source: [https://github.com/karpathy/llama2.c/blob/master/model.py](https://gith
 
 This script defines the model architecture and inference logic, adapted for use with MicroLLM.
 
+### export_llama3.py
+This script fixes some issues with the export.py script.
+
+### hf_*.py
+These scripts are used to download model weights.
+
 ## Usage
 
-### Exporting Model Weights
+### Quantization
 ```bash
-python export.py --checkpoint <path_to_checkpoint> --output <output_file>
-```
-
-### Running Model Inference
-```bash
-python model.py --checkpoint <path_to_checkpoint> --prompt "Your prompt here"
+python3 export_llama3.py --version 3 --hf my_tinyllama/AI-ModelScope/TinyLlama-1.1B-Chat-v1.0 chat_q8.bin
 ```
 
 ## Notes
