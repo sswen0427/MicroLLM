@@ -126,6 +126,86 @@ def legacy_export(model, filepath):
     out_file.close()
     print(f"wrote {filepath}")
 
+
+def legacy_export_quant(model, filepath):
+    print('export quant model')
+    """ Original export of llama2.c bin files, i.e. version v0 """
+    out_file = open(filepath, 'wb')
+
+    # first write out the header
+    hidden_dim = model.layers[0].feed_forward.w1.weight.shape[0]
+    p = model.params
+    shared_classifier = torch.equal(model.tok_embeddings.weight, model.output.weight)
+    # legacy format uses negative/positive vocab size as a shared classifier flag
+    if not shared_classifier:
+        p.vocab_size = -p.vocab_size
+    n_kv_heads = p.n_heads if p.n_kv_heads is None else p.n_kv_heads
+    group_size = 64
+    header = struct.pack('iiiiiiii', p.dim, hidden_dim, p.n_layers, p.n_heads,
+                         n_kv_heads, p.vocab_size, p.max_seq_len, group_size)
+    out_file.write(header)
+
+    group_size = 64
+    for layer in model.layers:
+        q, s, err = quantize_q80(layer.attention.wq.weight, group_size)
+        serialize_int8(out_file, q)
+        serialize_fp32(out_file, s)
+    for layer in model.layers:
+        q, s, err = quantize_q80(layer.attention.wk.weight, group_size)
+        serialize_int8(out_file, q)
+        serialize_fp32(out_file, s)
+    for layer in model.layers:
+        q, s, err = quantize_q80(layer.attention.wv.weight, group_size)
+        serialize_int8(out_file, q)
+        serialize_fp32(out_file, s)
+    for layer in model.layers:
+        q, s, err = quantize_q80(layer.attention.wo.weight, group_size)
+        serialize_int8(out_file, q)
+        serialize_fp32(out_file, s)
+
+    for layer in model.layers:
+        q, s, err = quantize_q80(layer.feed_forward.w1.weight, group_size)
+        serialize_int8(out_file, q)
+        serialize_fp32(out_file, s)
+    for layer in model.layers:
+        q, s, err = quantize_q80(layer.feed_forward.w2.weight, group_size)
+        serialize_int8(out_file, q)
+        serialize_fp32(out_file, s)
+    for layer in model.layers:
+        q, s, err = quantize_q80(layer.feed_forward.w3.weight, group_size)
+        serialize_int8(out_file, q)
+        serialize_fp32(out_file, s)
+
+    # final classifier weights
+    if not shared_classifier:
+        # serialize_fp32(out_file, model.output.weight)
+        q, s, err = quantize_q80(model.output.weight, group_size)
+        serialize_int8(out_file, q)
+        serialize_fp32(out_file, s)
+
+
+    # next write out the embedding weights
+    serialize_fp32(out_file, model.tok_embeddings.weight)
+
+    # attention weights
+    for layer in model.layers:
+        serialize_fp32(out_file, layer.attention_norm.weight)
+
+    # ffn weights
+    for layer in model.layers:
+        serialize_fp32(out_file, layer.ffn_norm.weight)
+
+    # final rmsnorm
+    serialize_fp32(out_file, model.norm.weight)
+    # freqs_cis
+    # serialize_fp32(out_file, model.freqs_cos[:p.max_seq_len])
+    # serialize_fp32(out_file, model.freqs_sin[:p.max_seq_len])
+
+    # write to binary file
+    out_file.close()
+    print(f"wrote {filepath}")
+
+
 # -----------------------------------------------------------------------------
 # new version
 
@@ -449,14 +529,26 @@ def load_hf_model(model_path):
 
     # convert LlamaConfig to ModelArgs
     config = ModelArgs()
-    config.dim = hf_model.config.hidden_size
-    config.n_layers = hf_model.config.num_hidden_layers
-    config.n_heads = hf_model.config.num_attention_heads
-    config.n_kv_heads = hf_model.config.num_attention_heads
-    config.vocab_size = hf_model.config.vocab_size
-    config.hidden_dim = hf_model.config.intermediate_size
-    config.norm_eps = hf_model.config.rms_norm_eps
-    config.max_seq_len = hf_model.config.max_position_embeddings
+    if any(['config.json' in path for path in os.listdir("./")]):
+        with open(os.path.join("./", 'config.json'), 'r') as f:
+            config_json = json.load(f)
+        config.dim = config_json["hidden_size"]
+        config.n_layers = config_json["num_hidden_layers"]
+        config.n_heads = config_json["num_attention_heads"]
+        config.n_kv_heads = config_json["num_key_value_heads"]
+        config.vocab_size = config_json["vocab_size"]
+        config.hidden_dim = config_json["intermediate_size"]
+        config.norm_eps = config_json["rms_norm_eps"]
+        config.max_seq_len = config_json["max_position_embeddings"]
+    else:
+        config.dim = hf_model.config.hidden_size
+        config.n_layers = hf_model.config.num_hidden_layers
+        config.n_heads = hf_model.config.num_attention_heads
+        config.n_kv_heads = hf_model.config.num_key_value_heads
+        config.vocab_size = hf_model.config.vocab_size
+        config.hidden_dim = hf_model.config.intermediate_size
+        config.norm_eps = hf_model.config.rms_norm_eps
+        config.max_seq_len = hf_model.config.max_position_embeddings
 
     # create a new Transformer object and set weights
     model = Transformer(config)
@@ -471,8 +563,8 @@ def load_hf_model(model_path):
     for layer in model.layers:
         i = layer.layer_id
         layer.attention_norm.weight = nn.Parameter(hf_dict[f'model.layers.{i}.input_layernorm.weight'])
-        layer.attention.wq.weight = nn.Parameter(permute_reverse(hf_dict[f'model.layers.{i}.self_attn.q_proj.weight']))
-        layer.attention.wk.weight = nn.Parameter(permute_reverse(hf_dict[f'model.layers.{i}.self_attn.k_proj.weight']))
+        layer.attention.wq.weight = nn.Parameter(hf_dict[f'model.layers.{i}.self_attn.q_proj.weight'])
+        layer.attention.wk.weight = nn.Parameter(hf_dict[f'model.layers.{i}.self_attn.k_proj.weight'])
         layer.attention.wv.weight = nn.Parameter(hf_dict[f'model.layers.{i}.self_attn.v_proj.weight'])
         layer.attention.wo.weight = nn.Parameter(hf_dict[f'model.layers.{i}.self_attn.o_proj.weight'])
         layer.ffn_norm.weight = nn.Parameter(hf_dict[f'model.layers.{i}.post_attention_layernorm.weight'])
@@ -504,6 +596,8 @@ def model_export(model, filepath, version, dtype=torch.float32):
         version1_export(model, filepath)
     elif version == 2:
         version2_export(model, filepath)
+    elif version == 3:
+        legacy_export_quant(model, filepath)
     elif version == -1:
         hf_export(model, filepath, dtype)
     else:
