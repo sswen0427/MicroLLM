@@ -1,9 +1,3 @@
-The export.py is from the url:
-https://github.com/karpathy/llama2.c/blob/master/export.py
-
-and the model.py is from the url:
-https://github.com/karpathy/llama2.c/blob/master/model.py
-
 # Tools Directory
 
 This directory contains utility scripts for MicroLLM.
