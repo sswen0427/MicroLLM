@@ -1,9 +1,3 @@
-The export.py is from the url:
-https://github.com/karpathy/llama2.c/blob/master/export.py
-
-and the model.py is from the url:
-https://github.com/karpathy/llama2.c/blob/master/model.py
-
 # Tools Directory
 
 This directory contains utility scripts for MicroLLM.
@@ -20,20 +14,21 @@ Source: [https://github.com/karpathy/llama2.c/blob/master/model.py](https://gith
 
 This script defines the model architecture and inference logic, adapted for use with MicroLLM.
 
+### export_llama3.py
+This script fixes some issues with the export.py script.
+
+### hf_*.py
+These scripts are used to download model weights.
+
 ## Usage
 
-### Exporting Model Weights
+### Quantization
 ```bash
-python export.py --checkpoint <path_to_checkpoint> --output <output_file>
-```
-
-### Running Model Inference
-```bash
-python model.py --checkpoint <path_to_checkpoint> --prompt "Your prompt here"
+python3 export_llama3.py --version 3 --hf my_tinyllama/AI-ModelScope/TinyLlama-1.1B-Chat-v1.0 chat_q8.bin
 ```
 
 ## Notes
 
 - These scripts are adapted from the llama2.c project by Andrej Karpathy.
 - They have been modified to work with the MicroLLM architecture and requirements.
-- For more information about the original implementation, please refer to the [llama2.c repository](https://github.com/karpathy/llama2.c).
+- For more information about the original implementation, please refer to the [llama2.c](https://github.com/karpathy/llama2.c) repository.
