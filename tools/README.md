@@ -30,4 +30,4 @@ python model.py --checkpoint <path_to_checkpoint> --prompt "Your prompt here"
 
 - These scripts are adapted from the llama2.c project by Andrej Karpathy.
 - They have been modified to work with the MicroLLM architecture and requirements.
-- For more information about the original implementation, please refer to the [llama2.c repository](https://github.com/karpathy/llama2.c).
+- For more information about the original implementation, please refer to the [llama2.c](https://github.com/karpathy/llama2.c) repository.
