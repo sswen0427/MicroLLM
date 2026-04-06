@@ -3,6 +3,7 @@
 
 #include "base.h"
 
+namespace base {
 class DeviceAllocator {
  public:
   explicit DeviceAllocator(DeviceType device_type)
@@ -24,5 +25,6 @@ class CPUDeviceAllocator : public DeviceAllocator {
 
   void *allocate(std::size_t size) override;
 };
+}  // namespace base
 
 #endif

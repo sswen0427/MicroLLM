@@ -1,11 +1,11 @@
 #ifndef MICROLLM_INCLUDE_OP_LAYER_H
 #define MICROLLM_INCLUDE_OP_LAYER_H
-#include <cstdint>
 #include <string>
 
 #include "base/base.h"
 #include "tensor/tensor.h"
 
+namespace op {
 enum class LayerType : uint8_t {
   kLayerUnknown = 0,
   kLayerLinear = 1,
@@ -18,10 +18,10 @@ enum class LayerStatus : uint8_t {
 
 class Layer {
  public:
-  explicit Layer(LayerType layer_type, DataType data_type,
+  explicit Layer(LayerType layer_type, base::DataType data_type,
                  std::string layer_name = "");
 
-  DataType data_type() const;
+  base::DataType data_type() const;
 
   LayerType layer_type() const;
 
@@ -29,17 +29,17 @@ class Layer {
 
   virtual LayerStatus Forward() = 0;
 
-  virtual void set_input(int32_t idx, const Tensor& input) = 0;
+  virtual void set_input(int32_t idx, const tensor::Tensor& input) = 0;
 
-  virtual void set_output(int32_t idx, const Tensor& output) = 0;
+  virtual void set_output(int32_t idx, const tensor::Tensor& output) = 0;
 
-  virtual Tensor get_input(int32_t idx) const = 0;
+  virtual tensor::Tensor get_input(int32_t idx) const = 0;
 
-  virtual Tensor get_output(int32_t idx) const = 0;
+  virtual tensor::Tensor get_output(int32_t idx) const = 0;
 
-  virtual void set_weight(int32_t idx, const Tensor& weight) = 0;
+  virtual void set_weight(int32_t idx, const tensor::Tensor& weight) = 0;
 
-  virtual Tensor get_weight(int32_t idx) const = 0;
+  virtual tensor::Tensor get_weight(int32_t idx) const = 0;
 
   virtual void reset_input_size(size_t size) = 0;
 
@@ -48,7 +48,7 @@ class Layer {
  private:
   std::string layer_name_;
 
-  DataType data_type_ = DataType::kDataTypeUnknown;
+  base::DataType data_type_ = base::DataType::kDataTypeUnknown;
 
   LayerType layer_type_ = LayerType::kLayerUnknown;
 };
@@ -61,17 +61,17 @@ class ParamLayerFp32 : public Layer {
 
   LayerStatus Forward() override;
 
-  void set_input(int32_t idx, const Tensor& input) override;
+  void set_input(int32_t idx, const tensor::Tensor& input) override;
 
-  void set_output(int32_t idx, const Tensor& output) override;
+  void set_output(int32_t idx, const tensor::Tensor& output) override;
 
-  Tensor get_input(int32_t idx) const override;
+  tensor::Tensor get_input(int32_t idx) const override;
 
-  Tensor get_output(int32_t idx) const override;
+  tensor::Tensor get_output(int32_t idx) const override;
 
-  void set_weight(int32_t idx, const Tensor& weight) override;
+  void set_weight(int32_t idx, const tensor::Tensor& weight) override;
 
-  Tensor get_weight(int32_t idx) const override;
+  tensor::Tensor get_weight(int32_t idx) const override;
 
   void reset_weight_size(size_t size);
 
@@ -80,11 +80,13 @@ class ParamLayerFp32 : public Layer {
   void reset_output_size(size_t size) override;
 
  private:
-  std::vector<Tensor> weights_;
+  std::vector<tensor::Tensor> weights_;
 
-  std::vector<Tensor> inputs_;
+  std::vector<tensor::Tensor> inputs_;
 
-  std::vector<Tensor> outputs_;
+  std::vector<tensor::Tensor> outputs_;
 };
+
+}  // namespace op
 
 #endif  // MICROLLM_INCLUDE_OP_LAYER_H
