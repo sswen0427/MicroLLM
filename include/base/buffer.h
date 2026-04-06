@@ -5,6 +5,7 @@
 #include "alloc.h"
 #include "base.h"
 
+namespace base {
 class Buffer : public Noncopyable {
  public:
   explicit Buffer() = default;
@@ -34,5 +35,6 @@ class Buffer : public Noncopyable {
 
   std::shared_ptr<DeviceAllocator> allocator_;
 };
+}  // namespace base
 
 #endif
