@@ -32,7 +32,9 @@ enum class ModelBufferType {
 
 class Model {
  public:
-  explicit Model(std::string token_path, std::string model_path);
+  Model(const base::TokenizerType& tokenizer_type,
+        const base::ModelType& model_type, std::string token_path,
+        std::string model_path, bool is_quant_model);
 
   virtual base::Status init(base::DeviceType device_type) = 0;
 
@@ -61,7 +63,11 @@ class Model {
                                     bool is_prompt) const = 0;
 
  private:
+  base::TokenizerType tokenizer_type_ = base::TokenizerType::kEncodeUnknown;
+  base::ModelType model_type_ = base::ModelType::kModelTypeUnknown;
   std::string token_path_;
+  std::string model_path_;
+  bool is_quant_model_ = false;
 };
 }  // namespace model
 

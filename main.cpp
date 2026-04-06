@@ -57,8 +57,8 @@ int32_t generate(const model::LLama2Model& model, const std::string& sentence,
 // /home/wensisi.0427/MicroLLM/tools/my_tinyllama/AI-ModelScope/TinyLlama-1.1B-Chat-v1.0/tokenizer.model
 int main(int argc, char* argv[]) {
   CHECK_EQ(argc, 3) << "Usage: ./main checkpoint_path tokenizer_path";
-  const char* checkpoint_path = argv[1];  // e.g. out/model.bin
-  const char* tokenizer_path = argv[2];
+  const std::string& checkpoint_path = argv[1];  // e.g. out/model.bin
+  const std::string& tokenizer_path = argv[2];
 
   // Step1: Init the model.
   model::LLama2Model model(base::TokenizerType::kEncodeSpe, tokenizer_path,

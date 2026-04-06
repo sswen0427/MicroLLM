@@ -10,6 +10,18 @@ enum class DeviceType : uint8_t {
   kDeviceCUDA = 2,
 };
 
+enum class DataType : uint8_t {
+  kDataTypeUnknown = 0,
+  kDataTypeFp32 = 1,   // 32-bit floating-point
+  kDataTypeInt8 = 2,   // 8-bit integer
+  kDataTypeInt32 = 3,  // 32-bit integer
+};
+
+enum class ModelType : uint8_t {
+  kModelTypeUnknown = 0,
+  kModelTypeLLama2 = 1,
+};
+
 enum class TokenizerType {
   kEncodeUnknown = -1,
   kEncodeSpe = 0,  // https://github.com/google/sentencepiece
@@ -53,12 +65,6 @@ class Status {
  private:
   int code_ = StatusCode::kSuccess;
   std::string message_;
-};
-
-enum class DataType : uint8_t {
-  kDataTypeUnknown = 0,
-  kDataTypeFp32 = 1,  // 32-bit floating-point
-  kDataTypeInt8 = 2,  // 8-bit integer
 };
 
 inline std::size_t DataTypeSize(DataType type) {

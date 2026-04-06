@@ -6,14 +6,11 @@
 
 namespace model {
 
-LLama2Model::LLama2Model(base::TokenizerType tokenizer_type,
-                         const std::string &token_path,
-                         const std::string &model_path, bool is_quant_model)
-    : Model(token_path, model_path) {
-  std::cout << "[Stub] LLama2Model Constructor called. "
-            << "token_path: " << token_path << ", model_path: " << model_path
-            << std::endl;
-}
+LLama2Model::LLama2Model(const base::TokenizerType &tokenizer_type,
+                         std::string token_path, std::string model_path,
+                         bool is_quant_model)
+    : Model(tokenizer_type, base::ModelType::kModelTypeLLama2,
+            std::move(token_path), std::move(model_path), is_quant_model) {}
 
 base::Status LLama2Model::init(base::DeviceType device_type) { return {}; }
 

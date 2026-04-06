@@ -9,9 +9,8 @@ struct LLama2Layers {};
 
 class LLama2Model : public Model {
  public:
-  explicit LLama2Model(base::TokenizerType tokenizer_type,
-                       const std::string &token_path,
-                       const std::string &model_path, bool is_quant_model);
+  LLama2Model(const base::TokenizerType &tokenizer_type, std::string token_path,
+              std::string model_path, bool is_quant_model);
 
   base::Status init(base::DeviceType device_type) override;
 
