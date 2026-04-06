@@ -62,8 +62,9 @@ class Model {
                                     const op::EmbeddingOutput& embedding_output,
                                     bool is_prompt) const = 0;
 
- private:
-  const base::TokenizerType tokenizer_type_ = base::TokenizerType::kEncodeUnknown;
+ protected:
+  const base::TokenizerType tokenizer_type_ =
+      base::TokenizerType::kEncodeUnknown;
   const base::ModelType model_type_ = base::ModelType::kModelTypeUnknown;
   const std::string token_path_;
   const std::string model_path_;

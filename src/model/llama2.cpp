@@ -12,7 +12,13 @@ LLama2Model::LLama2Model(const base::TokenizerType &tokenizer_type,
     : Model(tokenizer_type, base::ModelType::kModelTypeLLama2,
             std::move(token_path), std::move(model_path), is_quant_model) {}
 
-base::Status LLama2Model::init(base::DeviceType device_type) { return {}; }
+base::Status LLama2Model::init(base::DeviceType device_type) {
+  CHECK(!token_path_.empty()) << "token_path is empty";
+  CHECK(!(device_type == base::DeviceType::kDeviceCPU && is_quant_model_))
+      << "The cpu device do not support int8 quantized model.";
+
+  return {};
+}
 
 tensor::Tensor &LLama2Model::get_buffer(ModelBufferType buffer_idx) {
   static tensor::Tensor dummy_tensor;
