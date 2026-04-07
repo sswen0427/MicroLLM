@@ -90,7 +90,9 @@ enable_testing()
 find_package(GTest REQUIRED)
 message(STATUS "Found GTest: ${GTest_DIR}")
 
-file(GLOB ALL_TEST_FILES "test/test_*.cpp")
+file(GLOB_RECURSE ALL_TEST_FILES CONFIGURE_DEPENDS "test/test_*.cpp")
+message(STATUS "Found test files: ${ALL_TEST_FILES}")
+
 add_executable(MicroLLM_test ${ALL_TEST_FILES} ${ALL_SRC_FILES})
 target_include_directories(MicroLLM_test PRIVATE ${ALL_HEADER_DIRS})
 target_include_directories(MicroLLM_test PRIVATE ${SENTENCEPIECE_INCLUDE_DIR})
