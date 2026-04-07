@@ -4,6 +4,8 @@
 #include <vector>
 
 #include "base/base.h"
+#include "config.h"
+#include "encode.h"
 #include "op/embedding.h"
 #include "tensor/tensor.h"
 
@@ -65,6 +67,8 @@ class Model {
  protected:
   virtual base::Status gen_model_from_file();
 
+  virtual base::Status create_encode_layer();
+
  protected:
   const base::TokenizerType tokenizer_type_ =
       base::TokenizerType::kEncodeUnknown;
@@ -73,6 +77,8 @@ class Model {
   const std::string model_path_;
   const bool is_quant_model_ = false;
   base::DeviceType device_type_ = base::DeviceType::kDeviceUnknown;
+  std::unique_ptr<TransformerConfig> config_;
+  std::unique_ptr<op::EncodeLayerBase> encode_layer_;
 };
 }  // namespace model
 
