@@ -13,4 +13,6 @@ Model::Model(const base::TokenizerType& tokenizer_type,
       model_path_(std::move(model_path)),
       is_quant_model_(is_quant_model) {}
 
+base::Status Model::gen_model_from_file() {}
+
 }  // namespace model

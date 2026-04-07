@@ -63,12 +63,16 @@ class Model {
                                     bool is_prompt) const = 0;
 
  protected:
+  virtual base::Status gen_model_from_file();
+
+ protected:
   const base::TokenizerType tokenizer_type_ =
       base::TokenizerType::kEncodeUnknown;
   const base::ModelType model_type_ = base::ModelType::kModelTypeUnknown;
   const std::string token_path_;
   const std::string model_path_;
   const bool is_quant_model_ = false;
+  base::DeviceType device_type_ = base::DeviceType::kDeviceUnknown;
 };
 }  // namespace model
 

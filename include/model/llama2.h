@@ -2,6 +2,7 @@
 #define MICROLLM_INCLUDE_MODEL_LLAMA2_H
 
 #include "base/base.h"
+#include "cuda_config.h"
 #include "model/model.h"
 
 namespace model {
@@ -35,6 +36,10 @@ class LLama2Model : public Model {
   tensor::Tensor fill_input(const tensor::Tensor &pos_tensor,
                             const op::EmbeddingOutput &embedding_output,
                             bool is_prompt) const override;
+
+ private:
+  std::shared_ptr<base::CudaConfig> cuda_config_;
+  std::shared_ptr<LLama2Layers> llama_layer_;
 };
 
 }  // namespace model

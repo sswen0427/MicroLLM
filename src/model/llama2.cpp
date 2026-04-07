@@ -1,5 +1,7 @@
 #include "model/llama2.h"
 
+#include <cuda_runtime_api.h>
+
 #include <iostream>
 #include <string>
 #include <vector>
@@ -16,6 +18,16 @@ base::Status LLama2Model::init(base::DeviceType device_type) {
   CHECK(!token_path_.empty()) << "token_path is empty";
   CHECK(!(device_type == base::DeviceType::kDeviceCPU && is_quant_model_))
       << "The cpu device do not support int8 quantized model.";
+
+  device_type_ = device_type;
+  if (device_type_ == base::DeviceType::kDeviceCPU) {
+    cudaSetDevice(0);
+    cuda_config_ = std::make_shared<base::CudaConfig>();
+    cudaStreamCreate(&cuda_config_->stream);
+    CHECK_EQ(cudaGetLastError(), cudaSuccess) << "cudaStreamCreate failed.";
+  }
+
+  Status read_status = gen_model_from_file();
 
   return {};
 }
