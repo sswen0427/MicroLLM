@@ -1,6 +1,8 @@
 #ifndef MICROLLM_INCLUDE_BASE_ALLOC_H
 #define MICROLLM_INCLUDE_BASE_ALLOC_H
 
+#include <driver_types.h>
+
 #include <map>
 #include <memory>
 #include <vector>
@@ -8,13 +10,6 @@
 #include "base.h"
 
 namespace base {
-
-enum class MemcpyType {
-  kMemcpyCPU2CPU = 0,
-  kMemcpyCPU2CUDA = 1,
-  kMemcpyCUDA2CPU = 2,
-  kMemcpyCUDA2CUDA = 3,
-};
 
 class DeviceAllocator {
  public:
@@ -28,8 +23,8 @@ class DeviceAllocator {
   virtual void release(void *ptr) const = 0;
 
   virtual void memcpy(void *dst, const void *src, std::size_t size,
-                      MemcpyType type = MemcpyType::kMemcpyCPU2CPU,
-                      void *stream = nullptr, bool need_sync = false) const;
+                      cudaMemcpyKind kind, void *stream = nullptr,
+                      bool need_sync = false) const;
 
   virtual void memset_zero(void *ptr, size_t byte_size, void *stream,
                            bool need_sync = false);
