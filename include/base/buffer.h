@@ -7,6 +7,17 @@
 
 namespace base {
 class Buffer : public Noncopyable {
+ private:
+  std::size_t byte_size_ = 0;
+
+  void* ptr_ = nullptr;
+
+  bool use_external_ = false;
+
+  DeviceType device_type_ = DeviceType::kDeviceUnknown;
+
+  std::shared_ptr<DeviceAllocator> allocator_;
+
  public:
   explicit Buffer() = default;
 
@@ -18,6 +29,10 @@ class Buffer : public Noncopyable {
 
   bool allocate();
 
+  void copy_from(const Buffer& buffer) const;
+
+  void copy_from(const Buffer* buffer) const;
+
   void* ptr();
 
   const void* ptr() const;
@@ -26,14 +41,13 @@ class Buffer : public Noncopyable {
 
   std::shared_ptr<DeviceAllocator> allocator() const;
 
- private:
-  std::size_t byte_size_ = 0;
+  DeviceType device_type() const;
 
-  void* ptr_ = nullptr;
+  void set_device_type(DeviceType device_type);
 
-  bool use_external_ = false;
+  std::shared_ptr<Buffer> get_shared_from_this();
 
-  std::shared_ptr<DeviceAllocator> allocator_;
+  bool is_external() const;
 };
 }  // namespace base
 
