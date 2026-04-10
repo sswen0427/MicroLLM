@@ -41,7 +41,7 @@ list(APPEND CMAKE_PREFIX_PATH
 
 find_package(OpenBLAS REQUIRED)
 find_package(Armadillo REQUIRED CONFIG)
-find_package(Boost REQUIRED)
+find_package(Boost REQUIRED CONFIG)
 find_package(gflags REQUIRED)
 find_package(glog REQUIRED)
 find_package(GTest REQUIRED)
