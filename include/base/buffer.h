@@ -11,20 +11,24 @@ class Buffer : private boost::noncopyable {
  private:
   std::size_t byte_size_ = 0;
 
+  std::shared_ptr<DeviceAllocator> allocator_;
+
   void* ptr_ = nullptr;
 
   bool use_external_ = false;
 
   DeviceType device_type_ = DeviceType::kDeviceUnknown;
 
-  std::shared_ptr<DeviceAllocator> allocator_;
-
  public:
   explicit Buffer() = default;
 
+  /**
+   * @brief If the user provides a ptr, then the buffer will be external,
+   * otherwise it will be internal, and use the allocator to allocate memory.
+   */
   explicit Buffer(std::size_t byte_size,
                   std::shared_ptr<DeviceAllocator> allocator = nullptr,
-                  void* ptr = nullptr, bool use_external = false);
+                  void* ptr = nullptr);
 
   virtual ~Buffer();
 
@@ -32,19 +36,17 @@ class Buffer : private boost::noncopyable {
 
   void copy_from(const Buffer& buffer) const;
 
-  void* ptr();
+  [[nodiscard]] std::shared_ptr<DeviceAllocator> allocator() const;
 
-  const void* ptr() const;
+  [[nodiscard]] size_t byte_size() const;
 
-  size_t byte_size() const;
+  [[nodiscard]] DeviceType device_type() const;
 
-  std::shared_ptr<DeviceAllocator> allocator() const;
+  [[nodiscard]] bool is_external() const;
 
-  DeviceType device_type() const;
+  [[nodiscard]] const void* ptr() const;
 
   void set_device_type(DeviceType device_type);
-
-  bool is_external() const;
 };
 }  // namespace base
 
