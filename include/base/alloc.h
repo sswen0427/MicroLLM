@@ -23,11 +23,9 @@ class DeviceAllocator {
   virtual void release(void *ptr) const = 0;
 
   virtual void memcpy(void *dst, const void *src, std::size_t size,
-                      cudaMemcpyKind kind, void *stream = nullptr,
-                      bool need_sync = false) const;
+                      cudaMemcpyKind kind, cudaStream_t stream) const;
 
-  virtual void memset_zero(void *ptr, size_t byte_size, void *stream,
-                           bool need_sync = false);
+  virtual void memset_zero(void *ptr, size_t byte_size, cudaStream_t stream);
 
  private:
   DeviceType device_type_ = DeviceType::kDeviceUnknown;
