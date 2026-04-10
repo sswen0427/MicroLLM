@@ -51,18 +51,18 @@ void Buffer::copy_from(const Buffer& buffer) const {
   if (buffer_device == DeviceType::kDeviceCPU &&
       current_device == DeviceType::kDeviceCPU) {
     return allocator_->memcpy(ptr_, buffer.ptr(), byte_size,
-                              MemcpyType::kMemcpyHostToHost);
+                              MemcpyType::kMemcpyCPU2CPU);
   } else if (buffer_device == DeviceType::kDeviceCUDA &&
              current_device == DeviceType::kDeviceCPU) {
     return allocator_->memcpy(ptr_, buffer.ptr(), byte_size,
-                              MemcpyType::kMemcpyDeviceToHost);
+                              MemcpyType::kMemcpyCUDA2CPU);
   } else if (buffer_device == DeviceType::kDeviceCPU &&
              current_device == DeviceType::kDeviceCUDA) {
     return allocator_->memcpy(ptr_, buffer.ptr(), byte_size,
-                              MemcpyType::kMemcpyHostToDevice);
+                              MemcpyType::kMemcpyCPU2CUDA);
   } else {
     return allocator_->memcpy(ptr_, buffer.ptr(), byte_size,
-                              MemcpyType::kMemcpyDeviceToDevice);
+                              MemcpyType::kMemcpyCUDA2CUDA);
   }
 }
 
