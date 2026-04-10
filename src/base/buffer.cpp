@@ -1,4 +1,3 @@
-
 #include "buffer.h"
 
 #include <glog/logging.h>
@@ -51,18 +50,18 @@ void Buffer::copy_from(const Buffer& buffer) const {
   if (buffer_device == DeviceType::kDeviceCPU &&
       current_device == DeviceType::kDeviceCPU) {
     return allocator_->memcpy(ptr_, buffer.ptr(), byte_size,
-                              MemcpyType::kMemcpyCPU2CPU);
+                              cudaMemcpyHostToHost);
   } else if (buffer_device == DeviceType::kDeviceCUDA &&
              current_device == DeviceType::kDeviceCPU) {
     return allocator_->memcpy(ptr_, buffer.ptr(), byte_size,
-                              MemcpyType::kMemcpyCUDA2CPU);
+                              cudaMemcpyDeviceToHost);
   } else if (buffer_device == DeviceType::kDeviceCPU &&
              current_device == DeviceType::kDeviceCUDA) {
     return allocator_->memcpy(ptr_, buffer.ptr(), byte_size,
-                              MemcpyType::kMemcpyCPU2CUDA);
+                              cudaMemcpyHostToDevice);
   } else {
     return allocator_->memcpy(ptr_, buffer.ptr(), byte_size,
-                              MemcpyType::kMemcpyCUDA2CUDA);
+                              cudaMemcpyDeviceToDevice);
   }
 }
 
