@@ -29,29 +29,26 @@ set(THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party")
 # Append local third-party library paths to CMAKE_PREFIX_PATH
 # so that `find_package` can locate their corresponding xxxConfig.cmake files.
 list(APPEND CMAKE_PREFIX_PATH
+        "${THIRD_PARTY_DIR}/armadillo"
+        "${THIRD_PARTY_DIR}/boost"
         "${THIRD_PARTY_DIR}/gflags"
         "${THIRD_PARTY_DIR}/glog"
         "${THIRD_PARTY_DIR}/gtest"
-        "${THIRD_PARTY_DIR}/unwind"
+        "${THIRD_PARTY_DIR}/openblas"
         "${THIRD_PARTY_DIR}/sentencepiece"
+        "${THIRD_PARTY_DIR}/unwind"
 )
 
-# Find and load Google Flags (gflags) for command-line argument parsing.
+find_package(OpenBLAS REQUIRED)
+find_package(Armadillo REQUIRED CONFIG)
+find_package(Boost REQUIRED)
 find_package(gflags REQUIRED)
-message(STATUS "Found gflags: ${gflags_DIR}")
-
-# Find and load Google Logging (glog) for high-performance logging.
 find_package(glog REQUIRED)
-message(STATUS "Found glog: ${glog_DIR}")
-
-# Find and load the CUDA Toolkit (provides CUDA runtime libraries and headers).
+find_package(GTest REQUIRED)
+find_package(sentencepiece REQUIRED)
+find_package(Unwind REQUIRED)
 find_package(CUDAToolkit REQUIRED)
-message(STATUS "Found CUDAToolkit: ${CUDAToolkit_DIR}")
 
-# Manually configure SentencePiece (tokenizer) include and library directories.
-set(SENTENCEPIECE_ROOT "${THIRD_PARTY_DIR}/sentencepiece")
-set(SENTENCEPIECE_INCLUDE_DIR "${SENTENCEPIECE_ROOT}/include")
-set(SENTENCEPIECE_LIB_DIR "${SENTENCEPIECE_ROOT}/lib")
 
 # ==============================================================================
 # Source & Header Files Collection
@@ -77,28 +74,20 @@ add_executable(MicroLLM main.cpp ${ALL_SRC_FILES})
 # Add header search paths for the MicroLLM target.
 # (PRIVATE means these paths are only visible to this target and not exported).
 target_include_directories(MicroLLM PRIVATE ${ALL_HEADER_DIRS})
-target_include_directories(MicroLLM PRIVATE ${SENTENCEPIECE_INCLUDE_DIR})
 # [Fix]: Add CUDA Toolkit include directories to resolve '<cuda_runtime.h> not found' errors.
 target_include_directories(MicroLLM PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
-# Add library search paths (tells the linker where to find .a or .so files).
-target_link_directories(MicroLLM PRIVATE ${SENTENCEPIECE_LIB_DIR})
 # Link all required third-party libraries to the final executable.
-target_link_libraries(MicroLLM PRIVATE glog::glog sentencepiece CUDA::cudart)
+target_link_libraries(MicroLLM PRIVATE glog::glog sentencepiece::sentencepiece CUDA::cudart)
 
 
 enable_testing()
 find_package(GTest REQUIRED)
-message(STATUS "Found GTest: ${GTest_DIR}")
-
 file(GLOB_RECURSE ALL_TEST_FILES CONFIGURE_DEPENDS "test/test_*.cpp")
-message(STATUS "Found test files: ${ALL_TEST_FILES}")
 
 add_executable(MicroLLM_test ${ALL_TEST_FILES} ${ALL_SRC_FILES})
 target_include_directories(MicroLLM_test PRIVATE ${ALL_HEADER_DIRS})
-target_include_directories(MicroLLM_test PRIVATE ${SENTENCEPIECE_INCLUDE_DIR})
 target_include_directories(MicroLLM_test PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
-target_link_directories(MicroLLM_test PRIVATE ${SENTENCEPIECE_LIB_DIR})
-target_link_libraries(MicroLLM_test PRIVATE glog::glog sentencepiece CUDA::cudart GTest::gtest GTest::gtest_main)
+target_link_libraries(MicroLLM_test PRIVATE glog::glog sentencepiece::sentencepiece CUDA::cudart GTest::gtest GTest::gtest_main)
 
 include(GoogleTest)
 gtest_discover_tests(MicroLLM_test)
