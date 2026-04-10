@@ -70,18 +70,6 @@ inline std::size_t DataTypeSize(DataType type) {
     return 0;
   }
 }
-
-class Noncopyable {
- public:
-  Noncopyable() = default;
-
-  ~Noncopyable() = default;
-
- private:
-  Noncopyable(const Noncopyable&) = delete;
-
-  Noncopyable& operator=(const Noncopyable&) = delete;
-};
 }  // namespace base
 
 #endif
