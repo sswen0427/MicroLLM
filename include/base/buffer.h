@@ -1,12 +1,13 @@
 #ifndef MICROLLM_INCLUDE_BASE_BUFFER_H
 #define MICROLLM_INCLUDE_BASE_BUFFER_H
+#include <boost/noncopyable.hpp>
 #include <memory>
 
 #include "alloc.h"
 #include "base.h"
 
 namespace base {
-class Buffer : public Noncopyable {
+class Buffer : boost::noncopyable {
  private:
   std::size_t byte_size_ = 0;
 

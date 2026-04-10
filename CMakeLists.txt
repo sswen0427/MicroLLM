@@ -77,7 +77,7 @@ target_include_directories(MicroLLM PRIVATE ${ALL_HEADER_DIRS})
 # [Fix]: Add CUDA Toolkit include directories to resolve '<cuda_runtime.h> not found' errors.
 target_include_directories(MicroLLM PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
 # Link all required third-party libraries to the final executable.
-target_link_libraries(MicroLLM PRIVATE glog::glog sentencepiece::sentencepiece CUDA::cudart)
+target_link_libraries(MicroLLM PRIVATE glog::glog sentencepiece::sentencepiece CUDA::cudart Boost::boost)
 
 
 enable_testing()
