@@ -10,10 +10,10 @@
 namespace base {
 
 enum class MemcpyType {
-  kMemcpyHostToHost,
-  kMemcpyHostToDevice,
-  kMemcpyDeviceToHost,
-  kMemcpyDeviceToDevice,
+  kMemcpyCPU2CPU = 0,
+  kMemcpyCPU2CUDA = 1,
+  kMemcpyCUDA2CPU = 2,
+  kMemcpyCUDA2CUDA = 3,
 };
 
 class DeviceAllocator {
@@ -23,15 +23,16 @@ class DeviceAllocator {
 
   [[nodiscard]] virtual DeviceType device_type() const { return device_type_; }
 
-  virtual void *allocate(std::size_t size) = 0;
+  virtual void *allocate(std::size_t size) const = 0;
 
-  virtual void release(void *ptr) = 0;
+  virtual void release(void *ptr) const = 0;
 
   virtual void memcpy(void *dst, const void *src, std::size_t size,
-                      MemcpyType type = MemcpyType::kMemcpyHostToHost,
-                      void *stream = nullptr, bool need_sync = false);
+                      MemcpyType type = MemcpyType::kMemcpyCPU2CPU,
+                      void *stream = nullptr, bool need_sync = false) const;
 
-  virtual void memset_zero(void *ptr, std::size_t size);
+  virtual void memset_zero(void *ptr, size_t byte_size, void *stream,
+                           bool need_sync = false);
 
  private:
   DeviceType device_type_ = DeviceType::kDeviceUnknown;
@@ -41,9 +42,9 @@ class CPUDeviceAllocator : public DeviceAllocator {
  public:
   explicit CPUDeviceAllocator();
 
-  void *allocate(std::size_t size) override;
+  void *allocate(size_t byte_size) const override;
 
-  void release(void *ptr) override;
+  void release(void *ptr) const override;
 };
 
 struct CUDAMemoryBuffer {
@@ -56,9 +57,9 @@ class CUDADeviceAllocator : public DeviceAllocator {
  public:
   explicit CUDADeviceAllocator();
 
-  void *allocate(std::size_t size) override;
+  void *allocate(size_t byte_size) const override;
 
-  void release(void *ptr) override;
+  void release(void *ptr) const override;
 
  private:
   mutable std::map<int, size_t> no_busy_cnt_;
