@@ -7,7 +7,7 @@
 #include "base.h"
 
 namespace base {
-class Buffer : boost::noncopyable {
+class Buffer : private boost::noncopyable {
  private:
   std::size_t byte_size_ = 0;
 
@@ -32,8 +32,6 @@ class Buffer : boost::noncopyable {
 
   void copy_from(const Buffer& buffer) const;
 
-  void copy_from(const Buffer* buffer) const;
-
   void* ptr();
 
   const void* ptr() const;
@@ -45,8 +43,6 @@ class Buffer : boost::noncopyable {
   DeviceType device_type() const;
 
   void set_device_type(DeviceType device_type);
-
-  std::shared_ptr<Buffer> get_shared_from_this();
 
   bool is_external() const;
 };
