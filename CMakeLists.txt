@@ -87,7 +87,7 @@ file(GLOB_RECURSE ALL_TEST_FILES CONFIGURE_DEPENDS "test/test_*.cpp")
 add_executable(MicroLLM_test ${ALL_TEST_FILES} ${ALL_SRC_FILES})
 target_include_directories(MicroLLM_test PRIVATE ${ALL_HEADER_DIRS})
 target_include_directories(MicroLLM_test PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
-target_link_libraries(MicroLLM_test PRIVATE glog::glog sentencepiece::sentencepiece CUDA::cudart GTest::gtest GTest::gtest_main)
+target_link_libraries(MicroLLM_test PRIVATE glog::glog sentencepiece::sentencepiece CUDA::cudart Boost::boost GTest::gtest GTest::gtest_main)
 
 include(GoogleTest)
 gtest_discover_tests(MicroLLM_test)
