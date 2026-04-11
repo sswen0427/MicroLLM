@@ -9,10 +9,6 @@ cmake_minimum_required(VERSION 3.22)
 # This prevents CMake from failing when probing for a GPU on a machine without a physical GPU.
 set(CMAKE_CUDA_ARCHITECTURES 80)
 
-# [Critical Configuration]: Explicitly set the absolute path to the nvcc compiler.
-# This prevents "compiler not found" errors caused by IDEs (like CLion) not reading ~/.bashrc.
-set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12.1/bin/nvcc")
-
 # Define the project name and enable both C++ (CXX) and CUDA language support.
 project(MicroLLM LANGUAGES CXX CUDA)
 
