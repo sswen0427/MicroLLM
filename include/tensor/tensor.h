@@ -102,7 +102,7 @@ const T* Tensor::ptr() const {
   if (!buffer_) {
     return nullptr;
   }
-  return static_cast<T*>(buffer_->ptr());
+  return static_cast<const T*>(buffer_->ptr());
 }
 
 template <typename T>
