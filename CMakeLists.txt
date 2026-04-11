@@ -41,7 +41,7 @@ list(APPEND CMAKE_PREFIX_PATH
 
 find_package(OpenBLAS REQUIRED)
 find_package(Armadillo REQUIRED CONFIG)
-find_package(Boost REQUIRED)
+find_package(Boost REQUIRED CONFIG)
 find_package(gflags REQUIRED)
 find_package(glog REQUIRED)
 find_package(GTest REQUIRED)
@@ -77,17 +77,16 @@ target_include_directories(MicroLLM PRIVATE ${ALL_HEADER_DIRS})
 # [Fix]: Add CUDA Toolkit include directories to resolve '<cuda_runtime.h> not found' errors.
 target_include_directories(MicroLLM PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
 # Link all required third-party libraries to the final executable.
-target_link_libraries(MicroLLM PRIVATE glog::glog sentencepiece::sentencepiece CUDA::cudart)
+target_link_libraries(MicroLLM PRIVATE glog::glog sentencepiece::sentencepiece CUDA::cudart Boost::boost)
 
 
 enable_testing()
-find_package(GTest REQUIRED)
 file(GLOB_RECURSE ALL_TEST_FILES CONFIGURE_DEPENDS "test/test_*.cpp")
 
 add_executable(MicroLLM_test ${ALL_TEST_FILES} ${ALL_SRC_FILES})
 target_include_directories(MicroLLM_test PRIVATE ${ALL_HEADER_DIRS})
 target_include_directories(MicroLLM_test PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
-target_link_libraries(MicroLLM_test PRIVATE glog::glog sentencepiece::sentencepiece CUDA::cudart GTest::gtest GTest::gtest_main)
+target_link_libraries(MicroLLM_test PRIVATE glog::glog sentencepiece::sentencepiece CUDA::cudart Boost::boost GTest::gtest GTest::gtest_main)
 
 include(GoogleTest)
 gtest_discover_tests(MicroLLM_test)
