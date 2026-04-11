@@ -34,7 +34,10 @@ case $MODE in
         )
 
         echo "[Debug Mode] Configuring CMake..."
-        cmake .. "${CMAKE_ARGS[@]}"
+        cmake .. \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS="-DCUDA_DEBUG" \
+            -DCMAKE_CUDA_FLAGS="-DCUDA_DEBUG"
 
         echo "[Debug Mode] Starting multi-core compilation (${CORES} cores)..."
         make -j${CORES}
@@ -48,14 +51,11 @@ case $MODE in
         mkdir build
         cd build
 
-        CMAKE_ARGS=(
-            "-DCMAKE_BUILD_TYPE=Release"
-            "-DCMAKE_CXX_FLAGS=-DNDEBUG"
-            "-DCMAKE_CUDA_FLAGS=-DNDEBUG"
-        )
-
         echo "[Release Mode] Configuring CMake..."
-        cmake .. "${CMAKE_ARGS[@]}"
+        cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_FLAGS="-DNDEBUG" \
+            -DCMAKE_CUDA_FLAGS="-DNDEBUG"
 
         echo "[Release Mode] Starting multi-core compilation (${CORES} cores)..."
         make -j${CORES}
