@@ -19,45 +19,25 @@ CORES=$(nproc 2>/dev/null || echo 4)
 
 case $MODE in
     "debug")
-        echo "[Debug Mode] Preparing build environment..."
-
-        # Force clean to prevent CMake cache pollution
         rm -rf build
         mkdir build
         cd build
-
-        # Abstract CMake arguments into an array
-        CMAKE_ARGS=(
-            "-DCMAKE_BUILD_TYPE=Debug"
-            "-DCMAKE_CXX_FLAGS=-DCUDA_DEBUG"
-            "-DCMAKE_CUDA_FLAGS=-DCUDA_DEBUG"
-        )
-
-        echo "[Debug Mode] Configuring CMake..."
         cmake .. \
             -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_CXX_FLAGS="-DCUDA_DEBUG" \
             -DCMAKE_CUDA_FLAGS="-DCUDA_DEBUG"
-
-        echo "[Debug Mode] Starting multi-core compilation (${CORES} cores)..."
         make -j${CORES}
         echo "Debug build completed successfully!"
         ;;
 
     "release")
-        echo "[Release Mode] Preparing build environment..."
-
         rm -rf build
         mkdir build
         cd build
-
-        echo "[Release Mode] Configuring CMake..."
         cmake .. \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_CXX_FLAGS="-DNDEBUG" \
             -DCMAKE_CUDA_FLAGS="-DNDEBUG"
-
-        echo "[Release Mode] Starting multi-core compilation (${CORES} cores)..."
         make -j${CORES}
         echo "Release build completed successfully!"
         ;;
