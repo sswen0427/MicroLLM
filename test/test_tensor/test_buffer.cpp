@@ -1,10 +1,117 @@
 #include <gtest/gtest.h>
+
 #include "base/alloc.h"
 #include "base/buffer.h"
 
-
 TEST(BufferTest, Allocate) {
-    auto alloc = base::CPUDeviceAllocatorFactory::get_instance();
-    base::Buffer buffer(32, alloc);
-    EXPECT_NE(buffer.ptr(), nullptr);
+  auto alloc = base::CPUDeviceAllocatorFactory::get_instance();
+  base::Buffer buffer(32, alloc);
+  EXPECT_NE(buffer.ptr(), nullptr);
 }
+
+TEST(BufferTest, UseExternal) {
+  float array[32];
+  base::Buffer buffer(32, nullptr, array);
+  EXPECT_TRUE(buffer.is_external());
+}
+
+// TEST(BufferTest, cuda_memcpy1) {
+//   using namespace base;
+//   auto alloc = base::CPUDeviceAllocatorFactory::get_instance();
+//   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
+//
+//   int32_t size = 32;
+//   float* ptr = new float[size];
+//   for (int i = 0; i < size; ++i) {
+//     ptr[i] = float(i);
+//   }
+//   Buffer buffer(size * sizeof(float), nullptr, ptr, true);
+//   buffer.set_device_type(DeviceType::kDeviceCPU);
+//   ASSERT_EQ(buffer.is_external(), true);
+//
+//   Buffer cu_buffer(size * sizeof(float), alloc_cu);
+//   cu_buffer.copy_from(buffer);
+//
+//   float* ptr2 = new float[size];
+//   cudaMemcpy(ptr2, cu_buffer.ptr(), sizeof(float) * size,
+//   cudaMemcpyDeviceToHost); for (int i = 0; i < size; ++i) {
+//     // ptr[i] = float(i);
+//     ASSERT_EQ(ptr2[i], float(i));
+//   }
+//
+//   delete[] ptr;
+//   delete[] ptr2;
+// }
+//
+// TEST(test_buffer, cuda_memcpy2) {
+//   using namespace base;
+//   auto alloc = base::CPUDeviceAllocatorFactory::get_instance();
+//   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
+//
+//   int32_t size = 32;
+//   float* ptr = new float[size];
+//   for (int i = 0; i < size; ++i) {
+//     ptr[i] = float(i);
+//   }
+//   Buffer buffer(size * sizeof(float), nullptr, ptr, true);
+//   buffer.set_device_type(DeviceType::kDeviceCPU);
+//   ASSERT_EQ(buffer.is_external(), true);
+//
+//   // cpu to cuda
+//   Buffer cu_buffer(size * sizeof(float), alloc_cu);
+//   cu_buffer.copy_from(buffer);
+//
+//   float* ptr2 = new float[size];
+//   cudaMemcpy(ptr2, cu_buffer.ptr(), sizeof(float) * size,
+//   cudaMemcpyDeviceToHost); for (int i = 0; i < size; ++i) {
+//     ASSERT_EQ(ptr2[i], float(i));
+//   }
+//
+//   delete[] ptr;
+//   delete[] ptr2;
+// }
+//
+// TEST(test_buffer, cuda_memcpy3) {
+//   using namespace base;
+//   auto alloc = base::CPUDeviceAllocatorFactory::get_instance();
+//   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
+//
+//   int32_t size = 32;
+//   Buffer cu_buffer1(size * sizeof(float), alloc_cu);
+//   Buffer cu_buffer2(size * sizeof(float), alloc_cu);
+//
+//   set_value_cu((float*)cu_buffer2.ptr(), size);
+//   // cu to cu
+//   ASSERT_EQ(cu_buffer1.device_type(), DeviceType::kDeviceCUDA);
+//   ASSERT_EQ(cu_buffer2.device_type(), DeviceType::kDeviceCUDA);
+//
+//   cu_buffer1.copy_from(cu_buffer2);
+//
+//   float* ptr2 = new float[size];
+//   cudaMemcpy(ptr2, cu_buffer1.ptr(), sizeof(float) * size,
+//   cudaMemcpyDeviceToHost); for (int i = 0; i < size; ++i) {
+//     ASSERT_EQ(ptr2[i], 1.f);
+//   }
+//   delete[] ptr2;
+// }
+//
+// TEST(test_buffer, cuda_memcpy4) {
+//   using namespace base;
+//   auto alloc = base::CPUDeviceAllocatorFactory::get_instance();
+//   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
+//
+//   int32_t size = 32;
+//   Buffer cu_buffer1(size * sizeof(float), alloc_cu);
+//   Buffer cu_buffer2(size * sizeof(float), alloc);
+//   ASSERT_EQ(cu_buffer1.device_type(), DeviceType::kDeviceCUDA);
+//   ASSERT_EQ(cu_buffer2.device_type(), DeviceType::kDeviceCPU);
+//
+//   // cu to cpu
+//   set_value_cu((float*)cu_buffer1.ptr(), size);
+//   cu_buffer2.copy_from(cu_buffer1);
+//
+//   float* ptr2 = (float*)cu_buffer2.ptr();
+//   for (int i = 0; i < size; ++i) {
+//     ASSERT_EQ(ptr2[i], 1.f);
+//   }
+// }
