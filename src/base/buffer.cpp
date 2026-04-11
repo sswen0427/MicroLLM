@@ -38,9 +38,10 @@ bool Buffer::allocate() {
 void Buffer::copy_from(const Buffer& buffer) const {
   CHECK(allocator_ != nullptr) << "The allocator pointer must be non-null.";
   CHECK(buffer.ptr_ != nullptr) << "The buffer pointer must be non-null.";
+  CHECK(byte_size_ >= buffer.byte_size_) << "The dst byte size " << byte_size_
+      << " must be greater than or equal to the src byte size " << buffer.byte_size_;
 
-  size_t byte_size =
-      byte_size_ < buffer.byte_size_ ? byte_size_ : buffer.byte_size_;
+  size_t byte_size = buffer.byte_size_;
   const DeviceType& buffer_device = buffer.device_type();
   const DeviceType& current_device = this->device_type();
   CHECK(buffer_device != DeviceType::kDeviceUnknown &&
@@ -75,7 +76,7 @@ DeviceType Buffer::device_type() const { return device_type_; }
 
 bool Buffer::is_external() const { return this->use_external_; }
 
-const void* Buffer::ptr() const { return ptr_; }
+void* Buffer::ptr() const { return ptr_; }
 
 void Buffer::set_device_type(DeviceType device_type) {
   device_type_ = device_type;

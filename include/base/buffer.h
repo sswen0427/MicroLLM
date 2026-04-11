@@ -44,7 +44,7 @@ class Buffer : private boost::noncopyable {
 
   [[nodiscard]] bool is_external() const;
 
-  [[nodiscard]] const void* ptr() const;
+  [[nodiscard]] void* ptr() const;
 
   void set_device_type(DeviceType device_type);
 };
