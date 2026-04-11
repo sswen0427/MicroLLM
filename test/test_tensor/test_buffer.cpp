@@ -31,8 +31,8 @@ TEST(BufferTest, CUDAMemcpy1) {
   base::Buffer buffer_cuda(32 * sizeof(int), alloc_cu);
   buffer_cuda.copy_from(buffer_cpu);
 
-  float array_cuda[32];
-  cudaMemcpy(array_cuda, buffer_cuda.ptr(), 32 * sizeof(float),cudaMemcpyDeviceToHost);
+  int array_cuda[32];
+  cudaMemcpy(array_cuda, buffer_cuda.ptr(), 32 * sizeof(int),cudaMemcpyDeviceToHost);
   for (int i = 0; i < 32; ++i) {
     EXPECT_EQ(array_cuda[i], i);
   }
