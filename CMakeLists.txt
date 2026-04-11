@@ -81,7 +81,6 @@ target_link_libraries(MicroLLM PRIVATE glog::glog sentencepiece::sentencepiece C
 
 
 enable_testing()
-find_package(GTest REQUIRED)
 file(GLOB_RECURSE ALL_TEST_FILES CONFIGURE_DEPENDS "test/test_*.cpp")
 
 add_executable(MicroLLM_test ${ALL_TEST_FILES} ${ALL_SRC_FILES})
