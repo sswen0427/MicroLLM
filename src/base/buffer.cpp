@@ -75,7 +75,7 @@ DeviceType Buffer::device_type() const { return device_type_; }
 
 bool Buffer::is_external() const { return this->use_external_; }
 
-const void* Buffer::ptr() const { return ptr_; }
+void* Buffer::ptr() const { return ptr_; }
 
 void Buffer::set_device_type(DeviceType device_type) {
   device_type_ = device_type;
