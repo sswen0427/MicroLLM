@@ -55,9 +55,23 @@ class CUDADeviceAllocator : public DeviceAllocator {
   void release(void *ptr) const override;
 
  private:
-  mutable std::map<int, size_t> no_busy_cnt_;
+  /**
+   * @brief big_buffers_map_ maps from GPU id to the big buffers, which is the
+   * buffers that are allocated with size greater than 1MB.
+   */
   mutable std::map<int, std::vector<CUDAMemoryBuffer>> big_buffers_map_;
-  mutable std::map<int, std::vector<CUDAMemoryBuffer>> cuda_buffers_map_;
+
+  /**
+   * @brief small_buffers_map_ maps from GPU id to the small buffers, which is
+   * the buffers that are allocated with size less than 1MB.
+   */
+  mutable std::map<int, std::vector<CUDAMemoryBuffer>> small_buffers_map_;
+
+  /**
+   * @brief small_buffers_idle_bytes_ maps from GPU id to the bytes num in the
+   * small_buffers_map_.
+   */
+  mutable std::map<int, size_t> small_buffers_idle_bytes_;
 };
 
 class CPUDeviceAllocatorFactory {
