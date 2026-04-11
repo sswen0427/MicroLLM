@@ -86,15 +86,15 @@ T& Tensor::index(int64_t offset) {
   CHECK(this->device_type() == base::DeviceType::kDeviceCPU)
     << "Fatal: Cannot return CPU reference for a CUDA Tensor!";
   CHECK(offset >= 0 && offset < this->size()) << "Invalid offset " << offset << " for tensor with size " << this->size();
-  T& val = *(static_cast<T*>(buffer_->ptr()) + offset);
-  return val;
+  return *(this->ptr<T>(offset));
 }
 
 template <typename T>
 const T& Tensor::index(int64_t offset) const {
+  CHECK(this->device_type() == base::DeviceType::kDeviceCPU)
+  << "Fatal: Cannot return CPU reference for a CUDA Tensor!";
   CHECK(offset >= 0 && offset < this->size()) << "Invalid offset " << offset << " for tensor with size " << this->size();
-  const T& val = *(static_cast<T*>(buffer_->ptr()) + offset);
-  return val;
+  return *(this->ptr<T>(offset));
 }
 
 template <typename T>
@@ -102,7 +102,7 @@ const T* Tensor::ptr() const {
   if (!buffer_) {
     return nullptr;
   }
-  return const_cast<const T*>(static_cast<T*>(buffer_->ptr()));
+  return static_cast<T*>(buffer_->ptr());
 }
 
 template <typename T>
@@ -110,21 +110,21 @@ T* Tensor::ptr() {
   if (!buffer_) {
     return nullptr;
   }
-  return reinterpret_cast<T*>(buffer_->ptr());
+  return static_cast<T*>(buffer_->ptr());
 }
 
 template <typename T>
 T* Tensor::ptr(int64_t index) {
   CHECK(buffer_ != nullptr && buffer_->ptr() != nullptr)
       << "The data area buffer of this tensor is empty or it points to a null pointer.";
-  return static_cast<T*>(buffer_->ptr()) + index;
+  return this->ptr<T>() + index;
 }
 
 template <typename T>
 const T* Tensor::ptr(int64_t index) const {
   CHECK(buffer_ != nullptr && buffer_->ptr() != nullptr)
       << "The data area buffer of this tensor is empty or it points to a null pointer.";
-  return static_cast<const T*>(buffer_->ptr()) + index;
+  return this->ptr<T>() + index;
 }
 }  // namespace tensor
 
