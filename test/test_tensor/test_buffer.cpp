@@ -1,3 +1,4 @@
+#include <cuda_runtime_api.h>
 #include <gtest/gtest.h>
 
 #include "base/alloc.h"
@@ -15,33 +16,27 @@ TEST(BufferTest, UseExternal) {
   EXPECT_TRUE(buffer.is_external());
 }
 
-// TEST(BufferTest, cuda_memcpy1) {
-//   using namespace base;
-//   auto alloc = base::CPUDeviceAllocatorFactory::get_instance();
-//   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
-//
-//   int32_t size = 32;
-//   float* ptr = new float[size];
-//   for (int i = 0; i < size; ++i) {
-//     ptr[i] = float(i);
-//   }
-//   Buffer buffer(size * sizeof(float), nullptr, ptr, true);
-//   buffer.set_device_type(DeviceType::kDeviceCPU);
-//   ASSERT_EQ(buffer.is_external(), true);
-//
-//   Buffer cu_buffer(size * sizeof(float), alloc_cu);
-//   cu_buffer.copy_from(buffer);
-//
-//   float* ptr2 = new float[size];
-//   cudaMemcpy(ptr2, cu_buffer.ptr(), sizeof(float) * size,
-//   cudaMemcpyDeviceToHost); for (int i = 0; i < size; ++i) {
-//     // ptr[i] = float(i);
-//     ASSERT_EQ(ptr2[i], float(i));
-//   }
-//
-//   delete[] ptr;
-//   delete[] ptr2;
-// }
+TEST(BufferTest, CUDAMemcpy1) {
+  auto alloc = base::CPUDeviceAllocatorFactory::get_instance();
+  auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
+
+  int array_cpu[32];
+  for (int i = 0; i < 32; ++i) {
+    array_cpu[i] = i;
+  }
+  base::Buffer buffer_cpu(32 * sizeof(int), nullptr, array_cpu);
+  buffer_cpu.set_device_type(base::DeviceType::kDeviceCPU);
+  EXPECT_EQ(buffer_cpu.is_external(), true);
+
+  base::Buffer buffer_cuda(32 * sizeof(int), alloc_cu);
+  buffer_cuda.copy_from(buffer_cpu);
+
+  int array_cuda[32];
+  cudaMemcpy(array_cuda, buffer_cuda.ptr(), 32 * sizeof(int),cudaMemcpyDeviceToHost);
+  for (int i = 0; i < 32; ++i) {
+    EXPECT_EQ(array_cuda[i], i);
+  }
+}
 //
 // TEST(test_buffer, cuda_memcpy2) {
 //   using namespace base;
