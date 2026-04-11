@@ -28,7 +28,7 @@ TEST(BufferTest, Memcpy) {
   };
 
   auto test_cuda_buffer = [&](const base::Buffer& buffer){
-    base::Buffer buffer_cpu(32, alloc);
+    base::Buffer buffer_cpu(buffer_size * sizeof(int), alloc);
     buffer_cpu.copy_from(buffer);
     test_cpu_buffer(buffer_cpu);
   };
