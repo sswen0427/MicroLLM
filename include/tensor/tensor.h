@@ -14,20 +14,6 @@ class Tensor {
  public:
   explicit Tensor() = default;
 
-  explicit Tensor(base::DataType data_type, int32_t dim0, bool need_alloc = false,
-                  std::shared_ptr<base::DeviceAllocator> alloc = nullptr, void* ptr = nullptr);
-
-  explicit Tensor(base::DataType data_type, int32_t dim0, int32_t dim1, bool need_alloc = false,
-                  std::shared_ptr<base::DeviceAllocator> alloc = nullptr, void* ptr = nullptr);
-
-  explicit Tensor(base::DataType data_type, int32_t dim0, int32_t dim1, int32_t dim2,
-                  bool need_alloc = false, std::shared_ptr<base::DeviceAllocator> alloc = nullptr,
-                  void* ptr = nullptr);
-
-  explicit Tensor(base::DataType data_type, int32_t dim0, int32_t dim1, int32_t dim2, int32_t dim3,
-                  bool need_alloc = false, std::shared_ptr<base::DeviceAllocator> alloc = nullptr,
-                  void* ptr = nullptr);
-
   explicit Tensor(base::DataType data_type, std::vector<int32_t> dims, bool need_alloc = false,
                   std::shared_ptr<base::DeviceAllocator> alloc = nullptr, void* ptr = nullptr);
 
@@ -68,7 +54,7 @@ class Tensor {
 
   void reset(base::DataType data_type, const std::vector<int32_t>& dims);
 
-  void set_device_type(base::DeviceType device_type) const;
+  void set_device_type(base::DeviceType device_type);
 
   base::DeviceType device_type() const;
 
@@ -97,17 +83,17 @@ class Tensor {
 
 template <typename T>
 T& Tensor::index(int64_t offset) {
-  CHECK_GE(offset, 0);
-  CHECK_LT(offset, this->size());
-  T& val = *(reinterpret_cast<T*>(buffer_->ptr()) + offset);
+  CHECK(this->device_type() == base::DeviceType::kDeviceCPU)
+    << "Fatal: Cannot return CPU reference for a CUDA Tensor!";
+  CHECK(offset >= 0 && offset < this->size()) << "Invalid offset " << offset << " for tensor with size " << this->size();
+  T& val = *(static_cast<T*>(buffer_->ptr()) + offset);
   return val;
 }
 
 template <typename T>
 const T& Tensor::index(int64_t offset) const {
-  CHECK_GE(offset, 0);
-  CHECK_LT(offset, this->size());
-  const T& val = *(reinterpret_cast<T*>(buffer_->ptr()) + offset);
+  CHECK(offset >= 0 && offset < this->size()) << "Invalid offset " << offset << " for tensor with size " << this->size();
+  const T& val = *(static_cast<T*>(buffer_->ptr()) + offset);
   return val;
 }
 
@@ -116,7 +102,7 @@ const T* Tensor::ptr() const {
   if (!buffer_) {
     return nullptr;
   }
-  return const_cast<const T*>(reinterpret_cast<T*>(buffer_->ptr()));
+  return const_cast<const T*>(static_cast<T*>(buffer_->ptr()));
 }
 
 template <typename T>
@@ -131,14 +117,14 @@ template <typename T>
 T* Tensor::ptr(int64_t index) {
   CHECK(buffer_ != nullptr && buffer_->ptr() != nullptr)
       << "The data area buffer of this tensor is empty or it points to a null pointer.";
-  return const_cast<T*>(reinterpret_cast<const T*>(buffer_->ptr())) + index;
+  return static_cast<T*>(buffer_->ptr()) + index;
 }
 
 template <typename T>
 const T* Tensor::ptr(int64_t index) const {
   CHECK(buffer_ != nullptr && buffer_->ptr() != nullptr)
       << "The data area buffer of this tensor is empty or it points to a null pointer.";
-  return reinterpret_cast<const T*>(buffer_->ptr()) + index;
+  return static_cast<const T*>(buffer_->ptr()) + index;
 }
 }  // namespace tensor
 
