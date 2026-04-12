@@ -75,10 +75,26 @@ class Tensor {
   tensor::Tensor clone() const;
 
  private:
-  size_t size_ = 0;
+
+  /**
+   * @brief The shape of the tensor (e.g., {Batch, Head, SeqLen, HeadDim}).
+   */
   std::vector<int32_t> dims_;
-  std::shared_ptr<base::Buffer> buffer_;
+
+  /**
+   * @brief The total number of elements in the tensor (cached for performance).
+   */
+  std::size_t size_ = 0;
+
+  /**
+   * @brief The data type of each element (e.g., FP32, INT8).
+   */
   base::DataType data_type_ = base::DataType::kDataTypeUnknown;
+
+  /**
+   * @brief The underlying physical memory buffer (CPU or GPU) that holds the actual data.
+   */
+  std::shared_ptr<base::Buffer> buffer_;
 };
 
 template <typename T>
