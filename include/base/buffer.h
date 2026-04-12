@@ -32,8 +32,6 @@ class Buffer : private boost::noncopyable {
 
   virtual ~Buffer();
 
-  bool allocate();
-
   void copy_from(const Buffer& buffer) const;
 
   [[nodiscard]] std::shared_ptr<DeviceAllocator> allocator() const;

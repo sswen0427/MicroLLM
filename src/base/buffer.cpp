@@ -26,15 +26,6 @@ Buffer::~Buffer() {
   }
 }
 
-bool Buffer::allocate() {
-  if (allocator_ && byte_size_ != 0) {
-    ptr_ = allocator_->allocate(byte_size_);
-    return ptr_ != nullptr;
-  } else {
-    return false;
-  }
-}
-
 void Buffer::copy_from(const Buffer& buffer) const {
   CHECK(allocator_ != nullptr) << "The allocator pointer must be non-null.";
   CHECK(buffer.ptr_ != nullptr) << "The buffer pointer must be non-null.";
