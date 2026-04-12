@@ -21,13 +21,13 @@ TEST(BufferTest, Memcpy) {
   auto alloc = base::CPUDeviceAllocatorFactory::get_instance();
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
 
-  auto test_cpu_buffer = [&](const base::Buffer& buffer){
+  auto test_cpu_buffer = [&](const base::Buffer& buffer) {
     for (int i = 0; i < buffer_size; ++i) {
       EXPECT_EQ(static_cast<int*>(buffer.ptr())[i], i);
     }
   };
 
-  auto test_cuda_buffer = [&](const base::Buffer& buffer){
+  auto test_cuda_buffer = [&](const base::Buffer& buffer) {
     base::Buffer buffer_cpu(buffer_size * sizeof(int), alloc);
     buffer_cpu.copy_from(buffer);
     test_cpu_buffer(buffer_cpu);

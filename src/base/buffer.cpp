@@ -38,8 +38,10 @@ bool Buffer::allocate() {
 void Buffer::copy_from(const Buffer& buffer) const {
   CHECK(allocator_ != nullptr) << "The allocator pointer must be non-null.";
   CHECK(buffer.ptr_ != nullptr) << "The buffer pointer must be non-null.";
-  CHECK(byte_size_ >= buffer.byte_size_) << "The dst byte size " << byte_size_
-      << " must be greater than or equal to the src byte size " << buffer.byte_size_;
+  CHECK(byte_size_ >= buffer.byte_size_)
+      << "The dst byte size " << byte_size_
+      << " must be greater than or equal to the src byte size "
+      << buffer.byte_size_;
 
   size_t byte_size = buffer.byte_size_;
   const DeviceType& buffer_device = buffer.device_type();
