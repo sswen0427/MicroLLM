@@ -7,15 +7,16 @@
 
 #include "base/buffer.h"
 
-
 namespace tensor {
 
 class Tensor {
  public:
   explicit Tensor() = default;
 
-  explicit Tensor(base::DataType data_type, std::vector<int32_t> dims, bool need_alloc = false,
-                  std::shared_ptr<base::DeviceAllocator> alloc = nullptr, void* ptr = nullptr);
+  explicit Tensor(base::DataType data_type, std::vector<int32_t> dims,
+                  bool need_alloc = false,
+                  std::shared_ptr<base::DeviceAllocator> alloc = nullptr,
+                  void* ptr = nullptr);
 
   void to_cpu();
 
@@ -23,8 +24,8 @@ class Tensor {
 
   bool is_empty() const;
 
-  void init_buffer(std::shared_ptr<base::DeviceAllocator> alloc, base::DataType data_type,
-                   bool need_alloc, void* ptr);
+  void init_buffer(std::shared_ptr<base::DeviceAllocator> alloc,
+                   base::DataType data_type, bool need_alloc, void* ptr);
 
   template <typename T>
   T* ptr();
@@ -58,7 +59,8 @@ class Tensor {
 
   base::DeviceType device_type() const;
 
-  bool allocate(std::shared_ptr<base::DeviceAllocator> allocator, bool need_realloc = false);
+  bool allocate(std::shared_ptr<base::DeviceAllocator> allocator,
+                bool need_realloc = false);
 
   template <typename T>
   T* ptr(int64_t index);
@@ -75,7 +77,6 @@ class Tensor {
   tensor::Tensor clone() const;
 
  private:
-
   /**
    * @brief The shape of the tensor (e.g., {Batch, Head, SeqLen, HeadDim}).
    */
@@ -92,7 +93,8 @@ class Tensor {
   base::DataType data_type_ = base::DataType::kDataTypeUnknown;
 
   /**
-   * @brief The underlying physical memory buffer (CPU or GPU) that holds the actual data.
+   * @brief The underlying physical memory buffer (CPU or GPU) that holds the
+   * actual data.
    */
   std::shared_ptr<base::Buffer> buffer_;
 };
@@ -100,16 +102,20 @@ class Tensor {
 template <typename T>
 T& Tensor::index(int64_t offset) {
   CHECK(this->device_type() == base::DeviceType::kDeviceCPU)
-    << "Fatal: Cannot return CPU reference for a CUDA Tensor!";
-  CHECK(offset >= 0 && offset < this->size()) << "Invalid offset " << offset << " for tensor with size " << this->size();
+      << "Fatal: Cannot return CPU reference for a CUDA Tensor!";
+  CHECK(offset >= 0 && offset < this->size())
+      << "Invalid offset " << offset << " for tensor with size "
+      << this->size();
   return *(this->ptr<T>(offset));
 }
 
 template <typename T>
 const T& Tensor::index(int64_t offset) const {
   CHECK(this->device_type() == base::DeviceType::kDeviceCPU)
-  << "Fatal: Cannot return CPU reference for a CUDA Tensor!";
-  CHECK(offset >= 0 && offset < this->size()) << "Invalid offset " << offset << " for tensor with size " << this->size();
+      << "Fatal: Cannot return CPU reference for a CUDA Tensor!";
+  CHECK(offset >= 0 && offset < this->size())
+      << "Invalid offset " << offset << " for tensor with size "
+      << this->size();
   return *(this->ptr<T>(offset));
 }
 
@@ -132,18 +138,18 @@ T* Tensor::ptr() {
 template <typename T>
 T* Tensor::ptr(int64_t index) {
   CHECK(buffer_ != nullptr && buffer_->ptr() != nullptr)
-      << "The data area buffer of this tensor is empty or it points to a null pointer.";
+      << "The data area buffer of this tensor is empty or it points to a null "
+         "pointer.";
   return this->ptr<T>() + index;
 }
 
 template <typename T>
 const T* Tensor::ptr(int64_t index) const {
   CHECK(buffer_ != nullptr && buffer_->ptr() != nullptr)
-      << "The data area buffer of this tensor is empty or it points to a null pointer.";
+      << "The data area buffer of this tensor is empty or it points to a null "
+         "pointer.";
   return this->ptr<T>() + index;
 }
 }  // namespace tensor
-
-
 
 #endif  // MICROLLM_INCLUDE_TENSOR_TENSOR_H
