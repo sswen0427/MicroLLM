@@ -1,6 +1,8 @@
 #ifndef MICROLLM_INCLUDE_BASE_BASE_H
 #define MICROLLM_INCLUDE_BASE_BASE_H
 
+#include <cuda_runtime_api.h>
+
 #include <string>
 
 namespace base {
@@ -24,6 +26,16 @@ enum StatusCode : uint8_t {
   kInternalError = 5,
   kKeyValueHasExist = 6,
   kInvalidArgument = 7,
+};
+
+struct CudaConfig {
+  cudaStream_t stream;
+
+  ~CudaConfig() {
+    if (stream != nullptr) {
+      cudaStreamDestroy(stream);
+    }
+  }
 };
 
 class Status {
