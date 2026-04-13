@@ -17,7 +17,7 @@ TEST(test_tensor, to_cpu) {
   for (int i = 0; i < 32 * 32; i++) {
     array[i] = i;
   }
-  base::Buffer buffer_cpu(32 * 32 * 32, nullptr, array);
+  base::Buffer buffer_cpu(32 * 32 * 4, nullptr, array);
   t1_cu.get_buffer().get()->copy_from(buffer_cpu);
   t1_cu.to_cpu();
 
