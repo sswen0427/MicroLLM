@@ -1,137 +1,121 @@
-#include "tensor.h"
+#include "tensor/tensor.h"
 
-#include <cstddef>
+#include <cuda_runtime.h>
+#include <glog/logging.h>
+
 #include <numeric>
 
-#include "base/base.h"
-#include "glog/logging.h"
-
 namespace tensor {
-template <typename T, typename Tp>
-static inline size_t MutiplyAccumulate(T begin, T end, Tp init) {
-  size_t size = std::accumulate(begin, end, init);
-  return size;
+
+Tensor Tensor::allocate(base::DataType data_type,
+                        const std::vector<int32_t>& dims,
+                        const std::shared_ptr<base::DeviceAllocator>& alloc) {
+  Tensor tensor;
+  tensor.dims_ = dims;
+  tensor.data_type_ = data_type;
+  tensor.size_ =
+      std::accumulate(dims.begin(), dims.end(), 1LL, std::multiplies<>());
+  tensor.buffer_ = std::make_shared<base::Buffer>(
+      tensor.size_ * DataTypeSize(data_type), alloc, nullptr);
+  return tensor;
 }
 
-Tensor::Tensor(base::DataType data_type, int32_t dim0) : data_type_(data_type) {
-  dims_.push_back(dim0);
-  size_ = dim0;
+Tensor Tensor::from_external(base::DataType data_type,
+                             const std::vector<int32_t>& dims, void* ptr) {
+  Tensor tensor;
+  tensor.dims_ = dims;
+  tensor.data_type_ = data_type;
+  tensor.size_ =
+      std::accumulate(dims.begin(), dims.end(), 1LL, std::multiplies<>());
+  tensor.buffer_ = std::make_shared<base::Buffer>(
+      tensor.size_ * DataTypeSize(data_type), nullptr, ptr);
+  return tensor;
 }
 
-Tensor::Tensor(base::DataType data_type, int32_t dim0, int32_t dim1)
-    : data_type_(data_type) {
-  dims_.push_back(dim0);
-  dims_.push_back(dim1);
-  size_ = dim0 * dim1;
-}
+void Tensor::to_cpu() {
+  CHECK_NE(buffer_, nullptr);
+  const base::DeviceType& device_type = buffer_->device_type();
+  CHECK(device_type != base::DeviceType::kDeviceUnknown)
+      << "Unknown device type";
 
-Tensor::Tensor(base::DataType data_type, int32_t dim0, int32_t dim1,
-               int32_t dim2)
-    : data_type_(data_type) {
-  dims_.push_back(dim0);
-  dims_.push_back(dim1);
-  dims_.push_back(dim2);
-  size_ = dim0 * dim1 * dim2;
-}
-
-Tensor::Tensor(base::DataType data_type, int32_t dim0, int32_t dim1,
-               int32_t dim2, int32_t dim3)
-    : data_type_(data_type) {
-  dims_.push_back(dim0);
-  dims_.push_back(dim1);
-  dims_.push_back(dim2);
-  dims_.push_back(dim3);
-  size_ = dim0 * dim1 * dim2 * dim3;
-}
-
-Tensor::Tensor(base::DataType data_type, std::vector<int32_t> dims)
-    : dims_(std::move(dims)), data_type_(data_type) {
-  size_ = MutiplyAccumulate(dims_.begin(), dims_.end(), 1);
-}
-
-size_t Tensor::size() const { return size_; }
-
-int32_t Tensor::get_dim(int32_t idx) const {
-  CHECK_GE(idx, 0);
-  CHECK_LT(idx, dims_.size());
-  return dims_.at(idx);
-}
-
-bool Tensor::assign(std::shared_ptr<base::Buffer> buffer) {
-  if (!buffer) {
-    LOG(ERROR) << "Tensor::assign: buffer is null";
-    return false;
+  if (device_type == base::DeviceType::kDeviceCUDA) {
+    size_t byte_size = this->byte_size();
+    auto cpu_alloc = base::CPUDeviceAllocatorFactory::get_instance();
+    auto cpu_buffer = std::make_shared<base::Buffer>(byte_size, cpu_alloc);
+    cpu_alloc->memcpy(cpu_buffer->ptr(), buffer_->ptr(), byte_size,
+                      cudaMemcpyDeviceToHost, nullptr);
+    this->buffer_ = cpu_buffer;
+  } else {
+    LOG(INFO) << "The device type of the tensor is already cpu.";
   }
-  size_t byte_size = this->byte_size();
-  if (byte_size != buffer->byte_size()) {
-    LOG(ERROR) << "Tensor::assign: byte_size not match";
-    return false;
-  }
-  buffer_ = buffer;
-  return true;
 }
 
-bool Tensor::allocate(std::shared_ptr<base::DeviceAllocator> allocator,
-                      bool need_realloc) {
-  if (!allocator) {
-    LOG(ERROR) << "Tensor::allocate: allocator is null";
-    return false;
+void Tensor::to_cuda(cudaStream_t stream) {
+  CHECK_NE(buffer_, nullptr);
+  const base::DeviceType device_type = this->device_type();
+  CHECK(device_type != base::DeviceType::kDeviceUnknown)
+      << "Unknown device type";
+  if (device_type == base::DeviceType::kDeviceCPU) {
+    size_t byte_size = this->byte_size();
+    auto cu_alloc = base::CUDADeviceAllocatorFactory::get_instance();
+    auto cu_buffer = std::make_shared<base::Buffer>(byte_size, cu_alloc);
+    cu_alloc->memcpy(cu_buffer->ptr(), buffer_->ptr(), byte_size,
+                     cudaMemcpyHostToDevice, stream);
+    this->buffer_ = cu_buffer;
+  } else {
+    LOG(INFO) << "The device type of the tensor is already cuda.";
   }
-  size_t byte_size = this->byte_size();
-  if (!byte_size) {
-    LOG(ERROR) << "Tensor::allocate: byte_size is 0";
-    return false;
-  }
-
-  if (buffer_ && byte_size == buffer_->byte_size()) {
-    if (!need_realloc) {
-      return true;
-    }
-  }
-  buffer_ = std::make_shared<base::Buffer>(byte_size, allocator, nullptr);
-  if (!buffer_->ptr()) {
-    LOG(ERROR) << "Tensor::allocate: failed to allocate buffer";
-    return false;
-  }
-  return true;
 }
 
-const std::vector<int32_t>& Tensor::dims() const { return dims_; }
+bool Tensor::is_empty() const {
+  return size_ == 0 || buffer_ == nullptr || buffer_->ptr() == nullptr;
+}
 
-void Tensor::reset(base::DataType data_type, const std::vector<int32_t>& dims) {
-  data_type_ = data_type;
-  dims_ = dims;
-  size_ = MutiplyAccumulate(dims_.begin(), dims_.end(), 1);
-  buffer_ = nullptr;
+size_t Tensor::size() const { return this->size_; }
+
+size_t Tensor::byte_size() const {
+  return this->size() * DataTypeSize(data_type_);
 }
 
 int32_t Tensor::dims_size() const { return static_cast<int32_t>(dims_.size()); }
 
+std::shared_ptr<base::Buffer> Tensor::get_buffer() const { return buffer_; }
+
 base::DataType Tensor::data_type() const { return data_type_; }
 
-void Tensor::reshape(std::vector<int32_t> dims) {
-  size_t size = MutiplyAccumulate(dims.begin(), dims.end(), 1);
-  if (buffer_ != nullptr && size == size_) {
-    dims_ = dims;
-  } else {
-    dims_ = dims;
-    size_ = size;
-    buffer_ = std::make_shared<base::Buffer>(size, buffer_->allocator());
-    CHECK(buffer_->allocate());
-  }
+int32_t Tensor::get_dim(int32_t idx) const {
+  CHECK_GE(idx, 0);
+  CHECK_LT(idx, this->dims_.size());
+  return this->dims_.at(idx);
+}
+const std::vector<int32_t>& Tensor::dims() const { return this->dims_; }
+
+base::DeviceType Tensor::device_type() const { return buffer_->device_type(); }
+
+void Tensor::set_device_type(base::DeviceType device_type) {
+  buffer_->set_device_type(device_type);
 }
 
-size_t Tensor::byte_size() const { return size() * DataTypeSize(data_type_); }
-
-std::vector<size_t> Tensor::strides() const {
-  std::vector<size_t> strides;
-  if (!dims_.empty()) {
-    for (int32_t i = 0; i < dims_.size() - 1; ++i) {
-      size_t stride = MutiplyAccumulate(dims_.begin(), dims_.end(), 1);
-      strides.push_back(stride);
-    }
-    strides.push_back(1);
-  }
-  return strides;
+void Tensor::reshape(const std::vector<int32_t>& dims) {
+  std::size_t new_size =
+      std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<size_t>());
+  CHECK(new_size == size_)
+      << "Fatal: Reshape cannot change total element count! "
+      << "Current size: " << this->size_ << ", Requested size: " << new_size;
+  this->dims_ = dims;
 }
+
+Tensor Tensor::clone() const {
+  Tensor new_tensor;
+  new_tensor.dims_ = this->dims_;
+  new_tensor.data_type_ = this->data_type_;
+  new_tensor.size_ = this->size_;
+
+  auto allocator = buffer_->allocator();
+  new_tensor.buffer_ =
+      std::make_shared<base::Buffer>(this->byte_size(), allocator);
+  new_tensor.buffer_->copy_from(*buffer_.get());
+  return new_tensor;
+}
+
 }  // namespace tensor
