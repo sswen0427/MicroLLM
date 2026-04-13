@@ -14,7 +14,7 @@ TEST(test_tensor, to_cpu) {
   CHECK(!t1_cu.is_empty());
 
   int array[32 * 32];
-  for (int i = 0; i < 32; i++) {
+  for (int i = 0; i < 32 * 32; i++) {
     array[i] = i;
   }
   base::Buffer buffer_cpu(32 * 32 * sizeof(int), nullptr, array);
