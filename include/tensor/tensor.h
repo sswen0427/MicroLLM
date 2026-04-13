@@ -11,70 +11,60 @@ namespace tensor {
 
 class Tensor {
  public:
-  explicit Tensor() = default;
+  Tensor() = default;
 
-  explicit Tensor(base::DataType data_type, std::vector<int32_t> dims,
-                  bool need_alloc = false,
-                  std::shared_ptr<base::DeviceAllocator> alloc = nullptr,
-                  void* ptr = nullptr);
+  static Tensor allocate(base::DataType data_type,
+                         const std::vector<int32_t>& dims,
+                         const std::shared_ptr<base::DeviceAllocator>& alloc);
+
+  static Tensor from_external(base::DataType data_type,
+                              const std::vector<int32_t>& dims, void* ptr);
 
   void to_cpu();
 
   void to_cuda(cudaStream_t stream = nullptr);
 
-  bool is_empty() const;
+  [[nodiscard]] bool is_empty() const;
 
-  void init_buffer(std::shared_ptr<base::DeviceAllocator> alloc,
-                   base::DataType data_type, bool need_alloc, void* ptr);
+  [[nodiscard]] size_t size() const;
 
-  template <typename T>
-  T* ptr();
+  [[nodiscard]] size_t byte_size() const;
 
-  template <typename T>
-  const T* ptr() const;
+  [[nodiscard]] int32_t dims_size() const;
+
+  [[nodiscard]] std::shared_ptr<base::Buffer> get_buffer() const;
+
+  [[nodiscard]] base::DataType data_type() const;
+
+  [[nodiscard]] int32_t get_dim(int32_t idx) const;
+
+  [[nodiscard]] const std::vector<int32_t>& dims() const;
+
+  [[nodiscard]] base::DeviceType device_type() const;
+
+  [[nodiscard]] tensor::Tensor clone() const;
 
   void reshape(const std::vector<int32_t>& dims);
 
-  std::shared_ptr<base::Buffer> get_buffer() const;
-
-  size_t size() const;
-
-  size_t byte_size() const;
-
-  int32_t dims_size() const;
-
-  base::DataType data_type() const;
-
-  int32_t get_dim(int32_t idx) const;
-
-  const std::vector<int32_t>& dims() const;
-
-  std::vector<size_t> strides() const;
-
-  bool assign(std::shared_ptr<base::Buffer> buffer);
-
-  void reset(base::DataType data_type, const std::vector<int32_t>& dims);
-
   void set_device_type(base::DeviceType device_type);
 
-  base::DeviceType device_type() const;
-
-  bool allocate(std::shared_ptr<base::DeviceAllocator> allocator,
-                bool need_realloc = false);
+  template <typename T>
+  [[nodiscard]] T* ptr();
 
   template <typename T>
-  T* ptr(int64_t index);
+  [[nodiscard]] const T* ptr() const;
 
   template <typename T>
-  const T* ptr(int64_t index) const;
+  [[nodiscard]] T* ptr(int64_t offset);
 
   template <typename T>
-  T& index(int64_t offset);
+  [[nodiscard]] const T* ptr(int64_t offset) const;
 
   template <typename T>
-  const T& index(int64_t offset) const;
+  [[nodiscard]] T& at(int64_t offset);
 
-  tensor::Tensor clone() const;
+  template <typename T>
+  [[nodiscard]] const T& at(int64_t offset) const;
 
  private:
   /**
@@ -98,26 +88,6 @@ class Tensor {
    */
   std::shared_ptr<base::Buffer> buffer_;
 };
-
-template <typename T>
-T& Tensor::index(int64_t offset) {
-  CHECK(this->device_type() == base::DeviceType::kDeviceCPU)
-      << "Fatal: Cannot return CPU reference for a CUDA Tensor!";
-  CHECK(offset >= 0 && offset < this->size())
-      << "Invalid offset " << offset << " for tensor with size "
-      << this->size();
-  return *(this->ptr<T>(offset));
-}
-
-template <typename T>
-const T& Tensor::index(int64_t offset) const {
-  CHECK(this->device_type() == base::DeviceType::kDeviceCPU)
-      << "Fatal: Cannot return CPU reference for a CUDA Tensor!";
-  CHECK(offset >= 0 && offset < this->size())
-      << "Invalid offset " << offset << " for tensor with size "
-      << this->size();
-  return *(this->ptr<T>(offset));
-}
 
 template <typename T>
 const T* Tensor::ptr() const {
@@ -150,6 +120,27 @@ const T* Tensor::ptr(int64_t index) const {
          "pointer.";
   return this->ptr<T>() + index;
 }
+
+template <typename T>
+T& Tensor::at(int64_t offset) {
+  CHECK(this->device_type() == base::DeviceType::kDeviceCPU)
+      << "Fatal: Cannot return CPU reference for a CUDA Tensor!";
+  CHECK(offset >= 0 && offset < this->size())
+      << "Invalid offset " << offset << " for tensor with size "
+      << this->size();
+  return *(this->ptr<T>(offset));
+}
+
+template <typename T>
+const T& Tensor::at(int64_t offset) const {
+  CHECK(this->device_type() == base::DeviceType::kDeviceCPU)
+      << "Fatal: Cannot return CPU reference for a CUDA Tensor!";
+  CHECK(offset >= 0 && offset < this->size())
+      << "Invalid offset " << offset << " for tensor with size "
+      << this->size();
+  return *(this->ptr<T>(offset));
+}
+
 }  // namespace tensor
 
 #endif  // MICROLLM_INCLUDE_TENSOR_TENSOR_H

@@ -2,6 +2,7 @@
 #define MICROLLM_INCLUDE_BASE_BASE_H
 
 #include <cuda_runtime_api.h>
+#include <glog/logging.h>
 
 #include <string>
 
@@ -69,17 +70,20 @@ class Status {
 
 enum class DataType : uint8_t {
   kDataTypeUnknown = 0,
-  kDataTypeFp32 = 1,  // 32-bit floating-point
-  kDataTypeInt8 = 2,  // 8-bit integer
+  kDataTypeFp32 = 1,   // 32-bit floating-point
+  kDataTypeInt8 = 2,   // 8-bit integer
+  kDataTypeInt32 = 3,  //
 };
 
 inline std::size_t DataTypeSize(DataType type) {
   if (type == DataType::kDataTypeFp32) {
-    return sizeof(float);
+    return 4;
   } else if (type == DataType::kDataTypeInt8) {
-    return sizeof(int8_t);
+    return 1;
+  } else if (type == DataType::kDataTypeInt32) {
+    return 4;
   } else {
-    return 0;
+    LOG(FATAL) << "Unknown data type";
   }
 }
 }  // namespace base
