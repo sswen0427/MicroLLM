@@ -9,15 +9,15 @@
 TEST(test_tensor, to_cpu) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
-  tensor::Tensor t1_cu = tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
-                                                  {32, 32}, alloc_cu);
+  tensor::Tensor t1_cu = tensor::Tensor::allocate(
+      base::DataType::kDataTypeInt32, {32, 32}, alloc_cu);
   CHECK(!t1_cu.is_empty());
 
   int array[32 * 32];
   for (int i = 0; i < 32 * 32; i++) {
     array[i] = i;
   }
-  base::Buffer buffer_cpu(32 * 32 * sizeof(int), nullptr, array);
+  base::Buffer buffer_cpu(32 * 32 * 32, nullptr, array);
   t1_cu.get_buffer().get()->copy_from(buffer_cpu);
   t1_cu.to_cpu();
 
