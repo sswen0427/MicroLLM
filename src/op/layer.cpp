@@ -38,6 +38,17 @@ Layer::Layer(base::DeviceType device_type, LayerType layer_type,
 
 base::Status Layer::forward() { return base::error::FunctionNotImplement(""); }
 
+base::Status Layer::forward(const std::vector<tensor::Tensor>& inputs,
+                            std::vector<tensor::Tensor>& outputs) {
+  for (const auto& input : inputs) {
+    inputs_.emplace_back(input);
+  }
+  for (const auto& output : outputs) {
+    outputs_.emplace_back(output);
+  }
+  return this->forward();
+}
+
 base::Status Layer::check_tensor(const tensor::Tensor& tensor,
                                  base::DeviceType device_type,
                                  base::DataType data_type) const {
@@ -243,65 +254,6 @@ int32_t LayerParam::get_scale_num() const {
 void LayerParam::reset_weight_size(size_t size) { weights_.resize(size); }
 
 size_t LayerParam::weight_size() const { return weights_.size(); }
-
-base::Status Layer::forward(const tensor::Tensor& input1,
-                            const tensor::Tensor& output1) {
-  this->set_input(0, input1);
-  this->set_output(0, output1);
-  return this->forward();
-}
-
-base::Status Layer::forward(const tensor::Tensor& input1,
-                            const tensor::Tensor& input2,
-                            const tensor::Tensor& output1) {
-  this->set_input(0, input1);
-  this->set_input(1, input2);
-
-  this->set_output(0, output1);
-  return this->forward();
-}
-
-base::Status Layer::forward(const tensor::Tensor& input1,
-                            const tensor::Tensor& input2,
-                            const tensor::Tensor& input3,
-                            const tensor::Tensor& output1) {
-  this->set_input(0, input1);
-  this->set_input(1, input2);
-  this->set_input(2, input3);
-
-  this->set_output(0, output1);
-  return this->forward();
-}
-
-base::Status Layer::forward(const tensor::Tensor& input1,
-                            const tensor::Tensor& input2,
-                            const tensor::Tensor& input3,
-                            const tensor::Tensor& input4,
-                            const tensor::Tensor& output1) {
-  this->set_input(0, input1);
-  this->set_input(1, input2);
-  this->set_input(2, input3);
-  this->set_input(3, input4);
-
-  this->set_output(0, output1);
-  return this->forward();
-}
-
-base::Status Layer::forward(const tensor::Tensor& input1,
-                            const tensor::Tensor& input2,
-                            const tensor::Tensor& input3,
-                            const tensor::Tensor& input4,
-                            const tensor::Tensor& input5,
-                            const tensor::Tensor& output1) {
-  this->set_input(0, input1);
-  this->set_input(1, input2);
-  this->set_input(2, input3);
-  this->set_input(3, input4);
-  this->set_input(4, input5);
-
-  this->set_output(0, output1);
-  return this->forward();
-}
 
 tensor::Tensor& LayerParam::get_weight(int32_t idx) {
   CHECK_GE(idx, 0);
