@@ -21,7 +21,7 @@ int32_t generate(const model::LLama2Model& model, const std::string& sentence,
   std::vector<int32_t> words;
   // Step3: Generate the sentence.
   while (pos < total_steps) {
-    pos_tensor.index<int32_t>(0) = pos;
+    pos_tensor.at<int32_t>(0) = pos;
     if (pos < prompt_len - 1) {
       tensor::Tensor input =
           model.fill_input(pos_tensor, prompt_embedding, is_prompt);
