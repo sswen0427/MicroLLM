@@ -6,7 +6,7 @@
 #include "base/base.h"
 #include "base/buffer.h"
 
-TEST(test_tensor, to_cpu) {
+TEST(TensorTest, TOCPU) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
   tensor::Tensor t1_cu = tensor::Tensor::allocate(
@@ -131,23 +131,3 @@ TEST(test_tensor, to_cpu) {
 //   ASSERT_EQ(t1.is_empty(), true);
 // }
 //
-// TEST(test_tensor, assign1) {
-//   using namespace base;
-//   auto alloc_cpu = CPUDeviceAllocatorFactory::get_instance();
-//   tensor::Tensor t1_cpu(DataType::kDataTypeFp32, 32, 32, true, alloc_cpu);
-//   ASSERT_EQ(t1_cpu.is_empty(), false);
-//
-//   int32_t size = 32 * 32;
-//   float* ptr = new float[size];
-//   for (int i = 0; i < size; ++i) {
-//     ptr[i] = float(i);
-//   }
-//   std::shared_ptr<Buffer> buffer =
-//       std::make_shared<Buffer>(size * sizeof(float), nullptr, ptr, true);
-//   buffer->set_device_type(DeviceType::kDeviceCPU);
-//
-//   ASSERT_EQ(t1_cpu.assign(buffer), true);
-//   ASSERT_EQ(t1_cpu.is_empty(), false);
-//   ASSERT_NE(t1_cpu.ptr<float>(), nullptr);
-//   delete[] ptr;
-// }
