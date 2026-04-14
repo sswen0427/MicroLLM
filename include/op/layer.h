@@ -135,14 +135,6 @@ class LayerParam : public Layer {
   explicit LayerParam(base::DeviceType device_type, LayerType layer_type,
                       bool is_quant_layer = false, std::string layer_name = "");
 
-  size_t weight_size() const;
-
-  void reset_weight_size(size_t size);
-
-  tensor::Tensor& get_weight(int32_t idx);
-
-  const tensor::Tensor& get_weight(int32_t idx) const;
-
   void to_cuda() override;
 
   base::Status set_weight(int32_t idx, const tensor::Tensor& weight) override;
@@ -151,11 +143,19 @@ class LayerParam : public Layer {
       int32_t idx, const std::vector<int32_t>& dims, const void* weight_ptr,
       base::DeviceType device_type = base::DeviceType::kDeviceUnknown) override;
 
+  size_t weight_size() const;
+
+  const tensor::Tensor& get_weight(int32_t idx) const;
+
+  int32_t get_scale_num() const;
+
+  void reset_weight_size(size_t size);
+
+  tensor::Tensor& get_weight(int32_t idx);
+
   void set_scales(const tensor::Tensor& scales);
 
   void set_group_size(int32_t group_size);
-
-  int32_t get_scale_num() const;
 
  protected:
   int32_t group_size_ = 0;

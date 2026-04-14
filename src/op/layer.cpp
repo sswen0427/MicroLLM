@@ -1,5 +1,6 @@
-
 #include "layer.h"
+
+#include <numeric>
 
 #include "base/base.h"
 #include "glog/logging.h"
@@ -107,10 +108,9 @@ base::Status Layer::check_tensor(const tensor::Tensor& tensor,
   return base::error::Success();
 }
 
-base::Status Layer::check_tensor_with_dim(const tensor::Tensor& tensor,
-                                          base::DeviceType device_type,
-                                          base::DataType data_type, ...) const {
-  std::va_list args;
+base::Status Layer::check_tensor_with_dim(
+    const tensor::Tensor& tensor, base::DeviceType device_type,
+    base::DataType data_type, std::initializer_list<int32_t> dims) const {
   if (tensor.is_empty()) {
     return base::error::InvalidArgument("The tensor parameter is empty.");
   }
@@ -120,17 +120,22 @@ base::Status Layer::check_tensor_with_dim(const tensor::Tensor& tensor,
   if (tensor.data_type() != data_type) {
     return base::error::InvalidArgument("The tensor has a wrong data type.");
   }
-
-  va_start(args, data_type);
-  int32_t dims = tensor.dims_size();
-  for (int32_t i = 0; i < dims; ++i) {
-    int32_t dim = va_arg(args, int32_t);
-    if (dim != tensor.get_dim(i)) {
-      return base::error::InvalidArgument("The tensor has a wrong dim in dim" +
-                                          std::to_string(i));
-    }
+  if (tensor.dims_size() != static_cast<int32_t>(dims.size())) {
+    return base::error::InvalidArgument(
+        "The tensor dimension count mismatch. Expected: " +
+        std::to_string(dims.size()) +
+        ", Got: " + std::to_string(tensor.dims_size()));
   }
-  va_end(args);
+  int32_t i = 0;
+  for (int32_t expected_dim : dims) {
+    if (tensor.get_dim(i) != expected_dim) {
+      return base::error::InvalidArgument(
+          "The tensor has a wrong dim at index " + std::to_string(i) +
+          ". Expected: " + std::to_string(expected_dim) +
+          ", Got: " + std::to_string(tensor.get_dim(i)));
+    }
+    ++i;
+  }
   return base::error::Success();
 }
 
@@ -151,23 +156,34 @@ void Layer::to_cuda() {
   }
 }
 
-void Layer::set_cuda_config(std::shared_ptr<kernel::CudaConfig> config) {
+void Layer::set_cuda_config(std::shared_ptr<base::CudaConfig> config) {
   if (!config) {
     return;
   }
   this->cuda_config_ = config;
 }
 
-std::shared_ptr<kernel::CudaConfig> Layer::cuda_config() const {
+std::shared_ptr<base::CudaConfig> Layer::cuda_config() const {
   return cuda_config_;
 }
 }  // namespace op
 
+// LayerParam
 namespace op {
 LayerParam::LayerParam(base::DeviceType device_type, LayerType layer_type,
                        bool is_quant_layer, std::string layer_name)
     : Layer(device_type, layer_type, std::move(layer_name)),
       is_quant_layer_(is_quant_layer) {}
+
+void LayerParam::to_cuda() {
+  Layer::to_cuda();
+  for (auto& weight : weights_) {
+    weight.to_cuda(cuda_config_ ? cuda_config_->stream : nullptr);
+  }
+  if (!scales_.is_empty()) {
+    scales_.to_cuda(cuda_config_ ? cuda_config_->stream : nullptr);
+  }
+}
 
 base::Status LayerParam::set_weight(int32_t idx, const tensor::Tensor& weight) {
   CHECK_GE(idx, 0);
@@ -178,22 +194,6 @@ base::Status LayerParam::set_weight(int32_t idx, const tensor::Tensor& weight) {
   }
   weights_.at(idx) = weight;
   return base::error::Success();
-}
-
-const tensor::Tensor& LayerParam::get_weight(int32_t idx) const {
-  CHECK_GE(idx, 0);
-  CHECK_LT(idx, weights_.size());
-  return weights_.at(idx);
-}
-
-void LayerParam::to_cuda() {
-  Layer::to_cuda();
-  for (auto& weight : weights_) {
-    weight.to_cuda(cuda_config_ ? cuda_config_->stream : nullptr);
-  }
-  if (!scales_.is_empty()) {
-    scales_.to_cuda(cuda_config_ ? cuda_config_->stream : nullptr);
-  }
 }
 
 base::Status LayerParam::set_weight(int32_t idx,
@@ -207,43 +207,42 @@ base::Status LayerParam::set_weight(int32_t idx,
   size_t size = std::accumulate(dims.begin(), dims.end(), sizeof(float),
                                 std::multiplies<>());
   std::shared_ptr<base::Buffer> buffer = std::make_shared<base::Buffer>(
-      size, nullptr, const_cast<void*>(weight_ptr), true);
+      size, nullptr, const_cast<void*>(weight_ptr));
   if (device_type != base::DeviceType::kDeviceUnknown) {
     buffer->set_device_type(device_type);
   }
 
   if (!is_quant_layer_) {
-    tensor::Tensor weight(base::DataType::kDataTypeFp32, dims);
+    tensor::Tensor weight = tensor::Tensor::from_external(
+        base::DataType::kDataTypeFp32, dims, buffer.get());
     weight.set_device_type(device_type);
-    CHECK(weight.assign(buffer));
     weights_.at(idx) = weight;
   } else {
     // is quant layer
-    tensor::Tensor weight(base::DataType::kDataTypeInt8, dims);
+    tensor::Tensor weight = tensor::Tensor::from_external(
+        base::DataType::kDataTypeInt8, dims, buffer.get());
     weight.set_device_type(device_type);
-    CHECK(weight.assign(buffer));
     weights_.at(idx) = weight;
 
     const int32_t weight_size = static_cast<int32_t>(weight.size());
     CHECK(weight_size % group_size_ == 0);
 
     int32_t scale_nums = weight_size / group_size_;
-    scales_ = tensor::Tensor{
-        base::DataType::kDataTypeFp32, scale_nums, false, nullptr,
-        reinterpret_cast<float*>((int8_t*)weight_ptr + weight_size)};
+    scales_ = tensor::Tensor::from_external(base::DataType::kDataTypeFp32,
+                                            {scale_nums},
+                                            (int8_t*)weight_ptr + weight_size);
     scales_.set_device_type(device_type);
   }
 
   return base::error::Success();
 }
 
-void LayerParam::set_scales(const tensor::Tensor& scales) {
-  CHECK(!scales.is_empty());
-  this->scales_ = scales;
-}
+size_t LayerParam::weight_size() const { return weights_.size(); }
 
-void LayerParam::set_group_size(int32_t group_size) {
-  this->group_size_ = group_size;
+const tensor::Tensor& LayerParam::get_weight(int32_t idx) const {
+  CHECK_GE(idx, 0);
+  CHECK_LT(idx, weights_.size());
+  return weights_.at(idx);
 }
 
 int32_t LayerParam::get_scale_num() const {
@@ -253,12 +252,19 @@ int32_t LayerParam::get_scale_num() const {
 
 void LayerParam::reset_weight_size(size_t size) { weights_.resize(size); }
 
-size_t LayerParam::weight_size() const { return weights_.size(); }
-
 tensor::Tensor& LayerParam::get_weight(int32_t idx) {
   CHECK_GE(idx, 0);
   CHECK_LT(idx, weights_.size());
   return weights_.at(idx);
+}
+
+void LayerParam::set_scales(const tensor::Tensor& scales) {
+  CHECK(!scales.is_empty());
+  this->scales_ = scales;
+}
+
+void LayerParam::set_group_size(int32_t group_size) {
+  this->group_size_ = group_size;
 }
 
 }  // namespace op
