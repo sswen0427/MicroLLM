@@ -26,6 +26,8 @@ class BaseLayer {
   explicit BaseLayer(base::DeviceType device_type, LayerType layer_type,
                      base::DataType data_type, std::string layer_name = "");
 
+  virtual ~BaseLayer() = default;
+
   base::DataType data_type() const;
 
   LayerType layer_type() const;
@@ -34,30 +36,8 @@ class BaseLayer {
 
   virtual base::Status forward() = 0;
 
-  virtual base::Status forward(const tensor::Tensor& input1,
-                               const tensor::Tensor& output1) = 0;
-
-  virtual base::Status forward(const tensor::Tensor& input1,
-                               const tensor::Tensor& input2,
-                               const tensor::Tensor& output1) = 0;
-
-  virtual base::Status forward(const tensor::Tensor& input1,
-                               const tensor::Tensor& input2,
-                               const tensor::Tensor& input3,
-                               const tensor::Tensor& output1) = 0;
-
-  virtual base::Status forward(const tensor::Tensor& input1,
-                               const tensor::Tensor& input2,
-                               const tensor::Tensor& input3,
-                               const tensor::Tensor& input4,
-                               const tensor::Tensor& output1) = 0;
-
-  virtual base::Status forward(const tensor::Tensor& input1,
-                               const tensor::Tensor& input2,
-                               const tensor::Tensor& input3,
-                               const tensor::Tensor& input4,
-                               const tensor::Tensor& input5,
-                               const tensor::Tensor& output1) = 0;
+  virtual base::Status forward(const std::vector<tensor::Tensor>& inputs,
+                               std::vector<tensor::Tensor>& outputs) = 0;
 
   virtual void set_input(int32_t idx, const tensor::Tensor& input) = 0;
 
@@ -85,7 +65,7 @@ class BaseLayer {
 
   const std::string& get_layer_name() const;
 
-  void set_layer_name(const std::string& layer_name);
+  void set_layer_name(std::string layer_name);
 
   base::DeviceType device_type() const;
 
@@ -111,36 +91,15 @@ class Layer : public BaseLayer {
 
   base::Status check_tensor_with_dim(const tensor::Tensor& tensor,
                                      base::DeviceType device_type,
-                                     base::DataType data_type, ...) const;
+                                     base::DataType data_type,
+                                     std::initializer_list<int32_t> dims) const;
 
   base::Status check() const override;
 
   base::Status forward() override;
 
-  base::Status forward(const tensor::Tensor& input1,
-                       const tensor::Tensor& output1) override;
-
-  base::Status forward(const tensor::Tensor& input1,
-                       const tensor::Tensor& input2,
-                       const tensor::Tensor& output1) override;
-
-  base::Status forward(const tensor::Tensor& input1,
-                       const tensor::Tensor& input2,
-                       const tensor::Tensor& input3,
-                       const tensor::Tensor& output1) override;
-
-  base::Status forward(const tensor::Tensor& input1,
-                       const tensor::Tensor& input2,
-                       const tensor::Tensor& input3,
-                       const tensor::Tensor& input4,
-                       const tensor::Tensor& output1) override;
-
-  base::Status forward(const tensor::Tensor& input1,
-                       const tensor::Tensor& input2,
-                       const tensor::Tensor& input3,
-                       const tensor::Tensor& input4,
-                       const tensor::Tensor& input5,
-                       const tensor::Tensor& output1) override;
+  base::Status forward(const std::vector<tensor::Tensor>& inputs,
+                       std::vector<tensor::Tensor>& outputs) override;
 
   void set_input(int32_t idx, const tensor::Tensor& input) override;
 
