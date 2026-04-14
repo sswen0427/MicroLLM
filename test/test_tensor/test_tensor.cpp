@@ -8,7 +8,6 @@
 
 TEST(TensorTest, TOCPU) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
-  auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
   tensor::Tensor t1_cu = tensor::Tensor::allocate(
       base::DataType::kDataTypeInt32, {32, 32}, alloc_cu);
   CHECK(!t1_cu.is_empty());
@@ -26,6 +25,28 @@ TEST(TensorTest, TOCPU) {
   int* cpu_ptr = t1_cu.ptr<int>();
   for (int i = 0; i < 32 * 32; ++i) {
     CHECK_EQ(*(cpu_ptr + i), i);
+  }
+}
+
+TEST(TensorTest, TOCUDA) {
+  auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
+  tensor::Tensor t1_cpu = tensor::Tensor::allocate(
+      base::DataType::kDataTypeInt32, {32, 32}, alloc_cpu);
+  CHECK(!t1_cpu.is_empty());
+
+  int array[32 * 32];
+  for (int i = 0; i < 32 * 32; i++) {
+    array[i] = i;
+  }
+  base::Buffer buffer_cpu(32 * 32 * 4, nullptr, array);
+  t1_cpu.get_buffer().get()->copy_from(buffer_cpu);
+  t1_cpu.to_cuda();
+
+  int expected_array[32 * 32];
+  cudaMemcpy(expected_array, t1_cpu.ptr<int>(), 32 * 32 * 4,
+             cudaMemcpyDeviceToHost);
+  for (int i = 0; i < 32 * 32; ++i) {
+    CHECK_EQ(expected_array[i], i);
   }
 }
 
@@ -80,54 +101,5 @@ TEST(TensorTest, TOCPU) {
 //     ASSERT_EQ(p2[i], 1.f);
 //   }
 //   delete[] p2;
-// }
-//
-// TEST(test_tensor, to_cu) {
-//   using namespace base;
-//   auto alloc_cpu = CPUDeviceAllocatorFactory::get_instance();
-//   tensor::Tensor t1_cpu(DataType::kDataTypeFp32, 32, 32, true, alloc_cpu);
-//   ASSERT_EQ(t1_cpu.is_empty(), false);
-//   float* p1 = t1_cpu.ptr<float>();
-//   for (int i = 0; i < 32 * 32; ++i) {
-//     *(p1 + i) = 1.f;
-//   }
-//
-//   t1_cpu.to_cuda();
-//   float* p2 = new float[32 * 32];
-//   cudaMemcpy(p2, t1_cpu.ptr<float>(), sizeof(float) * 32 * 32,
-//   cudaMemcpyDeviceToHost); for (int i = 0; i < 32 * 32; ++i) {
-//     ASSERT_EQ(*(p2 + i), 1.f);
-//   }
-//   delete[] p2;
-// }
-//
-// TEST(test_tensor, init1) {
-//   using namespace base;
-//   auto alloc_cu = base::CPUDeviceAllocatorFactory::get_instance();
-//
-//   int32_t size = 32 * 151;
-//
-//   tensor::Tensor t1(base::DataType::kDataTypeFp32, size, true, alloc_cu);
-//   ASSERT_EQ(t1.is_empty(), false);
-// }
-//
-// TEST(test_tensor, init3) {
-//   using namespace base;
-//   float* ptr = new float[32];
-//   ptr[0] = 31;
-//   tensor::Tensor t1(base::DataType::kDataTypeFp32, 32, false, nullptr, ptr);
-//   ASSERT_EQ(t1.is_empty(), false);
-//   ASSERT_EQ(t1.ptr<float>(), ptr);
-//   ASSERT_EQ(*t1.ptr<float>(), 31);
-// }
-//
-// TEST(test_tensor, init2) {
-//   using namespace base;
-//   auto alloc_cu = base::CPUDeviceAllocatorFactory::get_instance();
-//
-//   int32_t size = 32 * 151;
-//
-//   tensor::Tensor t1(base::DataType::kDataTypeFp32, size, false, alloc_cu);
-//   ASSERT_EQ(t1.is_empty(), true);
 // }
 //
