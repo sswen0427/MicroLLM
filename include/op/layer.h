@@ -28,8 +28,6 @@ class BaseLayer {
 
   virtual ~BaseLayer() = default;
 
-  virtual base::Status init() = 0;
-
   virtual base::Status forward() = 0;
 
   virtual base::Status forward(const std::vector<tensor::Tensor>& inputs,
@@ -84,19 +82,6 @@ class Layer : public BaseLayer {
   explicit Layer(base::DeviceType device_type, LayerType layer_type,
                  std::string layer_name = "");
 
-  base::Status init() override;
-
-  base::Status check_tensor(const tensor::Tensor& tensor,
-                            base::DeviceType device_type,
-                            base::DataType data_type) const;
-
-  base::Status check_tensor_with_dim(const tensor::Tensor& tensor,
-                                     base::DeviceType device_type,
-                                     base::DataType data_type,
-                                     std::initializer_list<int32_t> dims) const;
-
-  base::Status check() const override;
-
   base::Status forward() override;
 
   base::Status forward(const std::vector<tensor::Tensor>& inputs,
@@ -106,17 +91,28 @@ class Layer : public BaseLayer {
 
   void set_output(int32_t idx, const tensor::Tensor& output) override;
 
-  const tensor::Tensor& get_input(int32_t idx) const override;
+  size_t input_size() const override;
 
-  const tensor::Tensor& get_output(int32_t idx) const override;
+  size_t output_size() const override;
+
+  base::Status check() const override;
 
   tensor::Tensor& get_input(int32_t idx) override;
 
   tensor::Tensor& get_output(int32_t idx) override;
 
-  size_t input_size() const override;
+  const tensor::Tensor& get_input(int32_t idx) const override;
 
-  size_t output_size() const override;
+  const tensor::Tensor& get_output(int32_t idx) const override;
+
+  base::Status check_tensor(const tensor::Tensor& tensor,
+                            base::DeviceType device_type,
+                            base::DataType data_type) const;
+
+  base::Status check_tensor_with_dim(const tensor::Tensor& tensor,
+                                     base::DeviceType device_type,
+                                     base::DataType data_type,
+                                     std::initializer_list<int32_t> dims) const;
 
   void reset_input_size(size_t size);
 
