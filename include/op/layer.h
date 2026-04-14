@@ -6,7 +6,7 @@
 #include "tensor/tensor.h"
 
 namespace op {
-class Layer;
+
 enum class LayerType : uint8_t {
   kLayerUnknown = 0,
   kLayerLinear = 1,
