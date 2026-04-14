@@ -36,8 +36,6 @@ Layer::Layer(base::DeviceType device_type, LayerType layer_type,
     : BaseLayer(device_type, layer_type, base::DataType::kDataTypeFp32,
                 std::move(layer_name)) {}
 
-base::Status Layer::init() { return base::error::Success(); }
-
 base::Status Layer::forward() { return base::error::FunctionNotImplement(""); }
 
 base::Status Layer::check_tensor(const tensor::Tensor& tensor,
