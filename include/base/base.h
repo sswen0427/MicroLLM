@@ -29,6 +29,16 @@ enum StatusCode : uint8_t {
   kInvalidArgument = 7,
 };
 
+struct CudaConfig {
+  cudaStream_t stream;
+
+  ~CudaConfig() {
+    if (stream != nullptr) {
+      cudaStreamDestroy(stream);
+    }
+  }
+};
+
 class Status {
  public:
   Status(int code = StatusCode::kSuccess, std::string err_message = "");
