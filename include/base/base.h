@@ -5,6 +5,29 @@
 #include <glog/logging.h>
 
 #include <string>
+namespace model {
+enum class ModelBufferType {
+  kInputTokens = 0,
+  kInputEmbeddings = 1,
+  kOutputRMSNorm = 2,
+  kKeyCache = 3,
+  kValueCache = 4,
+  kQuery = 5,
+  kInputPos = 6,
+  kScoreStorage = 7,
+  kOutputMHA = 8,
+  kAttnOutput = 9,
+  kW1Output = 10,
+  kW2Output = 11,
+  kW3Output = 12,
+  kFFNRMSNorm = 13,
+  kForwardOutput = 15,
+  kForwardOutputCPU = 16,
+
+  kSinCache = 17,
+  kCosCache = 18,
+};
+}
 
 namespace base {
 enum class DeviceType : uint8_t {
@@ -27,16 +50,6 @@ enum StatusCode : uint8_t {
   kInternalError = 5,
   kKeyValueHasExist = 6,
   kInvalidArgument = 7,
-};
-
-struct CudaConfig {
-  cudaStream_t stream;
-
-  ~CudaConfig() {
-    if (stream != nullptr) {
-      cudaStreamDestroy(stream);
-    }
-  }
 };
 
 class Status {
@@ -86,6 +99,32 @@ inline std::size_t DataTypeSize(DataType type) {
     LOG(FATAL) << "Unknown data type";
   }
 }
+
+enum class ModelType : uint8_t {
+  kModelTypeUnknown = 0,
+  kModelTypeLLama2 = 1,
+};
+
+namespace error {
+
+Status Success(const std::string& err_msg = "");
+
+Status FunctionNotImplement(const std::string& err_msg = "");
+
+Status PathNotValid(const std::string& err_msg = "");
+
+Status ModelParseError(const std::string& err_msg = "");
+
+Status InternalError(const std::string& err_msg = "");
+
+Status KeyHasExits(const std::string& err_msg = "");
+
+Status InvalidArgument(const std::string& err_msg = "");
+
+}  // namespace error
+
+std::ostream& operator<<(std::ostream& os, const Status& x);
+
 }  // namespace base
 
 #endif
