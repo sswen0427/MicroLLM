@@ -28,10 +28,6 @@ class BaseLayer {
 
   virtual ~BaseLayer() = default;
 
-  base::DataType data_type() const;
-
-  LayerType layer_type() const;
-
   virtual base::Status init() = 0;
 
   virtual base::Status forward() = 0;
@@ -57,15 +53,20 @@ class BaseLayer {
 
   virtual const tensor::Tensor& get_output(int32_t idx) const = 0;
 
-  virtual base::Status set_weight(int32_t idx, const tensor::Tensor& weight);
+  virtual base::Status set_weight(int32_t idx,
+                                  const tensor::Tensor& weight) = 0;
 
   virtual base::Status set_weight(
       int32_t idx, const std::vector<int32_t>& dims, const void* weight_ptr,
-      base::DeviceType device_type = base::DeviceType::kDeviceUnknown);
+      base::DeviceType device_type = base::DeviceType::kDeviceUnknown) = 0;
+
+  base::DataType data_type() const;
+
+  LayerType layer_type() const;
 
   const std::string& get_layer_name() const;
 
-  void set_layer_name(std::string layer_name);
+  void set_layer_name(const std::string& layer_name);
 
   base::DeviceType device_type() const;
 

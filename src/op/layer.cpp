@@ -5,6 +5,7 @@
 #include "glog/logging.h"
 #include "tensor/tensor.h"
 
+// BaseLayer
 namespace op {
 BaseLayer::BaseLayer(base::DeviceType device_type, LayerType layer_type,
                      base::DataType data_type, std::string layer_name)
@@ -17,17 +18,6 @@ base::DataType BaseLayer::data_type() const { return data_type_; }
 
 LayerType BaseLayer::layer_type() const { return layer_type_; }
 
-base::Status BaseLayer::set_weight(int32_t idx, const tensor::Tensor& weight) {
-  return base::error::FunctionNotImplement();
-}
-
-base::Status BaseLayer::set_weight(int32_t idx,
-                                   const std::vector<int32_t>& dims,
-                                   const void* weight_ptr,
-                                   base::DeviceType device_type) {
-  return base::error::FunctionNotImplement();
-}
-
 const std::string& BaseLayer::get_layer_name() const { return layer_name_; }
 
 void BaseLayer::set_layer_name(const std::string& layer_name) {
@@ -38,7 +28,9 @@ base::DeviceType BaseLayer::device_type() const { return device_type_; }
 void BaseLayer::set_device_type(base::DeviceType device_type) {
   device_type_ = device_type;
 }
+}  // namespace op
 
+namespace op {
 Layer::Layer(base::DeviceType device_type, LayerType layer_type,
              std::string layer_name)
     : BaseLayer(device_type, layer_type, base::DataType::kDataTypeFp32,
