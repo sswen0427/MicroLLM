@@ -1,14 +1,14 @@
 #pragma once
 
 #include <cstdint>
-#include <vector>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 struct range_nfd {
-    uint32_t first;
-    uint32_t last;
-    uint32_t nfd;
+  uint32_t first;
+  uint32_t last;
+  uint32_t nfd;
 };
 
 static const uint32_t MAX_CODEPOINTS = 0x110000;

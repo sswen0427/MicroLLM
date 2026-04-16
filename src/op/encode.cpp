@@ -1,11 +1,13 @@
 #include "op/encode.h"
+
 #include <glog/logging.h>
+
 #include "base/unicode.h"
 namespace op {
 
 // EncodeLayer::EncodeLayer(
-//     base::DeviceType device_type,std::string token_model_path, bool has_bos, bool has_eos,
-//     : Layer(device_type, LayerType::kLayerEncode, "Encode"),
+//     base::DeviceType device_type,std::string token_model_path, bool has_bos,
+//     bool has_eos, : Layer(device_type, LayerType::kLayerEncode, "Encode"),
 //       has_bos_(has_bos),
 //       has_eos_(has_eos),
 //       spe(std::move(sentence_piece_processor)) {}
@@ -16,19 +18,21 @@ std::string SpeEncodeLayer::decode(int32_t token_id) const {
   return this->spe->DecodeIds(token_ids);
 }
 
-std::string SpeEncodeLayer::decode(const std::vector<int32_t>& token_ids) const {
+std::string SpeEncodeLayer::decode(
+    const std::vector<int32_t>& token_ids) const {
   CHECK(spe != nullptr);
   return this->spe->DecodeIds(token_ids);
 }
 
-SpeEncodeLayer::SpeEncodeLayer(std::string token_model_path, bool has_bos, bool has_eos)
+SpeEncodeLayer::SpeEncodeLayer(std::string token_model_path, bool has_bos,
+                               bool has_eos)
     : EncodeLayerBase(std::move(token_model_path), has_bos, has_eos) {
   using namespace sentencepiece::util;
   spe = std::make_unique<sentencepiece::SentencePieceProcessor>();
   auto rc = spe->Load(token_model_path_);
   if (rc.code() != StatusCode::kOk) {
-    LOG(FATAL)
-        << "The token model path is not valid, please check the path and type of token model.";
+    LOG(FATAL) << "The token model path is not valid, please check the path "
+                  "and type of token model.";
   }
 }
 
@@ -59,18 +63,19 @@ int32_t SpeEncodeLayer::vocab_size() const {
 static const std::string PAT_STR =
     R"((?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?:$|[^\S])|\s+)";
 
-BpeEncodeLayer::BpeEncodeLayer(std::string token_model_path, bool has_bos, bool has_eos)
+BpeEncodeLayer::BpeEncodeLayer(std::string token_model_path, bool has_bos,
+                               bool has_eos)
     : EncodeLayerBase(std::move(token_model_path), has_bos, has_eos) {
   using json = nlohmann::json;
   std::ifstream f(token_model_path_);
-  CHECK(f.is_open())
-      << "The token model path is not valid, please check the path and type of token model.";
+  CHECK(f.is_open()) << "The token model path is not valid, please check the "
+                        "path and type of token model.";
   json data;
   try {
     data = json::parse(f);
   } catch (json::parse_error&) {
-    LOG(FATAL)
-        << "The token model path is not valid, please check the path and type of token model.";
+    LOG(FATAL) << "The token model path is not valid, please check the path "
+                  "and type of token model.";
   }
 
   const auto& datas = data["added_tokens"];
@@ -100,7 +105,8 @@ BpeEncodeLayer::BpeEncodeLayer(std::string token_model_path, bool has_bos, bool 
   stop_token2_ = special_tokens["<|eot_id|>"];
 
   num_token_ = encoder.size() + special_tokens.size();
-  tiktoken_ = std::make_unique<tiktoken::tiktoken>(encoder, special_tokens, PAT_STR);
+  tiktoken_ =
+      std::make_unique<tiktoken::tiktoken>(encoder, special_tokens, PAT_STR);
 }
 
 std::vector<int32_t> BpeEncodeLayer::encode(const std::string& sentence) const {
@@ -121,7 +127,8 @@ std::vector<int32_t> BpeEncodeLayer::encode(const std::string& sentence) const {
 
 std::string BpeEncodeLayer::decode(int32_t token_id) const { return ""; }
 
-std::string BpeEncodeLayer::decode(const std::vector<int32_t>& token_ids) const {
+std::string BpeEncodeLayer::decode(
+    const std::vector<int32_t>& token_ids) const {
   CHECK(this->tiktoken_ != nullptr);
   auto s = tiktoken_->decode(token_ids);
   std::map<std::string, std::string> reverse_replacements;
@@ -143,7 +150,8 @@ int32_t BpeEncodeLayer::vocab_size() const {
   return num_token_;
 }
 
-QwenEncodeLayer::QwenEncodeLayer(std::string token_model_path, bool has_bos, bool has_eos)
+QwenEncodeLayer::QwenEncodeLayer(std::string token_model_path, bool has_bos,
+                                 bool has_eos)
     : BpeEncodeLayer(std::move(token_model_path), has_bos, has_eos) {
   using json = nlohmann::json;
   std::ifstream f(token_model_path_);
@@ -176,7 +184,8 @@ QwenEncodeLayer::QwenEncodeLayer(std::string token_model_path, bool has_bos, boo
   stop_token2_ = special_tokens["<|endoftext|>"];
 
   num_token_ = encoder.size() + special_tokens.size();
-  tiktoken_ = std::make_unique<tiktoken::tiktoken>(encoder, special_tokens, PAT_STR);
+  tiktoken_ =
+      std::make_unique<tiktoken::tiktoken>(encoder, special_tokens, PAT_STR);
 }
 
 #endif
