@@ -5,7 +5,7 @@
 #include <vector>
 
 // TODO: prefix all symbols with "llama_"
-
+namespace base {
 struct codepoint_flags {
   enum {
     UNDEFINED = 0x0001,
@@ -67,3 +67,4 @@ uint32_t unicode_tolower(uint32_t cp);
 
 std::vector<std::string> unicode_regex_split(
     const std::string& text, const std::vector<std::string>& regex_exprs);
+}  // namespace base
