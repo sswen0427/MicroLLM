@@ -1,5 +1,4 @@
-#ifndef MICROLLM_INCLUDE_MODEL_LLAMA2_H
-#define MICROLLM_INCLUDE_MODEL_LLAMA2_H
+#pragma once
 
 #include "base/base.h"
 #include "model/model.h"
@@ -39,5 +38,3 @@ class LLama2Model : public Model {
 };
 
 }  // namespace model
-
-#endif  // MICROLLM_INCLUDE_MODEL_LLAMA2_H

@@ -1,5 +1,5 @@
-#ifndef MICROLLM_INCLUDE_OP_LAYER_H
-#define MICROLLM_INCLUDE_OP_LAYER_H
+#pragma once
+
 #include <string>
 
 #include "base/base.h"
@@ -164,5 +164,3 @@ class LayerParam : public Layer {
   std::vector<tensor::Tensor> weights_;
 };
 }  // namespace op
-
-#endif  // MICROLLM_INCLUDE_OP_LAYER_H
