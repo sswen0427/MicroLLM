@@ -1,5 +1,4 @@
-#ifndef MICROLLM_INCLUDE_BASE_ALLOC_H
-#define MICROLLM_INCLUDE_BASE_ALLOC_H
+#pragma once
 
 #include <driver_types.h>
 
@@ -101,5 +100,3 @@ class CUDADeviceAllocatorFactory {
 };
 
 }  // namespace base
-
-#endif

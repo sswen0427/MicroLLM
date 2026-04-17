@@ -1,5 +1,4 @@
-#ifndef MICROLLM_INCLUDE_BASE_BASE_H
-#define MICROLLM_INCLUDE_BASE_BASE_H
+#pragma once
 
 #include <cuda_runtime_api.h>
 #include <glog/logging.h>
@@ -113,5 +112,3 @@ Status InvalidArgument(const std::string& err_msg = "");
 std::ostream& operator<<(std::ostream& os, const Status& x);
 
 }  // namespace base
-
-#endif

@@ -1,5 +1,5 @@
-#ifndef MICROLLM_INCLUDE_MODEL_CONFIG_H
-#define MICROLLM_INCLUDE_MODEL_CONFIG_H
+#pragma once
+
 #include <cstdint>
 
 namespace model {
@@ -28,5 +28,3 @@ struct TransformerConfig {
   bool is_shared_weight_ = false;
 };
 }  // namespace model
-
-#endif  // MICROLLM_INCLUDE_MODEL_CONFIG_H
