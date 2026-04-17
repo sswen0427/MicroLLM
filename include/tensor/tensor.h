@@ -1,5 +1,5 @@
-#ifndef MICROLLM_INCLUDE_TENSOR_TENSOR_H
-#define MICROLLM_INCLUDE_TENSOR_TENSOR_H
+#pragma once
+
 #include <glog/logging.h>
 
 #include <memory>
@@ -142,5 +142,3 @@ const T& Tensor::at(int64_t offset) const {
 }
 
 }  // namespace tensor
-
-#endif  // MICROLLM_INCLUDE_TENSOR_TENSOR_H

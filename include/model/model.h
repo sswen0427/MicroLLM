@@ -1,5 +1,5 @@
-#ifndef MICROLLM_INCLUDE_MODEL_MODEL_H
-#define MICROLLM_INCLUDE_MODEL_MODEL_H
+#pragma once
+
 #include <string>
 #include <vector>
 
@@ -64,5 +64,3 @@ class Model {
   std::string token_path_;
 };
 }  // namespace model
-
-#endif  // MICROLLM_INCLUDE_MODEL_MODEL_H

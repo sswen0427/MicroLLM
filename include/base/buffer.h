@@ -1,5 +1,5 @@
-#ifndef MICROLLM_INCLUDE_BASE_BUFFER_H
-#define MICROLLM_INCLUDE_BASE_BUFFER_H
+#pragma once
+
 #include <boost/noncopyable.hpp>
 #include <memory>
 
@@ -47,5 +47,3 @@ class Buffer : private boost::noncopyable {
   void set_device_type(DeviceType device_type);
 };
 }  // namespace base
-
-#endif
