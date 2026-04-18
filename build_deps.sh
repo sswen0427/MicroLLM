@@ -16,3 +16,4 @@ mv boost-1.90.0-debian12-x86_64-gcc12.2.0 boost
 mv glog-0.7.1-debian12-x86_64-gcc12.2.0 glog
 mv openblas-0.3.32-debian12-x86_64-gcc12.2.0 openblas
 mv unwind-1.8.3-debian12-x86_64-gcc12.2.0 unwind
+mv unordered_dense-4.8.1-debian12-x86_64-gcc12.2.0 unordered_dense
