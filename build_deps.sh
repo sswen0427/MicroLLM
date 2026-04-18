@@ -14,6 +14,7 @@ mv boost-1.90.0-debian12-x86_64-gcc12.2.0 boost
 mv gflags-2.2.2-debian12-x86_64-gcc12.2.0 gflags
 mv glog-0.7.1-debian12-x86_64-gcc12.2.0 glog
 mv gtest-1.17.0-debian12-x86_64-gcc12.2.0 gtest
+mv json-v3.12.0-debian12-x86_64-gcc12.2.0 json
 mv openblas-0.3.32-debian12-x86_64-gcc12.2.0 openblas
 mv re2-2025-11-05-debian12-x86_64-gcc12.2.0 re2
 mv sentencepiece-0.2.1-debian12-x86_64-gcc12.2.0 sentencepiece
