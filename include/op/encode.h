@@ -1,17 +1,16 @@
-#ifndef KUIPER_INCLUDE_OP_ENCODE_H_
-#define KUIPER_INCLUDE_OP_ENCODE_H_
-#include <sentencepiece_processor.h>
+#pragma once
 
-#include "layer.h"
-#if defined(LLAMA3_SUPPORT) || defined(QWEN2_SUPPORT) || defined(QWEN3_SUPPORT)
 #include <absl/strings/str_join.h>
 #include <absl/strings/str_replace.h>
 #include <absl/strings/str_split.h>
+#include <ankerl/unordered_dense.h>
+#include <sentencepiece_processor.h>
+
+#include <nlohmann/json.hpp>
 
 #include "base/tiktoken.h"
-#include "base/unordered_dense.h"
-#include "nlohmann/json.hpp"
-#endif
+#include "op/layer.h"
+
 namespace op {
 
 class EncodeLayerBase : public Layer {
@@ -91,4 +90,3 @@ class QwenEncodeLayer : public BpeEncodeLayer {
 #endif
 
 }  // namespace op
-#endif  // KUIPER_INCLUDE_OP_ENCODE_H_
