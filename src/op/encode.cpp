@@ -6,20 +6,9 @@
 #include <nlohmann/json.hpp>
 
 #include "base/unicode.h"
+
+// SpeEncodeLayer
 namespace op {
-
-std::string SpeEncodeLayer::decode(int32_t token_id) const {
-  CHECK(spe != nullptr);
-  std::vector<int32_t> token_ids{token_id};
-  return this->spe->DecodeIds(token_ids);
-}
-
-std::string SpeEncodeLayer::decode(
-    const std::vector<int32_t>& token_ids) const {
-  CHECK(spe != nullptr);
-  return this->spe->DecodeIds(token_ids);
-}
-
 SpeEncodeLayer::SpeEncodeLayer(std::string token_model_path, bool has_bos,
                                bool has_eos)
     : EncodeLayerBase(std::move(token_model_path), has_bos, has_eos) {
@@ -45,6 +34,18 @@ std::vector<int32_t> SpeEncodeLayer::encode(const std::string& sentence) const {
   return input_ids;
 }
 
+std::string SpeEncodeLayer::decode(int32_t token_id) const {
+  CHECK(spe != nullptr);
+  std::vector<int32_t> token_ids{token_id};
+  return this->spe->DecodeIds(token_ids);
+}
+
+std::string SpeEncodeLayer::decode(
+    const std::vector<int32_t>& token_ids) const {
+  CHECK(spe != nullptr);
+  return this->spe->DecodeIds(token_ids);
+}
+
 bool SpeEncodeLayer::is_sentence_ending(int32_t token_id) const {
   CHECK(this->spe != nullptr);
   return token_id == this->spe->eos_id();
@@ -54,7 +55,9 @@ int32_t SpeEncodeLayer::vocab_size() const {
   CHECK(spe != nullptr);
   return spe->GetPieceSize();
 }
+}  // namespace op
 
+namespace op {
 static const std::string PAT_STR =
     R"((?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?:$|[^\S])|\s+)";
 
