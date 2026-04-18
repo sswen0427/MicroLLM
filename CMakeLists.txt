@@ -33,6 +33,7 @@ list(APPEND CMAKE_PREFIX_PATH
         "${THIRD_PARTY_DIR}/openblas"
         "${THIRD_PARTY_DIR}/sentencepiece"
         "${THIRD_PARTY_DIR}/unwind"
+        "${THIRD_PARTY_DIR}/unordered_dense"
 )
 
 find_package(OpenBLAS REQUIRED)
@@ -44,7 +45,7 @@ find_package(GTest REQUIRED)
 find_package(sentencepiece REQUIRED)
 find_package(Unwind REQUIRED)
 find_package(CUDAToolkit REQUIRED)
-
+find_package(unordered_dense CONFIG REQUIRED)
 
 # ==============================================================================
 # Source & Header Files Collection
@@ -73,7 +74,7 @@ target_include_directories(MicroLLM PRIVATE ${ALL_HEADER_DIRS})
 # [Fix]: Add CUDA Toolkit include directories to resolve '<cuda_runtime.h> not found' errors.
 target_include_directories(MicroLLM PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
 # Link all required third-party libraries to the final executable.
-target_link_libraries(MicroLLM PRIVATE glog::glog sentencepiece::sentencepiece CUDA::cudart Boost::boost)
+target_link_libraries(MicroLLM PRIVATE glog::glog sentencepiece::sentencepiece CUDA::cudart Boost::boost unordered_dense::unordered_dense)
 
 
 enable_testing()
