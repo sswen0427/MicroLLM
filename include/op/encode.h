@@ -8,7 +8,9 @@
 #include "op/layer.h"
 
 namespace op {
-
+/**
+ * See https://zhuanlan.zhihu.com/p/664717335 for more details.
+ */
 class EncodeLayerBase : public Layer {
  public:
   explicit EncodeLayerBase(std::string token_model_path, bool has_bos,
@@ -29,7 +31,9 @@ class EncodeLayerBase : public Layer {
   virtual int32_t vocab_size() const = 0;
 
  protected:
+  // Begin Of Sentence
   bool has_bos_ = true;
+  // End Of Sentence
   bool has_eos_ = false;
   std::string token_model_path_;
 };
