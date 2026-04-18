@@ -1,6 +1,5 @@
 #include "matmul_kernel.h"
 
-
 #include "base/base.h"
 namespace kernel {
 void matmul_kernel_cpu(const tensor::Tensor& input,

@@ -1,8 +1,10 @@
 #include "emb_kernel.h"
 namespace kernel {
 
-void emb_kernel_normal(const tensor::Tensor& input, const tensor::Tensor& weight,
-                       const tensor::Tensor& output, int32_t vocab_size, void* stream) {
+void emb_kernel_normal(const tensor::Tensor& input,
+                       const tensor::Tensor& weight,
+                       const tensor::Tensor& output, int32_t vocab_size,
+                       void* stream) {
   CHECK(!input.is_empty());
   CHECK(!weight.is_empty());
   const int32_t input_num = static_cast<int32_t>(input.size());
@@ -17,12 +19,14 @@ void emb_kernel_normal(const tensor::Tensor& input, const tensor::Tensor& weight
       LOG(FATAL) << "Token index is greater than vocab size.";
     } else {
       float* dest_ptr = const_cast<float*>(output.ptr<float>(i * weight_dim));
-      float* src_ptr = const_cast<float*>(weight.ptr<float>(token * weight_dim));
+      float* src_ptr =
+          const_cast<float*>(weight.ptr<float>(token * weight_dim));
       if (weight.device_type() == base::DeviceType::kDeviceCPU) {
         allocator->memcpy(src_ptr, dest_ptr, weight_dim * sizeof(float),
                           base::MemcpyKind::kMemcpyCPU2CPU);
       } else {
-        LOG(FATAL) << "Unknown device type of weight tensor in the embedding layer.";
+        LOG(FATAL)
+            << "Unknown device type of weight tensor in the embedding layer.";
       }
     }
   }

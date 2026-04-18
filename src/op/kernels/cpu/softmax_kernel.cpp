@@ -1,4 +1,5 @@
 #include "softmax_kernel.h"
+
 #include "../kernels_interface.h"
 namespace kernel {
 void softmax_inplace_cpu(const tensor::Tensor& input, void* stream) {
