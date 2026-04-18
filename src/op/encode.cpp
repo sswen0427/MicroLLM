@@ -2,6 +2,9 @@
 
 #include <glog/logging.h>
 
+#include <fstream>
+#include <nlohmann/json.hpp>
+
 #include "base/unicode.h"
 namespace op {
 
@@ -59,7 +62,6 @@ int32_t SpeEncodeLayer::vocab_size() const {
   return spe->GetPieceSize();
 }
 
-#if defined(LLAMA3_SUPPORT) || defined(QWEN2_SUPPORT) || defined(QWEN3_SUPPORT)
 static const std::string PAT_STR =
     R"((?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?:$|[^\S])|\s+)";
 
@@ -90,14 +92,14 @@ BpeEncodeLayer::BpeEncodeLayer(std::string token_model_path, bool has_bos,
   const auto& vocabs = data["model"]["vocab"];
   const auto& vocab_items = vocabs.items();
   for (const auto& v : vocab_items) {
-    const auto cpts = unicode_cpts_from_utf8(v.key());
-    std::string key;
-    for (const auto cpt : cpts) {
-      const auto utf8 = unicode_cpt_to_utf8(cpt);
-      key += unicode_utf8_to_byte(utf8);
-    }
-    const int32_t id = v.value();
-    encoder[key] = id;
+    // const auto cpts = unicode_cpts_from_utf8(v.key());
+    // std::string key;
+    // for (const auto cpt : cpts) {
+    //   const auto utf8 = unicode_cpt_to_utf8(cpt);
+    //   key += unicode_utf8_to_byte(utf8);
+    // }
+    // const int32_t id = v.value();
+    // encoder[key] = id;
   }
   bos_id_ = special_tokens["<|begin_of_text|>"];
   eos_id_ = special_tokens["<|end_of_text|>"];
@@ -106,7 +108,7 @@ BpeEncodeLayer::BpeEncodeLayer(std::string token_model_path, bool has_bos,
 
   num_token_ = encoder.size() + special_tokens.size();
   tiktoken_ =
-      std::make_unique<tiktoken::tiktoken>(encoder, special_tokens, PAT_STR);
+      std::make_unique<base::tiktoken>(encoder, special_tokens, PAT_STR);
 }
 
 std::vector<int32_t> BpeEncodeLayer::encode(const std::string& sentence) const {
@@ -169,14 +171,14 @@ QwenEncodeLayer::QwenEncodeLayer(std::string token_model_path, bool has_bos,
   const auto& vocabs = data["model"]["vocab"];
   const auto& vocab_items = vocabs.items();
   for (const auto& v : vocab_items) {
-    const auto cpts = unicode_cpts_from_utf8(v.key());
-    std::string key;
-    for (const auto cpt : cpts) {
-      const auto utf8 = unicode_cpt_to_utf8(cpt);
-      key += unicode_utf8_to_byte(utf8);
-    }
-    const int32_t id = v.value();
-    encoder[key] = id;
+    // const auto cpts = unicode_cpts_from_utf8(v.key());
+    // std::string key;
+    // for (const auto cpt : cpts) {
+    //   const auto utf8 = unicode_cpt_to_utf8(cpt);
+    //   key += unicode_utf8_to_byte(utf8);
+    // }
+    // const int32_t id = v.value();
+    // encoder[key] = id;
   }
   bos_id_ = special_tokens["<|im_start|>"];
   eos_id_ = special_tokens["<|im_end|>"];
@@ -185,8 +187,7 @@ QwenEncodeLayer::QwenEncodeLayer(std::string token_model_path, bool has_bos,
 
   num_token_ = encoder.size() + special_tokens.size();
   tiktoken_ =
-      std::make_unique<tiktoken::tiktoken>(encoder, special_tokens, PAT_STR);
+      std::make_unique<base::tiktoken>(encoder, special_tokens, PAT_STR);
 }
 
-#endif
 }  // namespace op
