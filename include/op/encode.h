@@ -1,19 +1,16 @@
-#ifndef KUIPER_INCLUDE_OP_ENCODE_H_
-#define KUIPER_INCLUDE_OP_ENCODE_H_
-#include <sentencepiece_processor.h>
+#pragma once
 
-#include "layer.h"
-#if defined(LLAMA3_SUPPORT) || defined(QWEN2_SUPPORT) || defined(QWEN3_SUPPORT)
 #include <absl/strings/str_join.h>
 #include <absl/strings/str_replace.h>
-#include <absl/strings/str_split.h>
+#include <sentencepiece_processor.h>
 
 #include "base/tiktoken.h"
-#include "base/unordered_dense.h"
-#include "nlohmann/json.hpp"
-#endif
-namespace op {
+#include "op/layer.h"
 
+namespace op {
+/**
+ * See https://zhuanlan.zhihu.com/p/664717335 for more details.
+ */
 class EncodeLayerBase : public Layer {
  public:
   explicit EncodeLayerBase(std::string token_model_path, bool has_bos,
@@ -34,7 +31,9 @@ class EncodeLayerBase : public Layer {
   virtual int32_t vocab_size() const = 0;
 
  protected:
+  // Begin Of Sentence
   bool has_bos_ = true;
+  // End Of Sentence
   bool has_eos_ = false;
   std::string token_model_path_;
 };
@@ -58,7 +57,6 @@ class SpeEncodeLayer : public EncodeLayerBase {
   std::unique_ptr<sentencepiece::SentencePieceProcessor> spe;
 };
 
-#if defined(LLAMA3_SUPPORT) || defined(QWEN2_SUPPORT) || defined(QWEN3_SUPPORT)
 class BpeEncodeLayer : public EncodeLayerBase {
  public:
   explicit BpeEncodeLayer(std::string token_model_path, bool has_bos,
@@ -80,7 +78,7 @@ class BpeEncodeLayer : public EncodeLayerBase {
   int32_t stop_token1_ = -1;
   int32_t stop_token2_ = -1;
   int32_t num_token_ = 0;
-  std::unique_ptr<tiktoken::tiktoken> tiktoken_;
+  std::unique_ptr<base::tiktoken> tiktoken_;
 };
 
 class QwenEncodeLayer : public BpeEncodeLayer {
@@ -88,7 +86,5 @@ class QwenEncodeLayer : public BpeEncodeLayer {
   explicit QwenEncodeLayer(std::string token_model_path, bool has_bos,
                            bool has_eos);
 };
-#endif
 
 }  // namespace op
-#endif  // KUIPER_INCLUDE_OP_ENCODE_H_

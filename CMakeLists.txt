@@ -72,6 +72,16 @@ file(GLOB_RECURSE ALL_SRC_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/s
 # ==============================================================================
 # Build Target Definition
 # ==============================================================================
+set(MICRO_LLM_DEPS
+        glog::glog
+        sentencepiece::sentencepiece
+        CUDA::cudart
+        Boost::boost
+        unordered_dense::unordered_dense
+        re2::re2
+        nlohmann_json::nlohmann_json
+)
+
 # Define the final executable target 'MicroLLM' and compile it with main.cpp and all collected source files.
 add_executable(MicroLLM main.cpp ${ALL_SRC_FILES})
 # Add header search paths for the MicroLLM target.
@@ -80,7 +90,7 @@ target_include_directories(MicroLLM PRIVATE ${ALL_HEADER_DIRS})
 # [Fix]: Add CUDA Toolkit include directories to resolve '<cuda_runtime.h> not found' errors.
 target_include_directories(MicroLLM PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
 # Link all required third-party libraries to the final executable.
-target_link_libraries(MicroLLM PRIVATE glog::glog sentencepiece::sentencepiece CUDA::cudart Boost::boost unordered_dense::unordered_dense re2::re2 nlohmann_json::nlohmann_json)
+target_link_libraries(MicroLLM PRIVATE ${MICRO_LLM_DEPS})
 
 
 enable_testing()
@@ -89,7 +99,8 @@ file(GLOB_RECURSE ALL_TEST_FILES CONFIGURE_DEPENDS "test/test_*.cpp")
 add_executable(MicroLLM_test ${ALL_TEST_FILES} ${ALL_SRC_FILES})
 target_include_directories(MicroLLM_test PRIVATE ${ALL_HEADER_DIRS})
 target_include_directories(MicroLLM_test PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
-target_link_libraries(MicroLLM_test PRIVATE glog::glog sentencepiece::sentencepiece CUDA::cudart Boost::boost GTest::gtest GTest::gtest_main)
+target_link_libraries(MicroLLM_test PRIVATE ${MICRO_LLM_DEPS} GTest::gtest GTest::gtest_main)
+target_compile_definitions(MicroLLM_test PRIVATE ROOT_PATH="${CMAKE_SOURCE_DIR}")
 
 include(GoogleTest)
 gtest_discover_tests(MicroLLM_test)
