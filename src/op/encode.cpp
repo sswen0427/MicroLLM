@@ -12,13 +12,10 @@ namespace op {
 SpeEncodeLayer::SpeEncodeLayer(std::string token_model_path, bool has_bos,
                                bool has_eos)
     : EncodeLayerBase(std::move(token_model_path), has_bos, has_eos) {
-  using namespace sentencepiece::util;
   spe = std::make_unique<sentencepiece::SentencePieceProcessor>();
-  auto rc = spe->Load(token_model_path_);
-  if (rc.code() != StatusCode::kOk) {
-    LOG(FATAL) << "The token model path is not valid, please check the path "
-                  "and type of token model.";
-  }
+  auto status = spe->Load(token_model_path_);
+  CHECK(status.ok()) << "Failed to load SentencePiece model: "
+                     << status.ToString();
 }
 
 std::vector<int32_t> SpeEncodeLayer::encode(const std::string& sentence) const {
