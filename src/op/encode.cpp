@@ -150,6 +150,7 @@ int32_t BpeEncodeLayer::vocab_size() const {
 }
 }  // namespace op
 
+// QwenEncodeLayer
 namespace op {
 
 QwenEncodeLayer::QwenEncodeLayer(std::string token_model_path, bool has_bos,
