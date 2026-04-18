@@ -73,13 +73,14 @@ file(GLOB_RECURSE ALL_SRC_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/s
 # Build Target Definition
 # ==============================================================================
 set(MICRO_LLM_DEPS
-        glog::glog
-        sentencepiece::sentencepiece
-        CUDA::cudart
+        armadillo
         Boost::boost
-        unordered_dense::unordered_dense
-        re2::re2
+        CUDA::cudart
+        glog::glog
         nlohmann_json::nlohmann_json
+        re2::re2
+        sentencepiece::sentencepiece
+        unordered_dense::unordered_dense
 )
 
 # Define the final executable target 'MicroLLM' and compile it with main.cpp and all collected source files.
