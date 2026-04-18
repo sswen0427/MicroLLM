@@ -105,6 +105,12 @@ class Layer : public BaseLayer {
 
   const tensor::Tensor& get_output(int32_t idx) const override;
 
+  base::Status set_weight(int32_t idx, const tensor::Tensor& weight) override;
+
+  base::Status set_weight(
+      int32_t idx, const std::vector<int32_t>& dims, const void* weight_ptr,
+      base::DeviceType device_type = base::DeviceType::kDeviceUnknown) override;
+
   base::Status check_tensor(const tensor::Tensor& tensor,
                             base::DeviceType device_type,
                             base::DataType data_type) const;
