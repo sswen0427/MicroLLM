@@ -4,7 +4,6 @@
 #include <absl/strings/str_replace.h>
 #include <sentencepiece_processor.h>
 
-#include "base/tiktoken.h"
 #include "op/layer.h"
 
 namespace op {
@@ -55,36 +54,6 @@ class SpeEncodeLayer : public EncodeLayerBase {
 
  private:
   std::unique_ptr<sentencepiece::SentencePieceProcessor> spe;
-};
-
-class BpeEncodeLayer : public EncodeLayerBase {
- public:
-  explicit BpeEncodeLayer(std::string token_model_path, bool has_bos,
-                          bool has_eos);
-
-  std::vector<int32_t> encode(const std::string& sentence) const override;
-
-  std::string decode(int32_t token_id) const override;
-
-  std::string decode(const std::vector<int32_t>& token_ids) const override;
-
-  bool is_sentence_ending(int32_t token_id) const override;
-
-  int32_t vocab_size() const override;
-
- protected:
-  int32_t bos_id_ = -1;
-  int32_t eos_id_ = -1;
-  int32_t stop_token1_ = -1;
-  int32_t stop_token2_ = -1;
-  int32_t num_token_ = 0;
-  std::unique_ptr<base::tiktoken> tiktoken_;
-};
-
-class QwenEncodeLayer : public BpeEncodeLayer {
- public:
-  explicit QwenEncodeLayer(std::string token_model_path, bool has_bos,
-                           bool has_eos);
 };
 
 }  // namespace op
