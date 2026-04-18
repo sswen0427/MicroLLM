@@ -1,8 +1,9 @@
 #pragma once
 
-#include <cstdint>
-
 namespace model {
+// ⚠️ WARNING: DO NOT MODIFY this struct.
+// Its memory layout is strictly mapped to the .bin file header.
+// Any changes will cause pointer offset errors during mmap parsing.
 struct ModelConfig {
   int32_t dim = 0;
   int32_t hidden_dim = 0;
