@@ -5,11 +5,11 @@
 #include "base/base.h"
 namespace kernel {
 void add_kernel_cpu(const tensor::Tensor& input1, const tensor::Tensor& input2,
-                    const tensor::Tensor& output, void* stream) {
-  UNUSED(stream);
-  CHECK_EQ(input1.is_empty(), false);
-  CHECK_EQ(input2.is_empty(), false);
-  CHECK_EQ(output.is_empty(), false);
+                    const tensor::Tensor& output,
+                    [[maybe_unused]] void* stream) {
+  CHECK(!input1.is_empty());
+  CHECK(!input2.is_empty());
+  CHECK(!output.is_empty());
 
   CHECK_EQ(input1.size(), input2.size());
   CHECK_EQ(input1.size(), output.size());
