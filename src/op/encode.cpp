@@ -57,6 +57,7 @@ int32_t SpeEncodeLayer::vocab_size() const {
 }
 }  // namespace op
 
+// BpeEncodeLayer
 namespace op {
 static const std::string PAT_STR =
     R"((?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?:$|[^\S])|\s+)";
@@ -147,6 +148,9 @@ int32_t BpeEncodeLayer::vocab_size() const {
   CHECK(this->tiktoken_ != nullptr);
   return num_token_;
 }
+}  // namespace op
+
+namespace op {
 
 QwenEncodeLayer::QwenEncodeLayer(std::string token_model_path, bool has_bos,
                                  bool has_eos)
