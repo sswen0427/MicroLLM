@@ -25,27 +25,31 @@ set(THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party")
 # Append local third-party library paths to CMAKE_PREFIX_PATH
 # so that `find_package` can locate their corresponding xxxConfig.cmake files.
 list(APPEND CMAKE_PREFIX_PATH
+        "${THIRD_PARTY_DIR}/abseil-cpp"
         "${THIRD_PARTY_DIR}/armadillo"
         "${THIRD_PARTY_DIR}/boost"
         "${THIRD_PARTY_DIR}/gflags"
         "${THIRD_PARTY_DIR}/glog"
         "${THIRD_PARTY_DIR}/gtest"
         "${THIRD_PARTY_DIR}/openblas"
+        "${THIRD_PARTY_DIR}/re2"
         "${THIRD_PARTY_DIR}/sentencepiece"
-        "${THIRD_PARTY_DIR}/unwind"
         "${THIRD_PARTY_DIR}/unordered_dense"
+        "${THIRD_PARTY_DIR}/unwind"
 )
 
-find_package(OpenBLAS REQUIRED)
+find_package(absl REQUIRED)
 find_package(Armadillo REQUIRED CONFIG)
 find_package(Boost REQUIRED CONFIG)
 find_package(gflags REQUIRED)
 find_package(glog REQUIRED)
 find_package(GTest REQUIRED)
+find_package(OpenBLAS REQUIRED)
+find_package(re2 REQUIRED)
 find_package(sentencepiece REQUIRED)
+find_package(unordered_dense CONFIG REQUIRED)
 find_package(Unwind REQUIRED)
 find_package(CUDAToolkit REQUIRED)
-find_package(unordered_dense CONFIG REQUIRED)
 
 # ==============================================================================
 # Source & Header Files Collection
@@ -74,7 +78,7 @@ target_include_directories(MicroLLM PRIVATE ${ALL_HEADER_DIRS})
 # [Fix]: Add CUDA Toolkit include directories to resolve '<cuda_runtime.h> not found' errors.
 target_include_directories(MicroLLM PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
 # Link all required third-party libraries to the final executable.
-target_link_libraries(MicroLLM PRIVATE glog::glog sentencepiece::sentencepiece CUDA::cudart Boost::boost unordered_dense::unordered_dense)
+target_link_libraries(MicroLLM PRIVATE glog::glog sentencepiece::sentencepiece CUDA::cudart Boost::boost unordered_dense::unordered_dense re2::re2)
 
 
 enable_testing()
