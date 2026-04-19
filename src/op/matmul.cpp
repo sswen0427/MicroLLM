@@ -90,7 +90,7 @@ base::Status MatmulLayer::forward() {
   return base::error::Success();
 }
 
-base::Status MatmulLayer::set_bias(int32_t idx, int32_t& dim,
+base::Status MatmulLayer::set_bias(int32_t idx, int32_t dim,
                                    const void* bias_ptr,
                                    base::DeviceType device_type) {
   CHECK_GE(idx, 0);
