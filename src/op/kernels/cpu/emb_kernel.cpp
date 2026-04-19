@@ -1,4 +1,7 @@
 #include "emb_kernel.h"
+
+#include <cuda_runtime_api.h>
+
 namespace kernel {
 
 void emb_kernel_normal(const tensor::Tensor& input,
@@ -22,8 +25,8 @@ void emb_kernel_normal(const tensor::Tensor& input,
       float* src_ptr =
           const_cast<float*>(weight.ptr<float>(token * weight_dim));
       if (weight.device_type() == base::DeviceType::kDeviceCPU) {
-        allocator->memcpy(src_ptr, dest_ptr, weight_dim * sizeof(float),
-                          base::MemcpyKind::kMemcpyCPU2CPU);
+        allocator->memcpy(dest_ptr, src_ptr, weight_dim * sizeof(float),
+                          cudaMemcpyHostToHost, nullptr);
       } else {
         LOG(FATAL)
             << "Unknown device type of weight tensor in the embedding layer.";
