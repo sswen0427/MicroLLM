@@ -12,9 +12,12 @@ set(CMAKE_CUDA_ARCHITECTURES 80)
 # Define the project name and enable both C++ (CXX) and CUDA language support.
 project(MicroLLM LANGUAGES CXX CUDA)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -std=c++20")
+
 # Enforce C++20 standard for modern C++ features (e.g., Concepts, Modules).
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# set(CMAKE_CXX_STANDARD 20)
+# set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # ==============================================================================
 # Third-party Libraries Configuration
