@@ -1,10 +1,12 @@
 #include "rmsnorm_kernel.h"
 
+#include <armadillo>
+
 namespace kernel {
 void rmsnorm_kernel_cpu(const tensor::Tensor& input,
                         const tensor::Tensor& weight,
-                        const tensor::Tensor& output, void* stream) {
-  UNUSED(stream);
+                        const tensor::Tensor& output,
+                        [[maybe_unused]] void* stream) {
   CHECK(!input.is_empty());
   CHECK(!weight.is_empty());
   CHECK(!output.is_empty());
