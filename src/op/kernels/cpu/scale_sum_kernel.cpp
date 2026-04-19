@@ -7,8 +7,7 @@ namespace kernel {
 void scale_sum_kernel_cpu(const tensor::Tensor& value,
                           const tensor::Tensor& scale,
                           const tensor::Tensor& output, int pos, int size,
-                          int stride, void* stream) {
-  UNUSED(stream);
+                          int stride, [[maybe_unused]] void* stream) {
   CHECK_EQ(value.is_empty(), false);
   CHECK_EQ(scale.is_empty(), false);
   CHECK_EQ(output.is_empty(), false);
