@@ -83,6 +83,7 @@ inline std::size_t DataTypeSize(DataType type) {
     return 4;
   } else {
     LOG(FATAL) << "Unknown data type";
+    return 0;
   }
 }
 
