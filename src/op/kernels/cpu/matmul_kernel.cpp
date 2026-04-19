@@ -5,6 +5,11 @@
 #include "base/base.h"
 
 namespace kernel {
+/**
+ * Y = W * X
+ * (M * K) = (M * N) * (N * K)
+ * The output dimension is weight_dim0 * in_dim1
+ */
 void matmul_kernel_cpu(const tensor::Tensor& input,
                        const tensor::Tensor& weight,
                        const tensor::Tensor& output, float scale,
@@ -19,9 +24,8 @@ void matmul_kernel_cpu(const tensor::Tensor& input,
   const float* input_ptr = input.ptr<float>();
   const float* weight_ptr = weight.ptr<float>();
   const float* output_ptr = output.ptr<float>();
-
-  int32_t in_dim1 = 1;
   int32_t in_dim0 = 1;
+  int32_t in_dim1 = 1;
   if (input.dims_size() == 2) {
     in_dim0 = input.get_dim(0);
     in_dim1 = input.get_dim(1);
