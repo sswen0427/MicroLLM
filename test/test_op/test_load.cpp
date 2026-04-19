@@ -7,6 +7,7 @@
 
 #include "base/alias.h"
 #include "base/buffer.h"
+#include "op/matmul.h"
 #include "tensor/tensor.h"
 
 TEST(LoadTest, Matmul) {
@@ -34,41 +35,41 @@ TEST(LoadTest, Matmul) {
    *                                   1
    *                                   1
    */
-  // auto wq = std::make_shared<op::MatmulLayer>(
-  //     base::DeviceType::kDeviceCPU, config.dim, config.hidden_dim, false);
-  // float* in = new float[config->hidden_dim];
-  // for (int i = 0; i < config->hidden_dim; ++i) {
-  //   in[i] = 1.f;
-  // }
-  //
-  // float* out = new float[config->dim];
-  // for (int i = 0; i < config->dim; ++i) {
-  //   out[i] = 0.f;
-  // }
-  // tensor::Tensor tensor = tensor::Tensor::from_external(
-  //     base::DataType::kDataTypeFp32, {config->hidden_dim}, in);
-  // tensor.set_device_type(base::DeviceType::kDeviceCPU);
-  //
-  // tensor::Tensor out_tensor = tensor::Tensor::from_external(
-  //     base::DataType::kDataTypeFp32, {config->dim}, out);
-  // out_tensor.set_device_type(base::DeviceType::kDeviceCPU);
-  //
-  // // wq->set_input(0, tensor);
-  // // wq->set_output(0, out_tensor);
-  // // wq->set_weight(0, {config.dim, config.hidden_dim}, weight_data,
-  // //                base::DeviceType::kDeviceCPU);
-  // // wq->forward();  // 完成一个计算
-  //
-  // /** python code:
-  //  *  w = np.arange(0,128 * 16).reshape(16, 128)
-  //  *  input = np.ones(128)
-  //  *  out = w@input
-  //  */
-  // ASSERT_EQ(out[0], 8128);
-  // ASSERT_EQ(out[1], 24512);
-  // ASSERT_EQ(out[14], 237504);
-  // ASSERT_EQ(out[15], 253888);
-  //
-  // delete[] in;
-  // delete[] out;
+  auto wq = std::make_shared<op::MatmulLayer>(
+      base::DeviceType::kDeviceCPU, config->dim, config->hidden_dim, false);
+  float* in = new float[config->hidden_dim];
+  for (int i = 0; i < config->hidden_dim; ++i) {
+    in[i] = 1.f;
+  }
+
+  float* out = new float[config->dim];
+  for (int i = 0; i < config->dim; ++i) {
+    out[i] = 0.f;
+  }
+  tensor::Tensor tensor = tensor::Tensor::from_external(
+      base::DataType::kDataTypeFp32, {config->hidden_dim}, in);
+  tensor.set_device_type(base::DeviceType::kDeviceCPU);
+
+  tensor::Tensor out_tensor = tensor::Tensor::from_external(
+      base::DataType::kDataTypeFp32, {config->dim}, out);
+  out_tensor.set_device_type(base::DeviceType::kDeviceCPU);
+
+  wq->set_input(0, tensor);
+  wq->set_output(0, out_tensor);
+  wq->set_weight(0, {config->dim, config->hidden_dim}, weight_data,
+                 base::DeviceType::kDeviceCPU);
+  wq->forward();  // 完成一个计算
+
+  /** python code:
+   *  w = np.arange(0,128 * 16).reshape(16, 128)
+   *  input = np.ones(128)
+   *  out = w@input
+   */
+  ASSERT_EQ(out[0], 8128);
+  ASSERT_EQ(out[1], 24512);
+  ASSERT_EQ(out[14], 237504);
+  ASSERT_EQ(out[15], 253888);
+
+  delete[] in;
+  delete[] out;
 }
