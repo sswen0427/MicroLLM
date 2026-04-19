@@ -42,21 +42,15 @@ TEST(LoadTest, Matmul) {
    */
   auto wq = std::make_shared<op::MatmulLayer>(
       base::DeviceType::kDeviceCPU, config->dim, config->hidden_dim, false);
-  float* in = new float[config->hidden_dim];
-  for (int i = 0; i < config->hidden_dim; ++i) {
-    in[i] = 1.f;
-  }
+  std::vector<float> in(config->hidden_dim, 1.f);
+  std::vector<float> out(config->hidden_dim, 0.f);
 
-  float* out = new float[config->dim];
-  for (int i = 0; i < config->dim; ++i) {
-    out[i] = 0.f;
-  }
   tensor::Tensor tensor = tensor::Tensor::from_external(
-      base::DataType::kDataTypeFp32, {config->hidden_dim}, in);
+      base::DataType::kDataTypeFp32, {config->hidden_dim}, in.data());
   tensor.set_device_type(base::DeviceType::kDeviceCPU);
 
   tensor::Tensor out_tensor = tensor::Tensor::from_external(
-      base::DataType::kDataTypeFp32, {config->dim}, out);
+      base::DataType::kDataTypeFp32, {config->dim}, out.data());
   out_tensor.set_device_type(base::DeviceType::kDeviceCPU);
 
   wq->set_input(0, tensor);
@@ -70,11 +64,8 @@ TEST(LoadTest, Matmul) {
    *  input = np.ones(128)
    *  out = w@input
    */
-  ASSERT_EQ(out[0], 8128);
-  ASSERT_EQ(out[1], 24512);
-  ASSERT_EQ(out[14], 237504);
-  ASSERT_EQ(out[15], 253888);
-
-  delete[] in;
-  delete[] out;
+  EXPECT_EQ(out[0], 8128);
+  EXPECT_EQ(out[1], 24512);
+  EXPECT_EQ(out[14], 237504);
+  EXPECT_EQ(out[15], 253888);
 }
