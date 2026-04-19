@@ -20,6 +20,7 @@ TEST(LoadTest, Matmul) {
   struct stat st;
   fstat(fd, &st);
   std::size_t file_size = st.st_size;
+  EXPECT_EQ(file_size, 8220);
 
   void* data = mmap(nullptr, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
   EXPECT_NE(data, MAP_FAILED);
