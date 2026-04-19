@@ -1,4 +1,4 @@
-#include "layer.h"
+#include "op/layer.h"
 
 #include <numeric>
 
@@ -93,11 +93,15 @@ const tensor::Tensor& Layer::get_output(int32_t idx) const {
   return outputs_.at(idx);
 }
 
-base::Status Layer::set_weight(int32_t idx, const tensor::Tensor& weight) {}
+base::Status Layer::set_weight(int32_t idx, const tensor::Tensor& weight) {
+  return base::Status();
+}
 
 base::Status Layer::set_weight(int32_t idx, const std::vector<int32_t>& dims,
                                const void* weight_ptr,
-                               base::DeviceType device_type) {}
+                               base::DeviceType device_type) {
+  return base::Status();
+}
 
 base::Status Layer::check_tensor(const tensor::Tensor& tensor,
                                  base::DeviceType device_type,

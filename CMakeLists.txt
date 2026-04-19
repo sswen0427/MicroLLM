@@ -56,30 +56,21 @@ find_package(CUDAToolkit REQUIRED)
 # ==============================================================================
 # Source & Header Files Collection
 # ==============================================================================
-# Recursively search for all subdirectories under include/ and add them to ALL_HEADER_DIRS.
-# This allows for shorter and cleaner #include paths in the source code.
-file(GLOB_RECURSE HEADER_DIRS_FILES LIST_DIRECTORIES true CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*")
-set(ALL_HEADER_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include")
-foreach(path IN LISTS HEADER_DIRS_FILES)
-    if(IS_DIRECTORY "${path}")
-        list(APPEND ALL_HEADER_DIRS "${path}")
-    endif()
-endforeach()
-
-# Recursively collect all source files (.cpp, .cu, etc.) under the src/ directory.
+set(ALL_HEADER_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/src")
 file(GLOB_RECURSE ALL_SRC_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*")
 
 # ==============================================================================
 # Build Target Definition
 # ==============================================================================
 set(MICRO_LLM_DEPS
-        glog::glog
-        sentencepiece::sentencepiece
-        CUDA::cudart
+        armadillo
         Boost::boost
-        unordered_dense::unordered_dense
-        re2::re2
+        CUDA::cudart
+        glog::glog
         nlohmann_json::nlohmann_json
+        re2::re2
+        sentencepiece::sentencepiece
+        unordered_dense::unordered_dense
 )
 
 # Define the final executable target 'MicroLLM' and compile it with main.cpp and all collected source files.

@@ -1,7 +1,7 @@
 #include <cuda_runtime_api.h>
 #include <glog/logging.h>
 
-#include "alloc.h"
+#include "base/alloc.h"
 
 namespace base {
 CUDADeviceAllocator::CUDADeviceAllocator()
