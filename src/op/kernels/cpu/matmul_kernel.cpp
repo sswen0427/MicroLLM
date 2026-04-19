@@ -41,6 +41,32 @@ void matmul_kernel_cpu(const tensor::Tensor& input,
   CHECK_EQ(in_dim0, wei_dim1);
 
   CHECK_EQ(output.size(), wei_dim0 * in_dim1);
+  /**
+   * [Zero-Copy Transpose Trick for Row-Major to Column-Major Alignment]
+   *
+   * 1. The Memory Layout Conflict:
+   *    Our C++ Tensors are stored in Row-Major order.
+   *    Armadillo (`arma::fmat`) strictly requires Column-Major order.
+   *    Passing Row-Major memory directly to Armadillo will corrupt the data.
+   *
+   * 2. The Dimension Swapping Trick:
+   *    To avoid expensive memory copying, we intentionally swap the `rows` and
+   * `cols` parameters when constructing the `arma::fmat`. A Row-Major matrix of
+   * shape [M, K] has the exact same memory layout as a Column-Major matrix of
+   * shape [K, M] (which is its transpose). Therefore, in Armadillo's
+   * perspective:
+   *      - `input_mat`  is logically Input^T
+   *      - `weight_mat` is logically Weight^T
+   *      - `output_mat` is logically Output^T
+   *
+   * 3. The Math (Y = WX):
+   *    We execute: output_mat = input_mat * weight_mat
+   *    Mathematically: Output^T = Input^T * Weight^T
+   *    By linear algebra: Input^T * Weight^T = (Weight * Input)^T
+   *
+   *    When this Output^T is written back to our Row-Major memory, it perfectly
+   *    represents the desired forward pass result: Output = Weight * Input.
+   */
   arma::fmat input_mat(const_cast<float*>(input_ptr), in_dim1, in_dim0, false,
                        true);
   arma::fmat weight_mat(const_cast<float*>(weight_ptr), wei_dim1, wei_dim0,
