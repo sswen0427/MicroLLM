@@ -1,7 +1,7 @@
 #include <cuda_runtime_api.h>
 #include <glog/logging.h>
 
-#include "alloc.h"
+#include "base/alloc.h"
 
 namespace base {
 CUDADeviceAllocator::CUDADeviceAllocator()
@@ -37,7 +37,7 @@ void* CUDADeviceAllocator::allocate(size_t byte_size) const {
                  << cudaGetErrorString(state);
       return nullptr;
     }
-    big_buffers.emplace_back(ptr, byte_size, true);
+    big_buffers.push_back({ptr, byte_size, true});
     return ptr;
   } else {
     auto& small_buffers = small_buffers_map_[id];
@@ -55,7 +55,7 @@ void* CUDADeviceAllocator::allocate(size_t byte_size) const {
                  << cudaGetErrorString(state);
       return nullptr;
     }
-    small_buffers.emplace_back(ptr, byte_size, true);
+    small_buffers.push_back({ptr, byte_size, true});
     return ptr;
   }
 }

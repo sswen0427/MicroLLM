@@ -13,7 +13,7 @@ set(CMAKE_CUDA_ARCHITECTURES 80)
 project(MicroLLM LANGUAGES CXX CUDA)
 
 # Enforce C++20 standard for modern C++ features (e.g., Concepts, Modules).
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # ==============================================================================
