@@ -1,9 +1,12 @@
 #include "swiglu_kernel.h"
+
+#include <armadillo>
+
 namespace kernel {
 void swiglu_kernel_cpu(const tensor::Tensor& input1,
                        const tensor::Tensor& input2,
-                       const tensor::Tensor& output, void* stream) {
-  UNUSED(stream);
+                       const tensor::Tensor& output,
+                       [[maybe_unused]] void* stream) {
   CHECK_EQ(input1.is_empty(), false);
   CHECK_EQ(input2.is_empty(), false);
   CHECK_EQ(output.is_empty(), false);
