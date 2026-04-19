@@ -1,6 +1,9 @@
 #include "softmax_kernel.h"
 
-#include "../kernels_interface.h"
+#include <armadillo>
+
+#include "op/kernels/kernels_interface.h"
+
 namespace kernel {
 void softmax_inplace_cpu(const tensor::Tensor& input, void* stream) {
   int32_t size = static_cast<int32_t>(input.size());
@@ -16,10 +19,10 @@ void softmax_inplace_cpu(const tensor::Tensor& input, void* stream) {
 }
 
 void softmax_inplace_cpu(const float* input_ptr, size_t size) {
-  tensor::Tensor input(base::DataType::kDataTypeFp32, size);
   std::shared_ptr<base::Buffer> buffer = std::make_shared<base::Buffer>(
-      size * sizeof(float), nullptr, (void*)input_ptr, true);
-  input.assign(buffer);
+      size * sizeof(float), nullptr, (void*)input_ptr);
+  tensor::Tensor input = tensor::Tensor::from_external(
+      base::DataType::kDataTypeFp32, {(int)size}, buffer.get());
   return softmax_inplace_cpu(input);
 }
 }  // namespace kernel
