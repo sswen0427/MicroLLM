@@ -27,7 +27,20 @@ TEST(LoadTest, Matmul) {
 
   auto* config = static_cast<model::ModelConfig*>(data);
   auto* raw_weight_data = reinterpret_cast<float*>(config + 1);
-
+  /**
+   *
+   * [CRITICAL HARDWARE ALIGNMENT FIX]
+   * We cannot use the raw pointer from `mmap` directly here.
+   * The raw weight data immediately follows the `ModelConfig` struct (28
+   * bytes). This 28-byte offset breaks the strict 64-byte memory alignment
+   * requirement of the underlying BLAS library (e.g., OpenBLAS with AVX-512
+   * instructions). Passing the misaligned raw pointer to the matmul kernel will
+   * trigger a hardware exception (General Protection Fault) and result in a
+   * SIGSEGV.
+   *
+   * Therefore, we use std::vector to allocate a fresh, guaranteed-aligned
+   * memory block and copy the weights into it before passing to the tensor.
+   */
   std::vector<float> aligned_weight(config->dim * config->hidden_dim);
   std::memcpy(aligned_weight.data(), raw_weight_data,
               aligned_weight.size() * sizeof(float));
@@ -36,7 +49,7 @@ TEST(LoadTest, Matmul) {
     EXPECT_EQ(aligned_weight[i], float(i));
   }
   /**                                  1
-   *    1 2 3 4 5 6 ... 1024           1
+   *    1 2 3 4 5 6 ... 2048           1
    *                                   1
    *                                   1
    */
