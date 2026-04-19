@@ -1,15 +1,17 @@
 #include "matmul_kernel.h"
 
+#include <armadillo>
+
 #include "base/base.h"
+
 namespace kernel {
 void matmul_kernel_cpu(const tensor::Tensor& input,
                        const tensor::Tensor& weight,
                        const tensor::Tensor& output, float scale,
-                       const base::CudaConfig* config) {
-  UNUSED(config);
-  CHECK(input.is_empty() == false);
-  CHECK(weight.is_empty() == false);
-  CHECK(output.is_empty() == false);
+                       [[maybe_unused]] const base::CudaConfig* config) {
+  CHECK(!input.is_empty());
+  CHECK(!weight.is_empty());
+  CHECK(!output.is_empty());
   CHECK(input.device_type() == base::DeviceType::kDeviceCPU);
   CHECK(weight.device_type() == base::DeviceType::kDeviceCPU);
   CHECK(output.device_type() == base::DeviceType::kDeviceCPU);
