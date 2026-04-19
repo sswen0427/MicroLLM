@@ -27,18 +27,13 @@ TEST(LoadTest, Matmul) {
 
   auto* config = static_cast<model::ModelConfig*>(data);
   auto* raw_weight_data = reinterpret_cast<float*>(config + 1);
-  size_t weight_elements = config->dim * config->hidden_dim;
-  size_t weight_bytes = weight_elements * sizeof(float);
 
-  float* aligned_weight_ptr = nullptr;
-  int alloc_ret = posix_memalign(reinterpret_cast<void**>(&aligned_weight_ptr),
-                                 64, weight_bytes);
-  EXPECT_EQ(alloc_ret, 0);
-  EXPECT_NE(aligned_weight_ptr, nullptr);
+  std::vector<float> aligned_weight(config->dim * config->hidden_dim);
+  std::memcpy(aligned_weight.data(), raw_weight_data,
+              aligned_weight.size() * sizeof(float));
 
-  std::memcpy(aligned_weight_ptr, raw_weight_data, weight_bytes);
-  for (int i = 0; i < config->dim * config->hidden_dim; ++i) {
-    EXPECT_EQ(*(aligned_weight_ptr + i), float(i));
+  for (int i = 0; i < aligned_weight.size(); ++i) {
+    EXPECT_EQ(aligned_weight[i], float(i));
   }
   /**                                  1
    *    1 2 3 4 5 6 ... 1024           1
@@ -66,7 +61,7 @@ TEST(LoadTest, Matmul) {
 
   wq->set_input(0, tensor);
   wq->set_output(0, out_tensor);
-  wq->set_weight(0, {config->dim, config->hidden_dim}, aligned_weight_ptr,
+  wq->set_weight(0, {config->dim, config->hidden_dim}, aligned_weight.data(),
                  base::DeviceType::kDeviceCPU);
   wq->forward();  // 完成一个计算
 
