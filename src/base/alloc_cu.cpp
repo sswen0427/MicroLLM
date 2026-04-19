@@ -37,7 +37,7 @@ void* CUDADeviceAllocator::allocate(size_t byte_size) const {
                  << cudaGetErrorString(state);
       return nullptr;
     }
-    big_buffers.push_back({ptr, byte_size, true});
+    big_buffers.emplace_back(ptr, byte_size, true);
     return ptr;
   } else {
     auto& small_buffers = small_buffers_map_[id];
@@ -55,7 +55,7 @@ void* CUDADeviceAllocator::allocate(size_t byte_size) const {
                  << cudaGetErrorString(state);
       return nullptr;
     }
-    small_buffers.push_back({ptr, byte_size, true});
+    small_buffers.emplace_back(ptr, byte_size, true);
     return ptr;
   }
 }
