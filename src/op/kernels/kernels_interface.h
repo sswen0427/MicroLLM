@@ -1,7 +1,6 @@
-#ifndef KERNELS_INTERFACE_H
-#define KERNELS_INTERFACE_H
-#include <base/cuda_config.h>
+#pragma once
 
+#include "base/base.h"
 #include "tensor/tensor.h"
 namespace kernel {
 typedef void (*AddKernel)(const tensor::Tensor& input1,
@@ -11,14 +10,14 @@ typedef void (*AddKernel)(const tensor::Tensor& input1,
 typedef void (*MatmulKernel)(const tensor::Tensor& input,
                              const tensor::Tensor& weight,
                              const tensor::Tensor& output, float scale,
-                             const CudaConfig* config);
+                             const base::CudaConfig* config);
 
 typedef void (*MatmulKernelQuant)(const tensor::Tensor& input,
                                   const tensor::Tensor& weight,
                                   const tensor::Tensor& output,
                                   int32_t group_size,
                                   const tensor::Tensor& scale,
-                                  const CudaConfig* config);
+                                  const base::CudaConfig* config);
 
 typedef void (*EmbeddingKernel)(const tensor::Tensor& input,
                                 const tensor::Tensor& weight,
@@ -36,7 +35,7 @@ typedef void (*MHAKernel)(int32_t pos, int32_t head_num, int32_t layer_index,
                           const tensor::Tensor& score_tensor,
                           const tensor::Tensor& key_cache_tensor,
                           const tensor::Tensor& value_cache_tensor,
-                          base::DeviceType device_type, CudaConfig*);
+                          base::DeviceType device_type, base::CudaConfig*);
 
 typedef void (*RMSNormKernel)(const tensor::Tensor& input,
                               const tensor::Tensor& weight,
@@ -91,4 +90,3 @@ ScaleSumKernel get_scale_sum_kernel(base::DeviceType device_type);
 
 RMSNormKernelDim get_rmsnorm_dim_kernel(base::DeviceType device_type);
 }  // namespace kernel
-#endif  // KERNELS_INTERFACE_H
