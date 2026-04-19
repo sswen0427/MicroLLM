@@ -56,12 +56,7 @@ find_package(CUDAToolkit REQUIRED)
 # ==============================================================================
 # Source & Header Files Collection
 # ==============================================================================
-# Recursively search for all subdirectories under include/ and add them to ALL_HEADER_DIRS.
-# This allows for shorter and cleaner #include paths in the source code.
-#file(GLOB_RECURSE HEADER_DIRS_FILES LIST_DIRECTORIES true CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h")
 set(ALL_HEADER_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/src")
-
-# Recursively collect all source files (.cpp, .cu, etc.) under the src/ directory.
 file(GLOB_RECURSE ALL_SRC_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*")
 
 # ==============================================================================
