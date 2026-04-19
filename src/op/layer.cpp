@@ -224,7 +224,7 @@ base::Status LayerParam::set_weight(int32_t idx,
 
   if (!is_quant_layer_) {
     tensor::Tensor weight = tensor::Tensor::from_external(
-        base::DataType::kDataTypeFp32, dims, buffer.get());
+        base::DataType::kDataTypeFp32, dims, buffer.get()->ptr());
     weight.set_device_type(device_type);
     weights_.at(idx) = weight;
   } else {
