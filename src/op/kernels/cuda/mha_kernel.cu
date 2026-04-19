@@ -1,9 +1,10 @@
-#include <base/cuda_config.h>
 #include <tensor/tensor.h>
+
 #include <cfloat>
 #include <cub/cub.cuh>
+
+#include "base/base.h"
 #include "mha_kernel.cuh"
-#include <base/tick.h>
 namespace kernel {
 constexpr static int thread_num = 256;
 __device__ void softmax_gpu(float* __restrict__ x, int size) {
@@ -46,12 +47,10 @@ __device__ void softmax_gpu(float* __restrict__ x, int size) {
   }
 }
 
-
-__global__ void multi_head_attention_kernel(int32_t pos, int32_t seq_len, float* query,
-                                            float* score_ptr, float* output, float* key_cache,
-                                            float* value_cache, int32_t kv_dim, int32_t kv_mul,
-                                            int32_t head_num, int32_t head_size,
-                                            int32_t layer_offset) {
+__global__ void multi_head_attention_kernel(
+    int32_t pos, int32_t seq_len, float* query, float* score_ptr, float* output,
+    float* key_cache, float* value_cache, int32_t kv_dim, int32_t kv_mul,
+    int32_t head_num, int32_t head_size, int32_t layer_offset) {
   int head = blockIdx.x;
   if (head >= head_num) {
     return;
@@ -81,8 +80,8 @@ __global__ void multi_head_attention_kernel(int32_t pos, int32_t seq_len, float*
       float4 key_val = *reinterpret_cast<float4*>(key_head + i);
       float4 query_val = *reinterpret_cast<float4*>(s_query_head + i);
 
-      score += key_val.x * query_val.x + key_val.y * query_val.y + key_val.z * query_val.z +
-               key_val.w * query_val.w;
+      score += key_val.x * query_val.x + key_val.y * query_val.y +
+               key_val.z * query_val.z + key_val.w * query_val.w;
     }
 
     score *= scale;
@@ -106,12 +105,15 @@ __global__ void multi_head_attention_kernel(int32_t pos, int32_t seq_len, float*
   }
 }
 
-void mha_kernel_cu(int32_t pos, int32_t head_num, int32_t layer_index, int32_t seq_len,
-                   int32_t kv_dim, int32_t kv_mul, int32_t head_size, const tensor::Tensor& mha_out,
-                   const tensor::Tensor& query_tensor, const tensor::Tensor& score_tensor,
-                   const tensor::Tensor& key_cache_tensor, const tensor::Tensor& value_cache_tensor,
-                   base::DeviceType device_type, CudaConfig* config) {
-  UNUSED(device_type);
+void mha_kernel_cu(int32_t pos, int32_t head_num, int32_t layer_index,
+                   int32_t seq_len, int32_t kv_dim, int32_t kv_mul,
+                   int32_t head_size, const tensor::Tensor& mha_out,
+                   const tensor::Tensor& query_tensor,
+                   const tensor::Tensor& score_tensor,
+                   const tensor::Tensor& key_cache_tensor,
+                   const tensor::Tensor& value_cache_tensor,
+                   [[maybe_unused]] base::DeviceType device_type,
+                   base::CudaConfig* config) {
   int32_t layer_offset = layer_index * seq_len * kv_dim;
   float* query = const_cast<float*>(query_tensor.ptr<float>());
   float* score = const_cast<float*>(score_tensor.ptr<float>());
@@ -121,9 +123,10 @@ void mha_kernel_cu(int32_t pos, int32_t head_num, int32_t layer_index, int32_t s
   float* value_cache = const_cast<float*>(value_cache_tensor.ptr<float>());
 
   cudaStream_t stream = config->stream;
-  multi_head_attention_kernel<<<head_num, thread_num, head_size * sizeof(float), stream>>>(
-      pos, seq_len, query, score, output, key_cache, value_cache, kv_dim, kv_mul, head_num,
-      head_size, layer_offset);
+  multi_head_attention_kernel<<<head_num, thread_num, head_size * sizeof(float),
+                                stream>>>(
+      pos, seq_len, query, score, output, key_cache, value_cache, kv_dim,
+      kv_mul, head_num, head_size, layer_offset);
 }
 
 }  // namespace kernel

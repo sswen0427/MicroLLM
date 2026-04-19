@@ -1,7 +1,8 @@
 #include "add_kernel.cuh"
 
 namespace kernel {
-__global__ void add_kernel_cu_fp32(int32_t size, const float* in1, const float* in2, float* out) {
+__global__ void add_kernel_cu_fp32(int32_t size, const float* in1,
+                                   const float* in2, float* out) {
   int32_t tid = threadIdx.x + blockDim.x * blockIdx.x;
   if (tid >= size) {
     return;
@@ -24,10 +25,12 @@ void add_kernel_cu(const tensor::Tensor& input1, const tensor::Tensor& input2,
   if (stream) {
     cudaStream_t stream_ = static_cast<CUstream_st*>(stream);
     add_kernel_cu_fp32<<<block_num, thread_num, 0, stream_>>>(
-        size, input1.ptr<float>(), input2.ptr<float>(), const_cast<float*>(output.ptr<float>()));
+        size, input1.ptr<float>(), input2.ptr<float>(),
+        const_cast<float*>(output.ptr<float>()));
   } else {
-    add_kernel_cu_fp32<<<block_num, thread_num>>>(size, input1.ptr<float>(), input2.ptr<float>(),
-                                                  const_cast<float*>(output.ptr<float>()));
+    add_kernel_cu_fp32<<<block_num, thread_num>>>(
+        size, input1.ptr<float>(), input2.ptr<float>(),
+        const_cast<float*>(output.ptr<float>()));
   }
 }
 }  // namespace kernel

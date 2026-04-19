@@ -1,5 +1,5 @@
-#include "../kernels_interface.h"
 #include "argmax_kernel.cuh"
+#include "op/kernels/kernels_interface.h"
 #include "tensor/tensor.h"
 namespace kernel {
 __forceinline__ __device__ void warp_reduce_argmax(float& val, size_t& ptr) {
@@ -19,7 +19,8 @@ __forceinline__ __device__ void warp_reduce_argmax(float& val, size_t& ptr) {
   }
 }
 
-__forceinline__ __device__ void block_reduce_argmax(float& val, size_t& ptr, float* shared_value,
+__forceinline__ __device__ void block_reduce_argmax(float& val, size_t& ptr,
+                                                    float* shared_value,
                                                     size_t* shared_ptr) {
   int lane_id = threadIdx.x % warpSize;
   int warp_id = threadIdx.x / warpSize;
@@ -46,7 +47,8 @@ __forceinline__ __device__ void block_reduce_argmax(float& val, size_t& ptr, flo
   }
 }
 
-__global__ void argmax_kernel_fp32(const float* input_ptr, size_t size, size_t* output_idx) {
+__global__ void argmax_kernel_fp32(const float* input_ptr, size_t size,
+                                   size_t* output_idx) {
   __shared__ size_t shared_max_ptr[32];
   __shared__ float shared_max_value[32];
   uint32_t tid = threadIdx.x;
@@ -81,7 +83,8 @@ size_t argmax_kernel_cu(const float* input_ptr, size_t size, void* stream) {
   } else {
     cudaStream_t stream_ = static_cast<cudaStream_t>(stream);
     argmax_kernel_fp32<<<1, 512, 0, stream_>>>(input_ptr, size, index);
-    cudaMemcpyAsync(&output_index, index, sizeof(size_t), cudaMemcpyDeviceToHost, stream_);
+    cudaMemcpyAsync(&output_index, index, sizeof(size_t),
+                    cudaMemcpyDeviceToHost, stream_);
   }
   return output_index;
 }

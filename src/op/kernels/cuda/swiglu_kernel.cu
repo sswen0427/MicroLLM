@@ -1,7 +1,9 @@
 #include <tensor/tensor.h>
+
 #include "swiglu_kernel.cuh"
 namespace kernel {
-__global__ void swiglu_kernel_cu_fp32(int size, const float* in1, const float* in2, float* out) {
+__global__ void swiglu_kernel_cu_fp32(int size, const float* in1,
+                                      const float* in2, float* out) {
   int tid = threadIdx.x;
   int idx = threadIdx.x + blockDim.x * blockIdx.x;
   if (idx >= size) {
@@ -21,7 +23,8 @@ __global__ void swiglu_kernel_cu_fp32(int size, const float* in1, const float* i
   out[idx] = smem1[tid] * smem2[tid];
 }
 
-void swiglu_kernel_cu(const tensor::Tensor& input1, const tensor::Tensor& input2,
+void swiglu_kernel_cu(const tensor::Tensor& input1,
+                      const tensor::Tensor& input2,
                       const tensor::Tensor& output, void* stream) {
   CHECK_EQ(input1.is_empty(), false);
   CHECK(input1.device_type() == base::DeviceType::kDeviceCUDA);
@@ -38,11 +41,13 @@ void swiglu_kernel_cu(const tensor::Tensor& input1, const tensor::Tensor& input2
   const size_t shmem = threads * sizeof(float) * 2;
   if (!stream) {
     swiglu_kernel_cu_fp32<<<blocks, threads, shmem>>>(
-        size, input1.ptr<float>(), input2.ptr<float>(), const_cast<float*>(output.ptr<float>()));
+        size, input1.ptr<float>(), input2.ptr<float>(),
+        const_cast<float*>(output.ptr<float>()));
   } else {
     cudaStream_t stream_ = static_cast<cudaStream_t>(stream);
     swiglu_kernel_cu_fp32<<<blocks, threads, shmem, stream_>>>(
-        size, input1.ptr<float>(), input2.ptr<float>(), const_cast<float*>(output.ptr<float>()));
+        size, input1.ptr<float>(), input2.ptr<float>(),
+        const_cast<float*>(output.ptr<float>()));
   }
 }
 }  // namespace kernel

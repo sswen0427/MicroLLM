@@ -1,12 +1,14 @@
 #include <device_launch_parameters.h>
+
 #include <cub/block/block_reduce.cuh>
+
 #include "rmsnorm_kernel.cuh"
 namespace kernel {
 /**
  * 计算多维输入 in = (dim1, dim2), 计算在dim2维度上的rmsnorm
  */
-static __global__ void row_rmsnorm_f32_dim(float* in, float* wei, float* out, int dim_size,
-                                           int size, float eps) {
+static __global__ void row_rmsnorm_f32_dim(float* in, float* wei, float* out,
+                                           int dim_size, int size, float eps) {
   const int bid = blockIdx.x;
   const int tid = threadIdx.x;
   if (bid >= dim_size) {
@@ -49,9 +51,9 @@ static __global__ void row_rmsnorm_f32_dim(float* in, float* wei, float* out, in
   for (int i = tid; i < pack_num; i += blockDim.x) {
     float4 in_float4 = *(in_pack + i);
     float4 wei_float4 = *(wei_pack + i);
-    *(out_pack + i) =
-        make_float4(scale * in_float4.x * wei_float4.x, scale * in_float4.y * wei_float4.y,
-                    scale * in_float4.z * wei_float4.z, scale * in_float4.w * wei_float4.w);
+    *(out_pack + i) = make_float4(
+        scale * in_float4.x * wei_float4.x, scale * in_float4.y * wei_float4.y,
+        scale * in_float4.z * wei_float4.z, scale * in_float4.w * wei_float4.w);
   }
 
   for (int i = pack_off + tid; i < size; i += blockDim.x) {
@@ -60,7 +62,8 @@ static __global__ void row_rmsnorm_f32_dim(float* in, float* wei, float* out, in
 }
 
 template <int32_t BLOCK_DIM>
-static __global__ void row_rmsnorm_f32(float* in, float* wei, float* out, int size, float eps) {
+static __global__ void row_rmsnorm_f32(float* in, float* wei, float* out,
+                                       int size, float eps) {
   const int tid = threadIdx.x;
 
   constexpr int pack_size = 4;
@@ -97,9 +100,9 @@ static __global__ void row_rmsnorm_f32(float* in, float* wei, float* out, int si
   for (int i = tid; i < pack_num; i += blockDim.x) {
     float4 in_float4 = *(in_pack + i);
     float4 wei_float4 = *(wei_pack + i);
-    *(out_pack + i) =
-        make_float4(scale * in_float4.x * wei_float4.x, scale * in_float4.y * wei_float4.y,
-                    scale * in_float4.z * wei_float4.z, scale * in_float4.w * wei_float4.w);
+    *(out_pack + i) = make_float4(
+        scale * in_float4.x * wei_float4.x, scale * in_float4.y * wei_float4.y,
+        scale * in_float4.z * wei_float4.z, scale * in_float4.w * wei_float4.w);
   }
 
   for (int i = pack_off + tid; i < size; i += blockDim.x) {
@@ -107,7 +110,8 @@ static __global__ void row_rmsnorm_f32(float* in, float* wei, float* out, int si
   }
 }
 
-void rmsnorm_kernel_cu(const tensor::Tensor& input, const tensor::Tensor& weight,
+void rmsnorm_kernel_cu(const tensor::Tensor& input,
+                       const tensor::Tensor& weight,
                        const tensor::Tensor& output, void* stream) {
   CHECK(!input.is_empty());
   CHECK(!weight.is_empty());
@@ -129,14 +133,18 @@ void rmsnorm_kernel_cu(const tensor::Tensor& input, const tensor::Tensor& weight
   constexpr int threads_num = 128;
   if (stream) {
     cudaStream_t stream_ = static_cast<cudaStream_t>(stream);
-    row_rmsnorm_f32<128><<<1, threads_num, 0, stream_>>>(in_ptr, wei_ptr, out_ptr, size, eps);
+    row_rmsnorm_f32<128>
+        <<<1, threads_num, 0, stream_>>>(in_ptr, wei_ptr, out_ptr, size, eps);
   } else {
-    row_rmsnorm_f32<128><<<1, threads_num>>>(in_ptr, wei_ptr, out_ptr, size, eps);
+    row_rmsnorm_f32<128>
+        <<<1, threads_num>>>(in_ptr, wei_ptr, out_ptr, size, eps);
   }
 }
 
-void rmsnorm_kernel_cu_dim(const tensor::Tensor& input, const tensor::Tensor& weight,
-                           const tensor::Tensor& output, int32_t dim, void* stream) {
+void rmsnorm_kernel_cu_dim(const tensor::Tensor& input,
+                           const tensor::Tensor& weight,
+                           const tensor::Tensor& output, int32_t dim,
+                           void* stream) {
   CHECK(!input.is_empty());
   CHECK(!weight.is_empty());
   CHECK(!output.is_empty());
@@ -156,10 +164,11 @@ void rmsnorm_kernel_cu_dim(const tensor::Tensor& input, const tensor::Tensor& we
   constexpr int threads_num = 128;
   if (stream) {
     cudaStream_t stream_ = static_cast<cudaStream_t>(stream);
-    row_rmsnorm_f32_dim<<<dim_size, threads_num, 0, stream_>>>(in_ptr, wei_ptr, out_ptr, dim_size,
-                                                               size, eps);
+    row_rmsnorm_f32_dim<<<dim_size, threads_num, 0, stream_>>>(
+        in_ptr, wei_ptr, out_ptr, dim_size, size, eps);
   } else {
-    row_rmsnorm_f32_dim<<<dim_size, threads_num>>>(in_ptr, wei_ptr, out_ptr, dim_size, size, eps);
+    row_rmsnorm_f32_dim<<<dim_size, threads_num>>>(in_ptr, wei_ptr, out_ptr,
+                                                   dim_size, size, eps);
   }
 }
 }  // namespace kernel
