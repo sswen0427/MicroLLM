@@ -65,8 +65,9 @@ TEST(CudaMatmulTest, RunCUDA) {
   out_cpu.to_cpu();
 
   EXPECT_EQ(out_cpu.at<float>(0), 0);
-  EXPECT_EQ(out_cpu.at<float>(1), 3);
-  EXPECT_EQ(out_cpu.at<float>(2), 6);
+  EXPECT_EQ(out_cpu.at<float>(1), 4);
+  EXPECT_EQ(out_cpu.at<float>(2), 8);
+  EXPECT_EQ(out_cpu.at<float>(3), 12);
 }
 
 TEST(CudaMatmulTest, Stream) {
