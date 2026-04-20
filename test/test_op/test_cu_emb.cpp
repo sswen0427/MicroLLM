@@ -44,7 +44,6 @@ TEST(CudaEmbTest, NoStream2) {
 
   int32_t token = 4;
   int32_t dim = 512;
-  int32_t size = 2048;
 
   // init input
   tensor::Tensor input =
@@ -54,7 +53,7 @@ TEST(CudaEmbTest, NoStream2) {
   // init weight
   tensor::Tensor weight = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {token, dim}, alloc_cpu);
-  for (int i = 0; i < size; ++i) {
+  for (int i = 0; i < token * dim; ++i) {
     weight.at<float>(i) = static_cast<float>(i);
   }
   weight.to_cuda();
@@ -77,7 +76,6 @@ TEST(CudaEmbTest, Stream) {
 
   int32_t token = 4;
   int32_t dim = 512;
-  int32_t size = 2048;
 
   // init input
   tensor::Tensor input =
@@ -87,7 +85,7 @@ TEST(CudaEmbTest, Stream) {
   // init weight
   tensor::Tensor weight = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {token, dim}, alloc_cpu);
-  for (int i = 0; i < size; ++i) {
+  for (int i = 0; i < token * dim; ++i) {
     weight.at<float>(i) = static_cast<float>(i);
   }
   weight.to_cuda();
