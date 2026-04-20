@@ -2,9 +2,9 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
-#include "../source/op/kernels/kernels_interface.h"
 #include "../utils.cuh"
 #include "base/buffer.h"
+#include "op/kernels/kernels_interface.h"
 TEST(test_add_cu, add1_nostream) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
 

@@ -2,8 +2,8 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
-#include "../source/op/kernels/kernels_interface.h"
 #include "base/buffer.h"
+#include "op/kernels/kernels_interface.h"
 TEST(test_emb_cu, emb1_nostream) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
