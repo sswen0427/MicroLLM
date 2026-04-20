@@ -6,6 +6,21 @@
 #include "matmul_kernel.cuh"
 
 namespace kernel {
+/**
+ * @brief Highly optimized FP32 GEMV (Matrix-Vector Multiplication) kernel.
+ *        Computes Y = W * X, specifically optimized for Batch Size = 1
+ * (Inference).
+ *
+ * @tparam THREAD_PER_BLOCK Number of threads per block (typically 128 or 256).
+ * @tparam ROW_PER_BLOCK    Number of rows processed by a single block
+ * (typically 1 for max occupancy).
+ * @param input  Pointer to the input vector X (size M).
+ * @param weight Pointer to the weight matrix W (size K x M, row-major).
+ * @param output Pointer to the output vector Y (size K).
+ * @param M      Number of columns in the weight matrix (length of input
+ * vector).
+ * @param K      Number of rows in the weight matrix (length of output vector).
+ */
 template <int THREAD_PER_BLOCK, int ROW_PER_BLOCK>
 __global__ void matmul_kernel_cu_fp32(const float* input, const float* weight,
                                       float* output, int M, int K) {
