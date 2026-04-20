@@ -110,10 +110,9 @@ TEST(test_rmsnorm_cu_dim, rmsnorm_stream) {
 
   for (int i = 0; i < dim_size; ++i) {
     for (int j = 0; j < size; ++j) {
-      ASSERT_EQ(out_cu.index<float>(i * size + j),
-                out_cu_golden.index<float>(j))
+      ASSERT_EQ(out_cu.at<float>(i * size + j), out_cu_golden.at<float>(j))
           << "i: " << i << " j: " << j;
-      ASSERT_EQ(in_cu.index<float>(i * size + j), out_cu_golden.index<float>(j))
+      ASSERT_EQ(in_cu.at<float>(i * size + j), out_cu_golden.at<float>(j))
           << "i: " << i << " j: " << j;
     }
   }

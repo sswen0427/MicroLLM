@@ -16,11 +16,11 @@ TEST(test_matmul_cu, matmul_linear_stream5) {
       base::DataType::kDataTypeFp32, {4, 4}, alloc_cpu);
 
   for (int i = 0; i < 4; ++i) {
-    input.index<float>(i) = float(i);
+    input.at<float>(i) = float(i);
   }
 
   for (int i = 0; i < 16; ++i) {
-    weight.index<float>(i) = float(i);
+    weight.at<float>(i) = float(i);
   }
   tensor::Tensor input_cpu = input.clone();
   tensor::Tensor weight_cpu = weight.clone();
@@ -45,7 +45,7 @@ TEST(test_matmul_cu, matmul_linear_stream5) {
 
   out_cu.to_cpu();
   for (int i = 0; i < out_cu.size(); ++i) {
-    ASSERT_EQ(out_cu.index<float>(i), out_cpu.index<float>(i));
+    ASSERT_EQ(out_cu.at<float>(i), out_cpu.at<float>(i));
   }
 }
 
@@ -58,12 +58,12 @@ TEST(test_matmul_cu, matmul_linear_course) {
   tensor::Tensor weight = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {3, 3}, alloc_cpu);
 
-  input.index<float>(0) = float(1);
-  input.index<float>(1) = float(1);
-  input.index<float>(2) = float(-1);
+  input.at<float>(0) = float(1);
+  input.at<float>(1) = float(1);
+  input.at<float>(2) = float(-1);
 
   for (int i = 1; i <= 9; ++i) {
-    weight.index<float>(i - 1) = float(i);
+    weight.at<float>(i - 1) = float(i);
   }
   tensor::Tensor input_cpu = input.clone();
   tensor::Tensor weight_cpu = weight.clone();
@@ -77,9 +77,9 @@ TEST(test_matmul_cu, matmul_linear_course) {
   kernel::get_matmul_kernel(base::DeviceType::kDeviceCPU)(
       input_cpu, weight_cpu, out_cpu, 1.f, nullptr);
 
-  ASSERT_EQ(out_cpu.index<float>(0), 0);
-  ASSERT_EQ(out_cpu.index<float>(1), 3);
-  ASSERT_EQ(out_cpu.index<float>(2), 6);
+  ASSERT_EQ(out_cpu.at<float>(0), 0);
+  ASSERT_EQ(out_cpu.at<float>(1), 3);
+  ASSERT_EQ(out_cpu.at<float>(2), 6);
 }
 
 TEST(test_matmul_cu, matmul_linear_course_cuda) {
@@ -91,18 +91,19 @@ TEST(test_matmul_cu, matmul_linear_course_cuda) {
   tensor::Tensor weight = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {3, 3}, alloc_cpu);
 
-  input.index<float>(0) = float(1);
-  input.index<float>(1) = float(1);
-  input.index<float>(2) = float(-1);
+  input.at<float>(0) = float(1);
+  input.at<float>(1) = float(1);
+  input.at<float>(2) = float(-1);
 
   for (int i = 1; i <= 9; ++i) {
-    weight.index<float>(i - 1) = float(i);
+    weight.at<float>(i - 1) = float(i);
   }
 
   input.to_cuda();
   weight.to_cuda();
 
-  tensor::Tensor out_cu(base::DataType::kDataTypeFp32, 3, true, alloc_cu);
+  tensor::Tensor out_cu =
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {3}, alloc_cu);
 
   kernel::get_matmul_kernel(base::DeviceType::kDeviceCUDA)(
       input, weight, out_cu, 1.f, nullptr);
@@ -110,7 +111,7 @@ TEST(test_matmul_cu, matmul_linear_course_cuda) {
   tensor::Tensor out_cpu = out_cu.clone();
   out_cpu.to_cpu();
 
-  ASSERT_EQ(out_cpu.index<float>(0), 0);
-  ASSERT_EQ(out_cpu.index<float>(1), 3);
-  ASSERT_EQ(out_cpu.index<float>(2), 6);
+  ASSERT_EQ(out_cpu.at<float>(0), 0);
+  ASSERT_EQ(out_cpu.at<float>(1), 3);
+  ASSERT_EQ(out_cpu.at<float>(2), 6);
 }

@@ -23,8 +23,8 @@ TEST(test_swiglu_cu, swiglu_nostream) {
   std::mt19937 mt(rd());
   std::uniform_real_distribution<float> dist(0.f, 1.f);
   for (int i = 0; i < size; ++i) {
-    in_cpu.index<float>(i) = dist(mt);
-    wei_cpu.index<float>(i) = dist(mt);
+    in_cpu.at<float>(i) = dist(mt);
+    wei_cpu.at<float>(i) = dist(mt);
   }
 
   tensor::Tensor in_cu = in_cpu.clone();
@@ -42,7 +42,7 @@ TEST(test_swiglu_cu, swiglu_nostream) {
                                                           out_cpu, nullptr);
 
   for (int i = 0; i < size; ++i) {
-    ASSERT_NEAR(out_cu.index<float>(i), out_cpu.index<float>(i), 1e-5f);
+    ASSERT_NEAR(out_cu.at<float>(i), out_cpu.at<float>(i), 1e-5f);
   }
 }
 
@@ -63,8 +63,8 @@ TEST(test_swiglu_cu, swiglu_stream) {
   std::mt19937 mt(rd());
   std::uniform_real_distribution<float> dist(0.f, 1.f);
   for (int i = 0; i < size; ++i) {
-    in_cpu.index<float>(i) = dist(mt);
-    wei_cpu.index<float>(i) = dist(mt);
+    in_cpu.at<float>(i) = dist(mt);
+    wei_cpu.at<float>(i) = dist(mt);
   }
 
   tensor::Tensor in_cu = in_cpu.clone();
@@ -84,7 +84,7 @@ TEST(test_swiglu_cu, swiglu_stream) {
                                                           out_cpu, nullptr);
 
   for (int i = 0; i < size; ++i) {
-    ASSERT_NEAR(out_cu.index<float>(i), out_cpu.index<float>(i), 1e-5f);
+    ASSERT_NEAR(out_cu.at<float>(i), out_cpu.at<float>(i), 1e-5f);
   }
   cudaStreamDestroy(stream);
 }

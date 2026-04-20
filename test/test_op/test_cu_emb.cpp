@@ -22,7 +22,7 @@ TEST(test_emb_cu, emb1_nostream) {
       tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim}, alloc_cu);
 
   for (int i = 0; i < size; ++i) {
-    weight.index<float>(i) = static_cast<float>(i);
+    weight.at<float>(i) = static_cast<float>(i);
   }
   weight.to_cuda();
   kernel::get_emb_kernel(base::DeviceType::kDeviceCUDA)(input, weight, output,
@@ -30,7 +30,7 @@ TEST(test_emb_cu, emb1_nostream) {
 
   output.to_cpu();
   for (int i = 0; i < dim; ++i) {
-    ASSERT_EQ(output.index<float>(i), 512 + i);
+    ASSERT_EQ(output.at<float>(i), 512 + i);
   }
 }
 
@@ -52,7 +52,7 @@ TEST(test_emb_cu, emb2_nostream) {
       tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim}, alloc_cu);
 
   for (int i = 0; i < size; ++i) {
-    weight.index<float>(i) = static_cast<float>(i);
+    weight.at<float>(i) = static_cast<float>(i);
   }
   weight.to_cuda();
   kernel::get_emb_kernel(base::DeviceType::kDeviceCUDA)(input, weight, output,
@@ -60,7 +60,7 @@ TEST(test_emb_cu, emb2_nostream) {
 
   output.to_cpu();
   for (int i = 0; i < dim; ++i) {
-    ASSERT_EQ(output.index<float>(i), 1024 + i);
+    ASSERT_EQ(output.at<float>(i), 1024 + i);
   }
 }
 
@@ -82,7 +82,7 @@ TEST(test_emb_cu, emb1_stream) {
       tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim}, alloc_cu);
 
   for (int i = 0; i < size; ++i) {
-    weight.index<float>(i) = static_cast<float>(i);
+    weight.at<float>(i) = static_cast<float>(i);
   }
   weight.to_cuda();
   cudaStream_t stream;
@@ -92,7 +92,7 @@ TEST(test_emb_cu, emb1_stream) {
 
   output.to_cpu();
   for (int i = 0; i < dim; ++i) {
-    ASSERT_EQ(output.index<float>(i), 512 + i);
+    ASSERT_EQ(output.at<float>(i), 512 + i);
   }
 
   cudaStreamDestroy(stream);
