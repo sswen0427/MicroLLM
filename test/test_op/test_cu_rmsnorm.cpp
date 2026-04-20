@@ -24,8 +24,8 @@ TEST(test_rmsnorm_cu, rmsnorm_nostream) {
   std::mt19937 mt(rd());
   std::uniform_real_distribution<float> dist(0.f, 1.f);
   for (int i = 0; i < size; ++i) {
-    in_cpu.index<float>(i) = dist(mt);
-    wei_cpu.index<float>(i) = dist(mt);
+    in_cpu.at<float>(i) = dist(mt);
+    wei_cpu.at<float>(i) = dist(mt);
   }
   tensor::Tensor in_cu = in_cpu.clone();
   tensor::Tensor wei_cu = wei_cpu.clone();
@@ -41,7 +41,7 @@ TEST(test_rmsnorm_cu, rmsnorm_nostream) {
                                                            out_cpu, nullptr);
 
   for (int i = 0; i < size; ++i) {
-    ASSERT_NEAR(out_cu.index<float>(i), out_cpu.index<float>(i), 1e-5f);
+    ASSERT_NEAR(out_cu.at<float>(i), out_cpu.at<float>(i), 1e-5f);
   }
 }
 
@@ -60,8 +60,8 @@ TEST(test_rmsnorm_cu_dim, rmsnorm_stream) {
 
   for (int i = 0; i < dim_size; ++i) {
     for (int j = 0; j < size; ++j) {
-      wei_cpu.index<float>(j) = float(j);
-      in_cpu.index<float>(i * size + j) = float(j);
+      wei_cpu.at<float>(j) = float(j);
+      in_cpu.at<float>(i * size + j) = float(j);
     }
   }
 
@@ -93,8 +93,8 @@ TEST(test_rmsnorm_cu_dim, rmsnorm_stream) {
   ASSERT_EQ(err, cudaSuccess);
 
   for (int j = 0; j < size; ++j) {
-    wei_cpu_golden.index<float>(j) = float(j);
-    in_cpu_golden.index<float>(j) = float(j);
+    wei_cpu_golden.at<float>(j) = float(j);
+    in_cpu_golden.at<float>(j) = float(j);
   }
   tensor::Tensor in_cu_golden = in_cpu_golden.clone();
   tensor::Tensor wei_cu_golden = wei_cpu_golden.clone();
@@ -136,8 +136,8 @@ TEST(test_rmsnorm_cu, rmsnorm_stream) {
   std::mt19937 mt(rd());
   std::uniform_real_distribution<float> dist(0.f, 1.f);
   for (int i = 0; i < size; ++i) {
-    in_cpu.index<float>(i) = dist(mt);
-    wei_cpu.index<float>(i) = dist(mt);
+    in_cpu.at<float>(i) = dist(mt);
+    wei_cpu.at<float>(i) = dist(mt);
   }
 
   tensor::Tensor in_cu = in_cpu.clone();
@@ -156,7 +156,7 @@ TEST(test_rmsnorm_cu, rmsnorm_stream) {
                                                            out_cpu, nullptr);
 
   for (int i = 0; i < size; ++i) {
-    ASSERT_NEAR(out_cu.index<float>(i), out_cpu.index<float>(i), 1e-5f);
+    ASSERT_NEAR(out_cu.at<float>(i), out_cpu.at<float>(i), 1e-5f);
   }
   cudaStreamDestroy(stream);
 }
@@ -178,8 +178,8 @@ TEST(test_rmsnorm_cu, rmsnorm_stream2) {
   std::mt19937 mt(rd());
   std::uniform_real_distribution<float> dist(0.f, 1.f);
   for (int i = 0; i < size; ++i) {
-    in_cpu.index<float>(i) = dist(mt);
-    wei_cpu.index<float>(i) = dist(mt);
+    in_cpu.at<float>(i) = dist(mt);
+    wei_cpu.at<float>(i) = dist(mt);
   }
 
   tensor::Tensor in_cu = in_cpu.clone();
@@ -198,7 +198,7 @@ TEST(test_rmsnorm_cu, rmsnorm_stream2) {
                                                            out_cpu, nullptr);
 
   for (int i = 0; i < size; ++i) {
-    ASSERT_NEAR(out_cu.index<float>(i), out_cpu.index<float>(i), 1e-5f);
+    ASSERT_NEAR(out_cu.at<float>(i), out_cpu.at<float>(i), 1e-5f);
   }
   cudaStreamDestroy(stream);
 }
