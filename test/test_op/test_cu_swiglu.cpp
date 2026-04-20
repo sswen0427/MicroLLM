@@ -2,6 +2,8 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
+#include <random>
+
 #include "base/buffer.h"
 #include "op/kernels/kernels_interface.h"
 TEST(test_swiglu_cu, swiglu_nostream) {
@@ -10,9 +12,12 @@ TEST(test_swiglu_cu, swiglu_nostream) {
 
   int32_t size = 32 * 151;
 
-  tensor::Tensor in_cpu(base::DataType::kDataTypeFp32, size, true, alloc_cpu);
-  tensor::Tensor wei_cpu(base::DataType::kDataTypeFp32, size, true, alloc_cpu);
-  tensor::Tensor out_cpu(base::DataType::kDataTypeFp32, size, true, alloc_cpu);
+  tensor::Tensor in_cpu = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+  tensor::Tensor wei_cpu = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+  tensor::Tensor out_cpu = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
 
   std::random_device rd;
   std::mt19937 mt(rd());
@@ -47,9 +52,12 @@ TEST(test_swiglu_cu, swiglu_stream) {
 
   int32_t size = 32 * 151;
 
-  tensor::Tensor in_cpu(base::DataType::kDataTypeFp32, size, true, alloc_cpu);
-  tensor::Tensor wei_cpu(base::DataType::kDataTypeFp32, size, true, alloc_cpu);
-  tensor::Tensor out_cpu(base::DataType::kDataTypeFp32, size, true, alloc_cpu);
+  tensor::Tensor in_cpu = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+  tensor::Tensor wei_cpu = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+  tensor::Tensor out_cpu = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
 
   std::random_device rd;
   std::mt19937 mt(rd());

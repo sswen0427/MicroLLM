@@ -10,9 +10,12 @@ TEST(test_add_cu, add1_nostream) {
 
   int32_t size = 32 * 151;
 
-  tensor::Tensor t1(base::DataType::kDataTypeFp32, size, true, alloc_cu);
-  tensor::Tensor t2(base::DataType::kDataTypeFp32, size, true, alloc_cu);
-  tensor::Tensor out(base::DataType::kDataTypeFp32, size, true, alloc_cu);
+  tensor::Tensor t1 =
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, alloc_cu);
+  tensor::Tensor t2 =
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, alloc_cu);
+  tensor::Tensor out =
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, alloc_cu);
 
   set_value_cu(static_cast<float*>(t1.get_buffer()->ptr()), size, 2.f);
   set_value_cu(static_cast<float*>(t2.get_buffer()->ptr()), size, 3.f);
@@ -34,9 +37,12 @@ TEST(test_add_cu, add1_stream) {
 
   int32_t size = 32 * 151;
 
-  tensor::Tensor t1(base::DataType::kDataTypeFp32, size, true, alloc_cu);
-  tensor::Tensor t2(base::DataType::kDataTypeFp32, size, true, alloc_cu);
-  tensor::Tensor out(base::DataType::kDataTypeFp32, size, true, alloc_cu);
+  tensor::Tensor t1 =
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, alloc_cu);
+  tensor::Tensor t2 =
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, alloc_cu);
+  tensor::Tensor out =
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, alloc_cu);
 
   set_value_cu(static_cast<float*>(t1.get_buffer()->ptr()), size, 2.f);
   set_value_cu(static_cast<float*>(t2.get_buffer()->ptr()), size, 3.f);
@@ -60,9 +66,12 @@ TEST(test_add_cu, add_align1) {
 
   int32_t size = 32 * 151 * 13;
 
-  tensor::Tensor t1(base::DataType::kDataTypeFp32, size, true, alloc_cu);
-  tensor::Tensor t2(base::DataType::kDataTypeFp32, size, true, alloc_cu);
-  tensor::Tensor out(base::DataType::kDataTypeFp32, size, true, alloc_cu);
+  tensor::Tensor t1 =
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, alloc_cu);
+  tensor::Tensor t2 =
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, alloc_cu);
+  tensor::Tensor out =
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, alloc_cu);
 
   set_value_cu(static_cast<float*>(t1.get_buffer()->ptr()), size, 2.1f);
   set_value_cu(static_cast<float*>(t2.get_buffer()->ptr()), size, 3.3f);

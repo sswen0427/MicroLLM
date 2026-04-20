@@ -12,12 +12,14 @@ TEST(test_emb_cu, emb1_nostream) {
   int32_t dim = 512;
   int32_t size = 2048;
 
-  tensor::Tensor input(base::DataType::kDataTypeFp32, 1, true, alloc_cpu);
-  input.index<int32_t>(0) = 1;
+  tensor::Tensor input =
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {1}, alloc_cpu);
+  input.at<int32_t>(0) = 1;
 
-  tensor::Tensor weight(base::DataType::kDataTypeFp32, token, dim, true,
-                        alloc_cpu);
-  tensor::Tensor output(base::DataType::kDataTypeFp32, dim, true, alloc_cu);
+  tensor::Tensor weight = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {token, dim}, alloc_cpu);
+  tensor::Tensor output =
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim}, alloc_cu);
 
   for (int i = 0; i < size; ++i) {
     weight.index<float>(i) = static_cast<float>(i);
@@ -40,12 +42,14 @@ TEST(test_emb_cu, emb2_nostream) {
   int32_t dim = 512;
   int32_t size = 2048;
 
-  tensor::Tensor input(base::DataType::kDataTypeInt32, 1, true, alloc_cpu);
-  input.index<int32_t>(0) = 2;
+  tensor::Tensor input =
+      tensor::Tensor::allocate(base::DataType::kDataTypeInt32, {1}, alloc_cpu);
+  input.at<int32_t>(0) = 2;
 
-  tensor::Tensor weight(base::DataType::kDataTypeFp32, token, dim, true,
-                        alloc_cpu);
-  tensor::Tensor output(base::DataType::kDataTypeFp32, dim, true, alloc_cu);
+  tensor::Tensor weight = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {token, dim}, alloc_cpu);
+  tensor::Tensor output =
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim}, alloc_cu);
 
   for (int i = 0; i < size; ++i) {
     weight.index<float>(i) = static_cast<float>(i);
@@ -68,12 +72,14 @@ TEST(test_emb_cu, emb1_stream) {
   int32_t dim = 512;
   int32_t size = 2048;
 
-  tensor::Tensor input(base::DataType::kDataTypeInt32, 1, true, alloc_cpu);
-  input.index<int32_t>(0) = 1;
+  tensor::Tensor input =
+      tensor::Tensor::allocate(base::DataType::kDataTypeInt32, {1}, alloc_cpu);
+  input.at<int32_t>(0) = 1;
 
-  tensor::Tensor weight(base::DataType::kDataTypeFp32, token, dim, true,
-                        alloc_cpu);
-  tensor::Tensor output(base::DataType::kDataTypeFp32, dim, true, alloc_cu);
+  tensor::Tensor weight = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {token, dim}, alloc_cpu);
+  tensor::Tensor output =
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim}, alloc_cu);
 
   for (int i = 0; i < size; ++i) {
     weight.index<float>(i) = static_cast<float>(i);
