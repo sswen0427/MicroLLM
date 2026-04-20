@@ -23,7 +23,7 @@ void add_kernel_cu(const tensor::Tensor& input1, const tensor::Tensor& input2,
   int32_t thread_num = 512;
   int32_t block_num = (size + thread_num - 1) / thread_num;
   if (stream) {
-    cudaStream_t stream_ = static_cast<CUstream_st*>(stream);
+    auto stream_ = static_cast<CUstream_st*>(stream);
     add_kernel_cu_fp32<<<block_num, thread_num, 0, stream_>>>(
         size, input1.ptr<float>(), input2.ptr<float>(),
         const_cast<float*>(output.ptr<float>()));
