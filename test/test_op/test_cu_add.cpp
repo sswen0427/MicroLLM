@@ -4,7 +4,7 @@
 
 #include "base/buffer.h"
 #include "op/kernels/kernels_interface.h"
-TEST(CudaAddTest, Nostream) {
+TEST(CudaAddTest, NoStream) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   int32_t size = 32 * 151;
   tensor::Tensor t1 =
