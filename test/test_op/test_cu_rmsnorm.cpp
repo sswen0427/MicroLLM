@@ -2,7 +2,8 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
-#include "../utils.cuh"
+#include <random>
+
 #include "base/buffer.h"
 #include "op/kernels/kernels_interface.h"
 
@@ -12,9 +13,12 @@ TEST(test_rmsnorm_cu, rmsnorm_nostream) {
 
   int32_t size = 32 * 15;
 
-  tensor::Tensor in_cpu(base::DataType::kDataTypeFp32, size, true, alloc_cpu);
-  tensor::Tensor wei_cpu(base::DataType::kDataTypeFp32, size, true, alloc_cpu);
-  tensor::Tensor out_cpu(base::DataType::kDataTypeFp32, size, true, alloc_cpu);
+  tensor::Tensor in_cpu = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+  tensor::Tensor wei_cpu = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+  tensor::Tensor out_cpu = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
 
   std::random_device rd;
   std::mt19937 mt(rd());
@@ -47,11 +51,12 @@ TEST(test_rmsnorm_cu_dim, rmsnorm_stream) {
 
   int dim_size = 4;
   int size = 1024;
-  tensor::Tensor in_cpu(base::DataType::kDataTypeFp32, dim_size, size, true,
-                        alloc_cpu);
-  tensor::Tensor wei_cpu(base::DataType::kDataTypeFp32, size, true, alloc_cpu);
-  tensor::Tensor out_cpu(base::DataType::kDataTypeFp32, dim_size, size, true,
-                         alloc_cpu);
+  tensor::Tensor in_cpu = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {dim_size, size}, alloc_cpu);
+  tensor::Tensor wei_cpu = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+  tensor::Tensor out_cpu = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {dim_size, size}, alloc_cpu);
 
   for (int i = 0; i < dim_size; ++i) {
     for (int j = 0; j < size; ++j) {
@@ -77,12 +82,12 @@ TEST(test_rmsnorm_cu_dim, rmsnorm_stream) {
   out_cu.to_cpu();
   in_cu.to_cpu();
 
-  tensor::Tensor in_cpu_golden(base::DataType::kDataTypeFp32, size, true,
-                               alloc_cpu);
-  tensor::Tensor wei_cpu_golden(base::DataType::kDataTypeFp32, size, true,
-                                alloc_cpu);
-  tensor::Tensor out_golden(base::DataType::kDataTypeFp32, size, true,
-                            alloc_cu);
+  tensor::Tensor in_cpu_golden = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+  tensor::Tensor wei_cpu_golden = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+  tensor::Tensor out_golden =
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, alloc_cu);
   cudaDeviceSynchronize();
   auto err = cudaGetLastError();
   ASSERT_EQ(err, cudaSuccess);
@@ -120,9 +125,12 @@ TEST(test_rmsnorm_cu, rmsnorm_stream) {
 
   int32_t size = 32;
 
-  tensor::Tensor in_cpu(base::DataType::kDataTypeFp32, size, true, alloc_cpu);
-  tensor::Tensor wei_cpu(base::DataType::kDataTypeFp32, size, true, alloc_cpu);
-  tensor::Tensor out_cpu(base::DataType::kDataTypeFp32, size, true, alloc_cpu);
+  tensor::Tensor in_cpu = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+  tensor::Tensor wei_cpu = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+  tensor::Tensor out_cpu = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
 
   std::random_device rd;
   std::mt19937 mt(rd());
@@ -159,9 +167,12 @@ TEST(test_rmsnorm_cu, rmsnorm_stream2) {
 
   int32_t size = 32 * 151 * 15;
 
-  tensor::Tensor in_cpu(base::DataType::kDataTypeFp32, size, true, alloc_cpu);
-  tensor::Tensor wei_cpu(base::DataType::kDataTypeFp32, size, true, alloc_cpu);
-  tensor::Tensor out_cpu(base::DataType::kDataTypeFp32, size, true, alloc_cpu);
+  tensor::Tensor in_cpu = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+  tensor::Tensor wei_cpu = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+  tensor::Tensor out_cpu = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
 
   std::random_device rd;
   std::mt19937 mt(rd());
