@@ -56,7 +56,7 @@ TEST(CudaMatmulTest, RunCUDA) {
   weight.to_cuda();
 
   tensor::Tensor out_cu =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {3}, alloc_cu);
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {4}, alloc_cu);
 
   kernel::get_matmul_kernel(base::DeviceType::kDeviceCUDA)(
       input, weight, out_cu, 1.f, nullptr);
