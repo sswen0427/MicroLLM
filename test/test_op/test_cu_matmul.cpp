@@ -109,6 +109,6 @@ TEST(CudaMatmulTest, Stream) {
 
   out_cu.to_cpu();
   for (int i = 0; i < out_cu.size(); ++i) {
-    ASSERT_EQ(out_cu.at<float>(i), out_cpu.at<float>(i));
+    EXPECT_EQ(out_cu.at<float>(i), out_cpu.at<float>(i));
   }
 }
