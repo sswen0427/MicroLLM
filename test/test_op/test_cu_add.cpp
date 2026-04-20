@@ -4,7 +4,7 @@
 
 #include "base/buffer.h"
 #include "op/kernels/kernels_interface.h"
-TEST(AddCudaTest, Nostream) {
+TEST(CudaAddTest, Nostream) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   int32_t size = 32 * 151;
   tensor::Tensor t1 =
@@ -31,7 +31,7 @@ TEST(AddCudaTest, Nostream) {
   }
 }
 
-TEST(AddCudaTest, Stream) {
+TEST(CudaAddTest, Stream) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   int32_t size = 32 * 151;
   tensor::Tensor t1 =
@@ -60,7 +60,7 @@ TEST(AddCudaTest, Stream) {
   cudaStreamDestroy(stream);
 }
 
-TEST(AddCudaTest, Align) {
+TEST(CudaAddTest, Align) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   int32_t size = 32 * 151 * 13;
   tensor::Tensor t1 =
