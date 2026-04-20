@@ -22,21 +22,16 @@ TEST(CudaMatmulTest, NoStream1) {
   for (int i = 1; i <= 9; ++i) {
     weight.at<float>(i - 1) = float(i);
   }
-  tensor::Tensor input_cpu = input.clone();
-  tensor::Tensor weight_cpu = weight.clone();
 
-  input.to_cuda(nullptr);
-  weight.to_cuda(nullptr);
-
-  tensor::Tensor out_cpu =
+  tensor::Tensor out =
       tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {3}, alloc_cpu);
 
-  kernel::get_matmul_kernel(base::DeviceType::kDeviceCPU)(
-      input_cpu, weight_cpu, out_cpu, 1.f, nullptr);
+  kernel::get_matmul_kernel(base::DeviceType::kDeviceCPU)(input, weight, out,
+                                                          1.f, nullptr);
 
-  ASSERT_EQ(out_cpu.at<float>(0), 0);
-  ASSERT_EQ(out_cpu.at<float>(1), 3);
-  ASSERT_EQ(out_cpu.at<float>(2), 6);
+  EXPECT_EQ(out.at<float>(0), 0);
+  EXPECT_EQ(out.at<float>(1), 3);
+  EXPECT_EQ(out.at<float>(2), 6);
 }
 
 TEST(CudaMatmulTest, NoStream2) {
