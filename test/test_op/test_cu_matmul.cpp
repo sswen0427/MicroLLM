@@ -6,7 +6,7 @@
 #include "base/buffer.h"
 #include "op/kernels/kernels_interface.h"
 
-TEST(CudaMatmulTest, NoStream1) {
+TEST(CudaMatmulTest, RunCPU) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
 
@@ -34,7 +34,7 @@ TEST(CudaMatmulTest, NoStream1) {
   EXPECT_EQ(out.at<float>(2), 6);
 }
 
-TEST(CudaMatmulTest, NoStream2) {
+TEST(CudaMatmulTest, RunCUDA) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
 
@@ -63,9 +63,9 @@ TEST(CudaMatmulTest, NoStream2) {
   tensor::Tensor out_cpu = out_cu.clone();
   out_cpu.to_cpu();
 
-  ASSERT_EQ(out_cpu.at<float>(0), 0);
-  ASSERT_EQ(out_cpu.at<float>(1), 3);
-  ASSERT_EQ(out_cpu.at<float>(2), 6);
+  EXPECT_EQ(out_cpu.at<float>(0), 0);
+  EXPECT_EQ(out_cpu.at<float>(1), 3);
+  EXPECT_EQ(out_cpu.at<float>(2), 6);
 }
 
 TEST(CudaMatmulTest, Stream) {
