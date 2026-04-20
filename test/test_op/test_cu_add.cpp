@@ -4,7 +4,7 @@
 
 #include "base/buffer.h"
 #include "op/kernels/kernels_interface.h"
-TEST(test_add_cu, add1_nostream) {
+TEST(AddCudaTest, Nostream) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
 
   int32_t size = 32 * 151;
@@ -35,7 +35,7 @@ TEST(test_add_cu, add1_nostream) {
   delete[] output;
 }
 
-TEST(test_add_cu, add1_stream) {
+TEST(AddCudaTest, Stream) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
 
   int32_t size = 32 * 151;
@@ -67,7 +67,7 @@ TEST(test_add_cu, add1_stream) {
   delete[] output;
 }
 
-TEST(test_add_cu, add_align1) {
+TEST(AddCudaTest, Align) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
 
   int32_t size = 32 * 151 * 13;
