@@ -6,7 +6,8 @@
 #include "base/buffer.h"
 #include "op/kernels/kernels_interface.h"
 using namespace kernel;
-TEST(test_matmul_cu, matmul_linear_stream5) {
+
+TEST(CudaMatmulTest, matmul_linear_stream5) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
 
@@ -49,7 +50,7 @@ TEST(test_matmul_cu, matmul_linear_stream5) {
   }
 }
 
-TEST(test_matmul_cu, matmul_linear_course) {
+TEST(CudaMatmulTest, matmul_linear_course) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
 
@@ -82,7 +83,7 @@ TEST(test_matmul_cu, matmul_linear_course) {
   ASSERT_EQ(out_cpu.at<float>(2), 6);
 }
 
-TEST(test_matmul_cu, matmul_linear_course_cuda) {
+TEST(CudaMatmulTest, matmul_linear_course_cuda) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
 
