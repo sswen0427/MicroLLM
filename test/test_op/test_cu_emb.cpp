@@ -4,7 +4,8 @@
 
 #include "base/buffer.h"
 #include "op/kernels/kernels_interface.h"
-TEST(test_emb_cu, emb1_nostream) {
+
+TEST(CudaEmbTest, NoStream) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
 
@@ -34,7 +35,7 @@ TEST(test_emb_cu, emb1_nostream) {
   }
 }
 
-TEST(test_emb_cu, emb2_nostream) {
+TEST(CudaEmbTest, NoStream2) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
 
@@ -64,7 +65,7 @@ TEST(test_emb_cu, emb2_nostream) {
   }
 }
 
-TEST(test_emb_cu, emb1_stream) {
+TEST(CudaEmbTest, Stream) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
 

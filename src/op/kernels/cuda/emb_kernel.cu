@@ -28,18 +28,18 @@ void emb_kernel_cu(const tensor::Tensor& input, const tensor::Tensor& weight,
     input_cu = input.clone();
     input_cu.to_cuda();
   }
-  const int32_t input_num = static_cast<int32_t>(input.size());
+  const auto input_num = static_cast<int32_t>(input.size());
   const int32_t weight_dim = weight.get_dim(1);
   CHECK(weight.device_type() == output.device_type());
   CHECK(output.device_type() == base::DeviceType::kDeviceCUDA);
 
   constexpr int32_t max_seq_len = 512;
   constexpr int32_t thread_num = 128;
-  int32_t* in_ptr = input_cu.ptr<int32_t>();
-  float* wei_ptr = const_cast<float*>(weight.ptr<float>());
-  float* out_ptr = const_cast<float*>(output.ptr<float>());
+  auto* in_ptr = input_cu.ptr<int32_t>();
+  auto* wei_ptr = const_cast<float*>(weight.ptr<float>());
+  auto* out_ptr = const_cast<float*>(output.ptr<float>());
   if (stream) {
-    cudaStream_t stream_ = static_cast<cudaStream_t>(stream);
+    auto stream_ = static_cast<cudaStream_t>(stream);
     emb_kernel_cu_fp32<<<max_seq_len, thread_num, 0, stream_>>>(
         vocab_size, input_num, weight_dim, in_ptr, wei_ptr, out_ptr);
   } else {
