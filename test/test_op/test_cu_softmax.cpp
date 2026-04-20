@@ -10,7 +10,8 @@
 //
 //   int32_t size = 32 * 151;
 //
-//   tensor::Tensor in_cpu(base::DataType::kDataTypeFp32, size, true, alloc_cpu);
+//   tensor::Tensor in_cpu(base::DataType::kDataTypeFp32, size, true,
+//   alloc_cpu);
 //
 //   srand(0);
 //   for (int i = 0; i < size; ++i) {
@@ -37,7 +38,8 @@
 //
 //   int32_t size = 72 * 151;
 //
-//   tensor::Tensor in_cpu(base::DataType::kDataTypeFp32, size, true, alloc_cpu);
+//   tensor::Tensor in_cpu(base::DataType::kDataTypeFp32, size, true,
+//   alloc_cpu);
 //
 //   srand(0);
 //   for (int i = 0; i < size; ++i) {
@@ -66,7 +68,8 @@
 //
 //   int32_t size = 72 * 18;
 //
-//   tensor::Tensor in_cpu(base::DataType::kDataTypeFp32, size, true, alloc_cpu);
+//   tensor::Tensor in_cpu(base::DataType::kDataTypeFp32, size, true,
+//   alloc_cpu);
 //
 //   std::random_device rd;
 //   std::mt19937 mt(rd());
@@ -96,7 +99,8 @@
 //
 //   int32_t size = 1;
 //
-//   tensor::Tensor in_cpu(base::DataType::kDataTypeFp32, size, true, alloc_cpu);
+//   tensor::Tensor in_cpu(base::DataType::kDataTypeFp32, size, true,
+//   alloc_cpu);
 //
 //   std::random_device rd;
 //   std::mt19937 mt(rd());

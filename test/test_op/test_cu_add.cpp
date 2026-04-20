@@ -1,6 +1,7 @@
 #include <cuda_runtime_api.h>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
+
 #include "../source/op/kernels/kernels_interface.h"
 #include "../utils.cuh"
 #include "base/buffer.h"
@@ -19,7 +20,8 @@ TEST(test_add_cu, add1_nostream) {
   kernel::get_add_kernel(base::DeviceType::kDeviceCUDA)(t1, t2, out, nullptr);
   cudaDeviceSynchronize();
   float* output = new float[size];
-  cudaMemcpy(output, out.ptr<float>(), size * sizeof(float), cudaMemcpyDeviceToHost);
+  cudaMemcpy(output, out.ptr<float>(), size * sizeof(float),
+             cudaMemcpyDeviceToHost);
   for (int i = 0; i < size; ++i) {
     ASSERT_EQ(output[i], 5.f);
   }
@@ -44,7 +46,8 @@ TEST(test_add_cu, add1_stream) {
   kernel::get_add_kernel(base::DeviceType::kDeviceCUDA)(t1, t2, out, stream);
   cudaDeviceSynchronize();
   float* output = new float[size];
-  cudaMemcpy(output, out.ptr<float>(), size * sizeof(float), cudaMemcpyDeviceToHost);
+  cudaMemcpy(output, out.ptr<float>(), size * sizeof(float),
+             cudaMemcpyDeviceToHost);
   for (int i = 0; i < size; ++i) {
     ASSERT_EQ(output[i], 5.f);
   }
@@ -64,10 +67,11 @@ TEST(test_add_cu, add_align1) {
   set_value_cu(static_cast<float*>(t1.get_buffer()->ptr()), size, 2.1f);
   set_value_cu(static_cast<float*>(t2.get_buffer()->ptr()), size, 3.3f);
 
-  kernel::get_add_kernel(base::DeviceType::kDeviceCUDA)( t1, t2, out, nullptr);
+  kernel::get_add_kernel(base::DeviceType::kDeviceCUDA)(t1, t2, out, nullptr);
   cudaDeviceSynchronize();
   float* output = new float[size];
-  cudaMemcpy(output, out.ptr<float>(), size * sizeof(float), cudaMemcpyDeviceToHost);
+  cudaMemcpy(output, out.ptr<float>(), size * sizeof(float),
+             cudaMemcpyDeviceToHost);
   for (int i = 0; i < size; ++i) {
     ASSERT_NEAR(output[i], 5.4f, 0.1f);
   }

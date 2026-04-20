@@ -2,6 +2,7 @@
 #include <cuda_runtime_api.h>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
+
 #include "../source/op/kernels/cpu/matmul_kernel.h"
 #include "../source/op/kernels/kernels_interface.h"
 #include "../utils.cuh"
@@ -34,10 +35,11 @@ TEST(test_matmul_cu, matmul_linear_stream5) {
   cudaStream_t stream;
   cudaStreamCreate(&stream);
   config->stream = stream;
-  kernel::get_matmul_kernel(base::DeviceType::kDeviceCUDA)(input, weight, out_cu, 1.f, config);
+  kernel::get_matmul_kernel(base::DeviceType::kDeviceCUDA)(input, weight,
+                                                           out_cu, 1.f, config);
 
-  kernel::get_matmul_kernel(base::DeviceType::kDeviceCPU)(input_cpu, weight_cpu, out_cpu, 1.f,
-                                                          config);
+  kernel::get_matmul_kernel(base::DeviceType::kDeviceCPU)(input_cpu, weight_cpu,
+                                                          out_cpu, 1.f, config);
 
   out_cu.to_cpu();
   for (int i = 0; i < out_cu.size(); ++i) {
@@ -67,8 +69,8 @@ TEST(test_matmul_cu, matmul_linear_course) {
 
   tensor::Tensor out_cpu(base::DataType::kDataTypeFp32, 3, true, alloc_cpu);
 
-  kernel::get_matmul_kernel(base::DeviceType::kDeviceCPU)(input_cpu, weight_cpu, out_cpu, 1.f,
-                                                          nullptr);
+  kernel::get_matmul_kernel(base::DeviceType::kDeviceCPU)(
+      input_cpu, weight_cpu, out_cpu, 1.f, nullptr);
 
   ASSERT_EQ(out_cpu.index<float>(0), 0);
   ASSERT_EQ(out_cpu.index<float>(1), 3);
@@ -95,7 +97,8 @@ TEST(test_matmul_cu, matmul_linear_course_cuda) {
 
   tensor::Tensor out_cu(base::DataType::kDataTypeFp32, 3, true, alloc_cu);
 
-  kernel::get_matmul_kernel(base::DeviceType::kDeviceCUDA)(input, weight, out_cu, 1.f, nullptr);
+  kernel::get_matmul_kernel(base::DeviceType::kDeviceCUDA)(
+      input, weight, out_cu, 1.f, nullptr);
 
   tensor::Tensor out_cpu = out_cu.clone();
   out_cpu.to_cpu();

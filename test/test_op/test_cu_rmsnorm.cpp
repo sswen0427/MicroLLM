@@ -1,6 +1,7 @@
 #include <cuda_runtime_api.h>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
+
 #include "../source/op/kernels/kernels_interface.h"
 #include "../utils.cuh"
 #include "base/buffer.h"
@@ -29,9 +30,11 @@ TEST(test_rmsnorm_cu, rmsnorm_nostream) {
   wei_cu.to_cuda(nullptr);
   out_cu.to_cuda(nullptr);
 
-  kernel::get_rmsnorm_kernel(base::DeviceType::kDeviceCUDA)(in_cu, wei_cu, out_cu, nullptr);
+  kernel::get_rmsnorm_kernel(base::DeviceType::kDeviceCUDA)(in_cu, wei_cu,
+                                                            out_cu, nullptr);
   out_cu.to_cpu();
-  kernel::get_rmsnorm_kernel(base::DeviceType::kDeviceCPU)(in_cpu, wei_cpu, out_cpu, nullptr);
+  kernel::get_rmsnorm_kernel(base::DeviceType::kDeviceCPU)(in_cpu, wei_cpu,
+                                                           out_cpu, nullptr);
 
   for (int i = 0; i < size; ++i) {
     ASSERT_NEAR(out_cu.index<float>(i), out_cpu.index<float>(i), 1e-5f);
@@ -44,9 +47,11 @@ TEST(test_rmsnorm_cu_dim, rmsnorm_stream) {
 
   int dim_size = 4;
   int size = 1024;
-  tensor::Tensor in_cpu(base::DataType::kDataTypeFp32, dim_size, size, true, alloc_cpu);
+  tensor::Tensor in_cpu(base::DataType::kDataTypeFp32, dim_size, size, true,
+                        alloc_cpu);
   tensor::Tensor wei_cpu(base::DataType::kDataTypeFp32, size, true, alloc_cpu);
-  tensor::Tensor out_cpu(base::DataType::kDataTypeFp32, dim_size, size, true, alloc_cpu);
+  tensor::Tensor out_cpu(base::DataType::kDataTypeFp32, dim_size, size, true,
+                         alloc_cpu);
 
   for (int i = 0; i < dim_size; ++i) {
     for (int j = 0; j < size; ++j) {
@@ -64,15 +69,20 @@ TEST(test_rmsnorm_cu_dim, rmsnorm_stream) {
   cudaStream_t stream;
   cudaStreamCreate(&stream);
 
-  kernel::get_rmsnorm_dim_kernel(base::DeviceType::kDeviceCUDA)(in_cu, wei_cu, out_cu, 1, nullptr);
-  kernel::get_rmsnorm_dim_kernel(base::DeviceType::kDeviceCUDA)(in_cu, wei_cu, in_cu, 1, nullptr);
+  kernel::get_rmsnorm_dim_kernel(base::DeviceType::kDeviceCUDA)(
+      in_cu, wei_cu, out_cu, 1, nullptr);
+  kernel::get_rmsnorm_dim_kernel(base::DeviceType::kDeviceCUDA)(
+      in_cu, wei_cu, in_cu, 1, nullptr);
 
   out_cu.to_cpu();
   in_cu.to_cpu();
 
-  tensor::Tensor in_cpu_golden(base::DataType::kDataTypeFp32, size, true, alloc_cpu);
-  tensor::Tensor wei_cpu_golden(base::DataType::kDataTypeFp32, size, true, alloc_cpu);
-  tensor::Tensor out_golden(base::DataType::kDataTypeFp32, size, true, alloc_cu);
+  tensor::Tensor in_cpu_golden(base::DataType::kDataTypeFp32, size, true,
+                               alloc_cpu);
+  tensor::Tensor wei_cpu_golden(base::DataType::kDataTypeFp32, size, true,
+                                alloc_cpu);
+  tensor::Tensor out_golden(base::DataType::kDataTypeFp32, size, true,
+                            alloc_cu);
   cudaDeviceSynchronize();
   auto err = cudaGetLastError();
   ASSERT_EQ(err, cudaSuccess);
@@ -88,14 +98,15 @@ TEST(test_rmsnorm_cu_dim, rmsnorm_stream) {
   wei_cu_golden.to_cuda();
   out_cu_golden.to_cuda();
 
-  kernel::get_rmsnorm_kernel(base::DeviceType::kDeviceCUDA)(in_cu_golden, wei_cu_golden,
-                                                            out_cu_golden, nullptr);
+  kernel::get_rmsnorm_kernel(base::DeviceType::kDeviceCUDA)(
+      in_cu_golden, wei_cu_golden, out_cu_golden, nullptr);
 
   out_cu_golden.to_cpu();
 
   for (int i = 0; i < dim_size; ++i) {
     for (int j = 0; j < size; ++j) {
-      ASSERT_EQ(out_cu.index<float>(i * size + j), out_cu_golden.index<float>(j))
+      ASSERT_EQ(out_cu.index<float>(i * size + j),
+                out_cu_golden.index<float>(j))
           << "i: " << i << " j: " << j;
       ASSERT_EQ(in_cu.index<float>(i * size + j), out_cu_golden.index<float>(j))
           << "i: " << i << " j: " << j;
@@ -129,10 +140,12 @@ TEST(test_rmsnorm_cu, rmsnorm_stream) {
   out_cu.to_cuda(nullptr);
   cudaStream_t stream;
   cudaStreamCreate(&stream);
-  kernel::get_rmsnorm_kernel(base::DeviceType::kDeviceCUDA)(in_cu, wei_cu, out_cu, stream);
+  kernel::get_rmsnorm_kernel(base::DeviceType::kDeviceCUDA)(in_cu, wei_cu,
+                                                            out_cu, stream);
   out_cu.to_cpu();
 
-  kernel::get_rmsnorm_kernel(base::DeviceType::kDeviceCPU)(in_cpu, wei_cpu, out_cpu, nullptr);
+  kernel::get_rmsnorm_kernel(base::DeviceType::kDeviceCPU)(in_cpu, wei_cpu,
+                                                           out_cpu, nullptr);
 
   for (int i = 0; i < size; ++i) {
     ASSERT_NEAR(out_cu.index<float>(i), out_cpu.index<float>(i), 1e-5f);
@@ -166,10 +179,12 @@ TEST(test_rmsnorm_cu, rmsnorm_stream2) {
   out_cu.to_cuda(nullptr);
   cudaStream_t stream;
   cudaStreamCreate(&stream);
-  kernel::get_rmsnorm_kernel(base::DeviceType::kDeviceCUDA)(in_cu, wei_cu, out_cu, stream);
+  kernel::get_rmsnorm_kernel(base::DeviceType::kDeviceCUDA)(in_cu, wei_cu,
+                                                            out_cu, stream);
   out_cu.to_cpu();
 
-  kernel::get_rmsnorm_kernel(base::DeviceType::kDeviceCPU)(in_cpu, wei_cpu, out_cpu, nullptr);
+  kernel::get_rmsnorm_kernel(base::DeviceType::kDeviceCPU)(in_cpu, wei_cpu,
+                                                           out_cpu, nullptr);
 
   for (int i = 0; i < size; ++i) {
     ASSERT_NEAR(out_cu.index<float>(i), out_cpu.index<float>(i), 1e-5f);

@@ -1,6 +1,7 @@
 #include <cuda_runtime_api.h>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
+
 #include "../source/op/kernels/kernels_interface.h"
 #include "base/buffer.h"
 TEST(test_swiglu_cu, swiglu_nostream) {
@@ -28,12 +29,12 @@ TEST(test_swiglu_cu, swiglu_nostream) {
   wei_cu.to_cuda(nullptr);
   out_cu.to_cuda(nullptr);
 
-  kernel::get_swiglu_kernel(base::DeviceType::kDeviceCUDA)(in_cu, wei_cu, out_cu,
-                                                           nullptr);
+  kernel::get_swiglu_kernel(base::DeviceType::kDeviceCUDA)(in_cu, wei_cu,
+                                                           out_cu, nullptr);
   out_cu.to_cpu();
 
-  kernel::get_swiglu_kernel(base::DeviceType::kDeviceCPU)(in_cpu, wei_cpu, out_cpu,
-                                                          nullptr);
+  kernel::get_swiglu_kernel(base::DeviceType::kDeviceCPU)(in_cpu, wei_cpu,
+                                                          out_cpu, nullptr);
 
   for (int i = 0; i < size; ++i) {
     ASSERT_NEAR(out_cu.index<float>(i), out_cpu.index<float>(i), 1e-5f);
@@ -67,11 +68,12 @@ TEST(test_swiglu_cu, swiglu_stream) {
   cudaStream_t stream;
   cudaStreamCreate(&stream);
 
-  kernel::get_swiglu_kernel(base::DeviceType::kDeviceCUDA)(in_cu, wei_cu, out_cu, stream);
+  kernel::get_swiglu_kernel(base::DeviceType::kDeviceCUDA)(in_cu, wei_cu,
+                                                           out_cu, stream);
   out_cu.to_cpu();
 
-  kernel::get_swiglu_kernel(base::DeviceType::kDeviceCPU)(in_cpu, wei_cpu, out_cpu,
-                                                          nullptr);
+  kernel::get_swiglu_kernel(base::DeviceType::kDeviceCPU)(in_cpu, wei_cpu,
+                                                          out_cpu, nullptr);
 
   for (int i = 0; i < size; ++i) {
     ASSERT_NEAR(out_cu.index<float>(i), out_cpu.index<float>(i), 1e-5f);
