@@ -6,9 +6,7 @@
 #include "op/kernels/kernels_interface.h"
 TEST(AddCudaTest, Nostream) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
-
   int32_t size = 32 * 151;
-
   tensor::Tensor t1 =
       tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, alloc_cu);
   tensor::Tensor t2 =
@@ -25,21 +23,17 @@ TEST(AddCudaTest, Nostream) {
 
   kernel::get_add_kernel(base::DeviceType::kDeviceCUDA)(t1, t2, out, nullptr);
   cudaDeviceSynchronize();
-  float* output = new float[size];
-  cudaMemcpy(output, out.ptr<float>(), size * sizeof(float),
+  std::vector<float> output(size);
+  cudaMemcpy(output.data(), out.ptr<float>(), size * sizeof(float),
              cudaMemcpyDeviceToHost);
   for (int i = 0; i < size; ++i) {
-    ASSERT_EQ(output[i], 5.f);
+    EXPECT_EQ(output[i], 5.f);
   }
-
-  delete[] output;
 }
 
 TEST(AddCudaTest, Stream) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
-
   int32_t size = 32 * 151;
-
   tensor::Tensor t1 =
       tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, alloc_cu);
   tensor::Tensor t2 =
@@ -57,21 +51,18 @@ TEST(AddCudaTest, Stream) {
   cudaStreamCreate(&stream);
   kernel::get_add_kernel(base::DeviceType::kDeviceCUDA)(t1, t2, out, stream);
   cudaDeviceSynchronize();
-  float* output = new float[size];
-  cudaMemcpy(output, out.ptr<float>(), size * sizeof(float),
+  std::vector<float> output(size);
+  cudaMemcpy(output.data(), out.ptr<float>(), size * sizeof(float),
              cudaMemcpyDeviceToHost);
   for (int i = 0; i < size; ++i) {
-    ASSERT_EQ(output[i], 5.f);
+    EXPECT_EQ(output[i], 5.f);
   }
   cudaStreamDestroy(stream);
-  delete[] output;
 }
 
 TEST(AddCudaTest, Align) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
-
   int32_t size = 32 * 151 * 13;
-
   tensor::Tensor t1 =
       tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, alloc_cu);
   tensor::Tensor t2 =
@@ -88,12 +79,10 @@ TEST(AddCudaTest, Align) {
 
   kernel::get_add_kernel(base::DeviceType::kDeviceCUDA)(t1, t2, out, nullptr);
   cudaDeviceSynchronize();
-  float* output = new float[size];
-  cudaMemcpy(output, out.ptr<float>(), size * sizeof(float),
+  std::vector<float> output(size);
+  cudaMemcpy(output.data(), out.ptr<float>(), size * sizeof(float),
              cudaMemcpyDeviceToHost);
   for (int i = 0; i < size; ++i) {
-    ASSERT_NEAR(output[i], 5.4f, 0.1f);
+    EXPECT_NEAR(output[i], 5.4f, 0.1f);
   }
-
-  delete[] output;
 }
