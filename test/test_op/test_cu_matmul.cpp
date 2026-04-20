@@ -39,15 +39,16 @@ TEST(CudaMatmulTest, RunCUDA) {
   auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
 
   tensor::Tensor input =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {3}, alloc_cpu);
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {4}, alloc_cpu);
   tensor::Tensor weight = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {3, 3}, alloc_cpu);
+      base::DataType::kDataTypeFp32, {4, 4}, alloc_cpu);
 
   input.at<float>(0) = float(1);
   input.at<float>(1) = float(1);
   input.at<float>(2) = float(-1);
+  input.at<float>(3) = float(0);
 
-  for (int i = 1; i <= 9; ++i) {
+  for (int i = 1; i <= 16; ++i) {
     weight.at<float>(i - 1) = float(i);
   }
 
