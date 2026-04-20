@@ -33,7 +33,7 @@ TEST(test_matmul_cu, matmul_linear_stream5) {
   tensor::Tensor out_cpu =
       tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {4}, alloc_cpu);
 
-  CudaConfig* config = new CudaConfig;
+  auto* config = new base::CudaConfig;
   cudaStream_t stream;
   cudaStreamCreate(&stream);
   config->stream = stream;

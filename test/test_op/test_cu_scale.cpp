@@ -2,7 +2,6 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
-#include "../utils.cuh"
 #include "base/buffer.h"
 #include "op/kernels/kernels_interface.h"
 // TEST(test_scale_cu, scale1_nostream) {

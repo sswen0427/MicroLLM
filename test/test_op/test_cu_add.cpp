@@ -2,7 +2,6 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
-#include "../utils.cuh"
 #include "base/buffer.h"
 #include "op/kernels/kernels_interface.h"
 TEST(test_add_cu, add1_nostream) {
@@ -17,8 +16,12 @@ TEST(test_add_cu, add1_nostream) {
   tensor::Tensor out =
       tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, alloc_cu);
 
-  set_value_cu(static_cast<float*>(t1.get_buffer()->ptr()), size, 2.f);
-  set_value_cu(static_cast<float*>(t2.get_buffer()->ptr()), size, 3.f);
+  std::vector<float> vec_2(size, 2.f);
+  std::vector<float> vec_3(size, 3.f);
+  cudaMemcpy(t1.get_buffer()->ptr(), vec_2.data(), size * sizeof(float),
+             cudaMemcpyHostToDevice);
+  cudaMemcpy(t2.get_buffer()->ptr(), vec_3.data(), size * sizeof(float),
+             cudaMemcpyHostToDevice);
 
   kernel::get_add_kernel(base::DeviceType::kDeviceCUDA)(t1, t2, out, nullptr);
   cudaDeviceSynchronize();
@@ -43,9 +46,12 @@ TEST(test_add_cu, add1_stream) {
       tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, alloc_cu);
   tensor::Tensor out =
       tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, alloc_cu);
-
-  set_value_cu(static_cast<float*>(t1.get_buffer()->ptr()), size, 2.f);
-  set_value_cu(static_cast<float*>(t2.get_buffer()->ptr()), size, 3.f);
+  std::vector<float> vec_2(size, 2.f);
+  std::vector<float> vec_3(size, 3.f);
+  cudaMemcpy(t1.get_buffer()->ptr(), vec_2.data(), size * sizeof(float),
+             cudaMemcpyHostToDevice);
+  cudaMemcpy(t2.get_buffer()->ptr(), vec_3.data(), size * sizeof(float),
+             cudaMemcpyHostToDevice);
 
   cudaStream_t stream;
   cudaStreamCreate(&stream);
@@ -73,8 +79,12 @@ TEST(test_add_cu, add_align1) {
   tensor::Tensor out =
       tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, alloc_cu);
 
-  set_value_cu(static_cast<float*>(t1.get_buffer()->ptr()), size, 2.1f);
-  set_value_cu(static_cast<float*>(t2.get_buffer()->ptr()), size, 3.3f);
+  std::vector<float> vec_2(size, 2.1f);
+  std::vector<float> vec_3(size, 3.3f);
+  cudaMemcpy(t1.get_buffer()->ptr(), vec_2.data(), size * sizeof(float),
+             cudaMemcpyHostToDevice);
+  cudaMemcpy(t2.get_buffer()->ptr(), vec_3.data(), size * sizeof(float),
+             cudaMemcpyHostToDevice);
 
   kernel::get_add_kernel(base::DeviceType::kDeviceCUDA)(t1, t2, out, nullptr);
   cudaDeviceSynchronize();
