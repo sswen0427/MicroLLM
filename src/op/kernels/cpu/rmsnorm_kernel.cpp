@@ -3,6 +3,16 @@
 #include <armadillo>
 
 namespace kernel {
+/**
+ * @brief CPU implementation of RMSNorm, see
+ * https://zhuanlan.zhihu.com/p/685181632
+ *
+ * Computes:
+ *   output = weight * input / sqrt(mean(input^2) + eps)
+ *
+ * `eps` is 1e-6 for QWEN2/QWEN3 and 1e-5 otherwise.
+ * All tensors must be non-empty, on CPU, and stored as float.
+ */
 void rmsnorm_kernel_cpu(const tensor::Tensor& input,
                         const tensor::Tensor& weight,
                         const tensor::Tensor& output,
