@@ -7,7 +7,7 @@
 #include "base/buffer.h"
 #include "op/kernels/kernels_interface.h"
 
-TEST(test_rmsnorm_cu, rmsnorm_nostream) {
+TEST(RMSNormTest, NoStream) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
 
@@ -45,7 +45,7 @@ TEST(test_rmsnorm_cu, rmsnorm_nostream) {
   }
 }
 
-TEST(test_rmsnorm_cu_dim, rmsnorm_stream) {
+TEST(RMSNormTest, Stream1) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
 
@@ -118,7 +118,7 @@ TEST(test_rmsnorm_cu_dim, rmsnorm_stream) {
   }
 }
 
-TEST(test_rmsnorm_cu, rmsnorm_stream) {
+TEST(RMSNormTest, Stream2) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
 
@@ -160,7 +160,7 @@ TEST(test_rmsnorm_cu, rmsnorm_stream) {
   cudaStreamDestroy(stream);
 }
 
-TEST(test_rmsnorm_cu, rmsnorm_stream2) {
+TEST(RMSNormTest, Stream3) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
 
