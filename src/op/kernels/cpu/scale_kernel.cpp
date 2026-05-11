@@ -8,6 +8,6 @@ void scale_inplace_cpu(float scale, const tensor::Tensor& tensor,
   CHECK(tensor.is_empty() == false);
   arma::fvec tensor_mat(const_cast<float*>(tensor.ptr<float>()), tensor.size(),
                         false, true);
-  tensor_mat = tensor_mat * scale;
+  tensor_mat *= scale;
 }
 }  // namespace kernel
