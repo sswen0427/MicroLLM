@@ -2,7 +2,8 @@
 
 #include <cmath>
 namespace kernel {
-#if defined(LLAMA3_SUPPORT)
+
+namespace llama3 {
 void sin_cos_cache_calc_cpu(int head_size, int max_seq_len, float* sin_cache,
                             float* cos_cache) {
   for (int pos = 0; pos < max_seq_len; ++pos) {
@@ -24,8 +25,8 @@ void rope_kernel_cpu(int32_t dim, int32_t kv_dim, int32_t head_size,
                      const tensor::Tensor& input_k,
                      const tensor::Tensor& input_pos,
                      const tensor::Tensor& sin_cache,
-                     const tensor::Tensor& cos_cache, void* stream) {
-  UNUSED(stream);
+                     const tensor::Tensor& cos_cache,
+                     [[maybe_unused]] void* stream) {
   const int32_t pos = *input_pos.ptr<int32_t>(0);
 
   for (int32_t i = 0; i < dim; i += head_size) {
@@ -49,7 +50,9 @@ void rope_kernel_cpu(int32_t dim, int32_t kv_dim, int32_t head_size,
     }
   }
 }
-#elif defined(QWEN2_SUPPORT) || defined(QWEN3_SUPPORT)
+}  // namespace llama3
+
+namespace qwen {
 void sin_cos_cache_calc_cpu(int head_size, int max_seq_len, float* sin_cache,
                             float* cos_cache) {
   for (int pos = 0; pos < max_seq_len; ++pos) {
@@ -71,8 +74,8 @@ void rope_kernel_cpu(int32_t dim, int32_t kv_dim, int32_t head_size,
                      const tensor::Tensor& input_k,
                      const tensor::Tensor& input_pos,
                      const tensor::Tensor& sin_cache,
-                     const tensor::Tensor& cos_cache, void* stream) {
-  UNUSED(stream);
+                     const tensor::Tensor& cos_cache,
+                     [[maybe_unused]] void* stream) {
   const int32_t pos = *input_pos.ptr<int32_t>(0);
 
   for (int32_t i = 0; i < dim; i += head_size) {
@@ -96,7 +99,27 @@ void rope_kernel_cpu(int32_t dim, int32_t kv_dim, int32_t head_size,
     }
   }
 }
-#else
+
+}  // namespace qwen
+
+/**
+ * @brief sin_cache (and cos_cache) stores the pre-computed trigonometric values
+ * for RoPE.
+ *
+ * Shape: [max_seq_len, head_size]
+ *   - max_seq_len: The maximum sequence length supported by the model (Rows).
+ *   - head_size: The dimension of a single attention head (Columns).
+ *
+ * Purpose:
+ * 1. Performance: Computing sin() and cos() on the fly is computationally
+ * expensive. Caching these values during model initialization significantly
+ * speeds up the forward pass.
+ * 2. Memory Optimization: The rotation frequencies (angles) are identical
+ * across all attention heads. Instead of caching for the full hidden dimension
+ * (`dim`), we only cache for a single `head_size`. The modulo operation (`i %
+ * head_size`) effectively broadcasts these cached values across all heads,
+ * reducing the cache memory footprint by a factor of `num_heads`.
+ */
 void sin_cos_cache_calc_cpu(int head_size, int max_seq_len, float* sin_cache,
                             float* cos_cache) {
   for (int pos = 0; pos < max_seq_len; ++pos) {
@@ -112,6 +135,10 @@ void sin_cos_cache_calc_cpu(int head_size, int max_seq_len, float* sin_cache,
   }
 }
 
+/**
+ * @brief CPU implementation of rope kernel. See
+ * https://zhuanlan.zhihu.com/p/647109286.
+ */
 void rope_kernel_cpu(int32_t dim, int32_t kv_dim, int32_t head_size,
                      const tensor::Tensor& input_q,
                      const tensor::Tensor& input_k,
@@ -140,5 +167,4 @@ void rope_kernel_cpu(int32_t dim, int32_t kv_dim, int32_t head_size,
     }
   }
 }
-#endif
 }  // namespace kernel
