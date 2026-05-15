@@ -59,7 +59,7 @@ TEST(SoftmaxTest, Stream1) {
   in_cu.to_cpu();
 
   for (int i = 0; i < size; ++i) {
-    ASSERT_NEAR(in_cpu.at<float>(i), in_cu.at<float>(i), 1e-5f);
+    EXPECT_NEAR(in_cpu.at<float>(i), in_cu.at<float>(i), 1e-5f);
   }
 }
 
@@ -89,7 +89,7 @@ TEST(SoftmaxTest, Stream2) {
   in_cu.to_cpu();
 
   for (int i = 0; i < size; ++i) {
-    ASSERT_NEAR(in_cpu.at<float>(i), in_cu.at<float>(i), 1e-5f);
+    EXPECT_NEAR(in_cpu.at<float>(i), in_cu.at<float>(i), 1e-5f);
   }
 }
 
@@ -119,6 +119,6 @@ TEST(SoftmaxTest, Stream3) {
   in_cu.to_cpu();
 
   for (int i = 0; i < size; ++i) {
-    ASSERT_NEAR(in_cpu.at<float>(i), in_cu.at<float>(i), 1e-5f);
+    EXPECT_NEAR(in_cpu.at<float>(i), in_cu.at<float>(i), 1e-5f);
   }
 }
