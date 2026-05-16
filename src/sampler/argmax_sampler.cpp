@@ -1,3 +1,9 @@
+#include "sampler/argmax_sampler.h"
+
+#include <algorithm>
+
+#include "op/kernels/cuda/argmax_kernel.cuh"
+
 namespace sampler {
 size_t ArgmaxSampler::sample(const float* logits, size_t size, void* stream) {
   if (device_type_ == base::DeviceType::kDeviceCPU) {
@@ -9,3 +15,4 @@ size_t ArgmaxSampler::sample(const float* logits, size_t size, void* stream) {
     return next;
   }
 }
+}  // namespace sampler
