@@ -6,7 +6,8 @@
 
 #include "base/buffer.h"
 #include "op/kernels/kernels_interface.h"
-TEST(test_swiglu_cu, swiglu_nostream) {
+
+TEST(SwiGLUTest, NoStream) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
 
@@ -46,7 +47,7 @@ TEST(test_swiglu_cu, swiglu_nostream) {
   }
 }
 
-TEST(test_swiglu_cu, swiglu_stream) {
+TEST(SwiGLUTest, Stream) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
 

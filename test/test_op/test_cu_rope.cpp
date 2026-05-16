@@ -7,7 +7,7 @@
 #include "base/buffer.h"
 #include "op/kernels/kernels_interface.h"
 
-TEST(test_rope_cu, rope_nostream) {
+TEST(ROPETest, NoStream1) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
   int32_t dim = 256;
@@ -36,11 +36,13 @@ TEST(test_rope_cu, rope_nostream) {
   input_q_gpu.to_cuda(nullptr);
   input_k_gpu.to_cuda(nullptr);
 
-  // kernel::get_rope_kernel(base::DeviceType::kDeviceCPU)(
-  //     dim, kv_dim, head_size, input_q_cpu, input_k_cpu, input_pos, nullptr);
-  //
-  // kernel::get_rope_kernel(base::DeviceType::kDeviceCUDA)(
-  //     dim, kv_dim, head_size, input_q_gpu, input_k_gpu, input_pos, nullptr);
+  kernel::get_rope_kernel(base::DeviceType::kDeviceCPU)(
+      dim, kv_dim, head_size, input_q_cpu, input_k_cpu, input_pos, input_k_cpu,
+      input_q_cpu, nullptr);
+
+  kernel::get_rope_kernel(base::DeviceType::kDeviceCUDA)(
+      dim, kv_dim, head_size, input_q_gpu, input_k_gpu, input_pos, input_k_cpu,
+      input_q_cpu, nullptr);
   cudaDeviceSynchronize();
 
   input_q_gpu.to_cpu();
@@ -53,7 +55,7 @@ TEST(test_rope_cu, rope_nostream) {
   }
 }
 
-TEST(test_rope_cu, rope_nostream2) {
+TEST(ROPETest, NoStream2) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
   int32_t dim = 512;
@@ -82,11 +84,13 @@ TEST(test_rope_cu, rope_nostream2) {
   input_q_gpu.to_cuda(nullptr);
   input_k_gpu.to_cuda(nullptr);
 
-  // kernel::get_rope_kernel(base::DeviceType::kDeviceCPU)(
-  //     dim, kv_dim, head_size, input_q_cpu, input_k_cpu, input_pos, nullptr);
-  //
-  // kernel::get_rope_kernel(base::DeviceType::kDeviceCUDA)(
-  //     dim, kv_dim, head_size, input_q_gpu, input_k_gpu, input_pos, nullptr);
+  kernel::get_rope_kernel(base::DeviceType::kDeviceCPU)(
+      dim, kv_dim, head_size, input_q_cpu, input_k_cpu, input_pos, input_k_cpu,
+      input_q_cpu, nullptr);
+
+  kernel::get_rope_kernel(base::DeviceType::kDeviceCUDA)(
+      dim, kv_dim, head_size, input_q_gpu, input_k_gpu, input_pos, input_k_cpu,
+      input_q_cpu, nullptr);
   cudaDeviceSynchronize();
 
   input_q_gpu.to_cpu();
@@ -99,7 +103,7 @@ TEST(test_rope_cu, rope_nostream2) {
   }
 }
 
-TEST(test_rope_cu, rope_stream1) {
+TEST(ROPETest, Stream) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
   int32_t dim = 512;
@@ -129,11 +133,13 @@ TEST(test_rope_cu, rope_stream1) {
   input_q_gpu.to_cuda(nullptr);
   input_k_gpu.to_cuda(nullptr);
 
-  // kernel::get_rope_kernel(base::DeviceType::kDeviceCPU)(
-  //     dim, kv_dim, head_size, input_q_cpu, input_k_cpu, input_pos, nullptr);
-  //
-  // kernel::get_rope_kernel(base::DeviceType::kDeviceCUDA)(
-  //     dim, kv_dim, head_size, input_q_gpu, input_k_gpu, input_pos, stream);
+  kernel::get_rope_kernel(base::DeviceType::kDeviceCPU)(
+      dim, kv_dim, head_size, input_q_cpu, input_k_cpu, input_pos, input_k_cpu,
+      input_q_cpu, nullptr);
+
+  kernel::get_rope_kernel(base::DeviceType::kDeviceCUDA)(
+      dim, kv_dim, head_size, input_q_gpu, input_k_gpu, input_pos, input_k_cpu,
+      input_q_cpu, stream);
   cudaDeviceSynchronize();
 
   input_q_gpu.to_cpu();

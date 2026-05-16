@@ -3,6 +3,7 @@
 #include <armadillo>
 
 namespace kernel {
+// https://arxiv.org/pdf/2002.05202
 void swiglu_kernel_cpu(const tensor::Tensor& input1,
                        const tensor::Tensor& input2,
                        const tensor::Tensor& output,
