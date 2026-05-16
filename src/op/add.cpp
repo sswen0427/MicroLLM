@@ -1,3 +1,7 @@
+#include "op/add.h"
+
+#include "op/kernels/kernels_interface.h"
+
 namespace op {
 VecAddLayer::VecAddLayer(base::DeviceType device_type)
     : Layer(device_type, LayerType::kLayerAdd, "Add") {
@@ -10,19 +14,20 @@ base::Status VecAddLayer::check() const {
   tensor::Tensor input2 = this->get_input(1);
   int32_t size = input1.size();
   base::Status status;
-  status = check_tensor_with_dim(input1, device_type_, data_type_, size);
+  status = check_tensor_with_dim(input1, device_type_, data_type_, {size});
   if (!status) {
     LOG(ERROR) << "The input tensor 1 error in the add layer.";
     return status;
   }
 
-  status = check_tensor_with_dim(input2, device_type_, data_type_, size);
+  status = check_tensor_with_dim(input2, device_type_, data_type_, {size});
   if (!status) {
     LOG(ERROR) << "The input tensor 2 error in the add layer.";
     return status;
   }
 
-  status = check_tensor_with_dim(get_output(0), device_type_, data_type_, size);
+  status =
+      check_tensor_with_dim(get_output(0), device_type_, data_type_, {size});
   if (!status) {
     LOG(ERROR) << "The output tensor error in the add layer.";
     return status;

@@ -1,3 +1,6 @@
+#include "op/mha.h"
+
+#include "op/kernels/kernels_interface.h"
 
 namespace op {
 MultiHeadAttention::MultiHeadAttention(base::DeviceType device_type,

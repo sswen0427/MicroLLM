@@ -1,3 +1,6 @@
+#include "op/rope.h"
+
+#include "op/kernels/kernels_interface.h"
 
 namespace op {
 RoPELayer::RoPELayer(base::DeviceType device_type, int32_t dim, int32_t kv_dim,
@@ -36,20 +39,21 @@ base::Status RoPELayer::check() const {
   // pos tensor
   auto status =
       check_tensor_with_dim(get_input(2), base::DeviceType::kDeviceCPU,
-                            base::DataType::kDataTypeInt32, 1);
+                            base::DataType::kDataTypeInt32, {1});
   if (!status) {
     LOG(ERROR) << "The input tensor 2 error in the add layer.";
     return status;
   }
 
   status =
-      check_tensor_with_dim(get_input(1), device_type_, data_type_, kv_dim_);
+      check_tensor_with_dim(get_input(1), device_type_, data_type_, {kv_dim_});
   if (!status) {
     LOG(ERROR) << "The input tensor 1 error in the add layer.";
     return status;
   }
 
-  status = check_tensor_with_dim(get_input(0), device_type_, data_type_, dim_);
+  status =
+      check_tensor_with_dim(get_input(0), device_type_, data_type_, {dim_});
   if (!status) {
     LOG(ERROR) << "The input tensor 0 error in the add layer.";
     return status;

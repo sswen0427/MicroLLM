@@ -1,3 +1,6 @@
+#include "op/rmsnorm.h"
+
+#include "op/kernels/kernels_interface.h"
 
 namespace op {
 RmsNormLayer::RmsNormLayer(base::DeviceType device_type, int32_t dim)
@@ -43,21 +46,21 @@ base::Status RmsNormLayer::check() const {
     }
   } else {
     auto status =
-        check_tensor_with_dim(get_input(0), device_type_, data_type_, dim_);
+        check_tensor_with_dim(get_input(0), device_type_, data_type_, {dim_});
     if (!status) {
       LOG(ERROR) << "The input tensor error in the rmsnorm layer.";
       return status;
     }
 
     status =
-        check_tensor_with_dim(get_weight(0), device_type_, data_type_, dim_);
+        check_tensor_with_dim(get_weight(0), device_type_, data_type_, {dim_});
     if (!status) {
       LOG(ERROR) << "The weight tensor error in the rmsnorm layer.";
       return status;
     }
 
     status =
-        check_tensor_with_dim(get_output(0), device_type_, data_type_, dim_);
+        check_tensor_with_dim(get_output(0), device_type_, data_type_, {dim_});
     if (!status) {
       LOG(ERROR) << "The output tensor error in the rmsnorm layer.";
       return status;
