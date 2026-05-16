@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
+
 namespace model {
 struct RawModelData {
   ~RawModelData();
@@ -8,7 +11,7 @@ struct RawModelData {
   void* data = nullptr;
   void* weight_data = nullptr;
 
-  virtual const void* weight(size_t offset) const = 0;
+  virtual const void* weight(std::size_t offset) const = 0;
 };
 
 struct RawModelDataFp32 : RawModelData {

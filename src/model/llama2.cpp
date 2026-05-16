@@ -1,12 +1,25 @@
 #include "model/llama2.h"
 
+#include <thrust/detail/functional/actor.h>
+
 #include <iostream>
 #include <string>
 #include <vector>
 
+#include "base/base.h"
+#include "op/add.h"
+#include "op/kernels/cpu/rope_kernel.h"
+#include "op/kernels/cuda/rope_kernel.cuh"
+#include "op/matmul.h"
+#include "op/mha.h"
+#include "op/rmsnorm.h"
+#include "op/rope.h"
+#include "op/swiglu.h"
+#include "sampler/argmax_sampler.h"
+
 namespace model {
 
-void LLama2Layers::to_cuda(std::shared_ptr<kernel::CudaConfig> config) {
+void LLama2Layers::to_cuda(std::shared_ptr<base::CudaConfig> config) {
   if (add_layer_) {
     add_layer_->set_cuda_config(config);
     add_layer_->to_cuda();
@@ -113,7 +126,7 @@ base::Status LLama2Model::init(base::DeviceType device_type) {
   device_type_ = device_type;
   if (device_type == DeviceType::kDeviceCUDA) {
     cudaSetDevice(0);
-    cuda_config_ = std::make_shared<kernel::CudaConfig>();
+    cuda_config_ = std::make_shared<base::CudaConfig>();
     cudaStreamCreate(&cuda_config_->stream);
     cudaError_t err = cudaGetLastError();
     if (err != cudaSuccess) {
@@ -472,16 +485,16 @@ void LLama2Model::init_mem() {
   std::shared_ptr<base::DeviceAllocator> alloc_cu =
       base::CUDADeviceAllocatorFactory::get_instance();
 
-  tensor::Tensor input_tokens(base::DataType::kDataTypeInt32, 1, true,
-                              alloc_cpu);
-  tensor::Tensor input_embeddings(base::DataType::kDataTypeFp32, 1,
-                                  config_->dim_, true, alloc);
-  tensor::Tensor sin_cache(base::DataType::kDataTypeFp32,
-                           config_->head_size_ * config_->seq_len_, true,
-                           alloc);
-  tensor::Tensor cos_cache(base::DataType::kDataTypeFp32,
-                           config_->head_size_ * config_->seq_len_, true,
-                           alloc);
+  tensor::Tensor input_tokens =
+      tensor::Tensor::allocate(base::DataType::kDataTypeInt32, {1}, alloc_cpu);
+  tensor::Tensor input_embeddings = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {1, config_->dim_}, alloc);
+  tensor::Tensor sin_cache = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {config_->head_size_ * config_->seq_len_},
+      alloc);
+  tensor::Tensor cos_cache = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {config_->head_size_ * config_->seq_len_},
+      alloc);
 
   CHECK(insert_buffer(ModelBufferType::kSinCache, sin_cache));
   CHECK(insert_buffer(ModelBufferType::kCosCache, cos_cache));
@@ -489,51 +502,55 @@ void LLama2Model::init_mem() {
   CHECK(insert_buffer(ModelBufferType::kInputTokens, input_tokens));
   CHECK(insert_buffer(ModelBufferType::kInputEmbeddings, input_embeddings));
 
-  tensor::Tensor rms_output(base::DataType::kDataTypeFp32, config_->dim_, true,
-                            alloc);
+  tensor::Tensor rms_output = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {config_->dim_}, alloc);
   CHECK(insert_buffer(ModelBufferType::kOutputRMSNorm, rms_output));
   CHECK(insert_buffer(ModelBufferType::kOutputMHA, rms_output));
   CHECK(insert_buffer(ModelBufferType::kW2Output, rms_output));
   CHECK(insert_buffer(ModelBufferType::kFFNRMSNorm, rms_output));
 
-  tensor::Tensor w1_output(base::DataType::kDataTypeFp32, config_->hidden_dim_,
-                           true, alloc);
-  tensor::Tensor w3_output(base::DataType::kDataTypeFp32, config_->hidden_dim_,
-                           true, alloc);
+  tensor::Tensor w1_output = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {config_->hidden_dim_}, alloc);
+  tensor::Tensor w3_output = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {config_->hidden_dim_}, alloc);
 
   CHECK(insert_buffer(ModelBufferType::kW1Output, w1_output));
   CHECK(insert_buffer(ModelBufferType::kW3Output, w3_output));
 
   // kv cache
-  tensor::Tensor key_cache(base::DataType::kDataTypeFp32, config_->layer_num_,
-                           config_->seq_len_, config_->kv_dim_, true, alloc);
-  tensor::Tensor value_cache(base::DataType::kDataTypeFp32, config_->layer_num_,
-                             config_->seq_len_, config_->kv_dim_, true, alloc);
+  tensor::Tensor key_cache = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32,
+      {config_->layer_num_, config_->seq_len_, config_->kv_dim_}, alloc);
+  tensor::Tensor value_cache = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32,
+      {config_->layer_num_, config_->seq_len_, config_->kv_dim_}, alloc);
 
   CHECK(insert_buffer(ModelBufferType::kKeyCache, key_cache));
   CHECK(insert_buffer(ModelBufferType::kValueCache, value_cache));
 
   // Wq query output
-  tensor::Tensor query(base::DataType::kDataTypeFp32, config_->dim_, true,
-                       alloc);
+  tensor::Tensor query = tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
+                                                  {config_->dim_}, alloc);
   CHECK(insert_buffer(ModelBufferType::kQuery, query));
 
   // Pos tensor
-  tensor::Tensor pos_tensor(base::DataType::kDataTypeInt32, 1, true, alloc_cpu);
+  tensor::Tensor pos_tensor =
+      tensor::Tensor::allocate(base::DataType::kDataTypeInt32, {1}, alloc_cpu);
   CHECK(insert_buffer(ModelBufferType::kInputPos, pos_tensor));
 
   // Attention output
-  tensor::Tensor attn(base::DataType::kDataTypeFp32, config_->head_num_,
-                      config_->seq_len_, true, alloc);
+  tensor::Tensor attn =
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
+                               {config_->head_num_, config_->seq_len_}, alloc);
   CHECK(insert_buffer(ModelBufferType::kScoreStorage, attn));
   CHECK(insert_buffer(ModelBufferType::kAttnOutput, query));
 
   // final forward output
-  tensor::Tensor forward_output(base::DataType::kDataTypeFp32,
-                                config_->vocab_size_, true, alloc);
+  tensor::Tensor forward_output = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {config_->vocab_size_}, alloc);
   if (device_type_ == base::DeviceType::kDeviceCUDA) {
-    tensor::Tensor forward_output_cpu(base::DataType::kDataTypeFp32,
-                                      config_->vocab_size_, true, alloc_cpu);
+    tensor::Tensor forward_output_cpu = tensor::Tensor::allocate(
+        base::DataType::kDataTypeFp32, {config_->vocab_size_}, alloc_cpu);
     CHECK(
         insert_buffer(ModelBufferType::kForwardOutputCPU, forward_output_cpu));
   }
@@ -635,15 +652,18 @@ op::EmbeddingOutput LLama2Model::embedding(
         {static_cast<int32_t>(tokens.size()), config_->dim_});
   }
   for (int32_t i = 0; i < tokens.size(); ++i) {
-    input_tokens.index<int32_t>(i) = tokens.at(i);
+    input_tokens.at<int32_t>(i) = tokens.at(i);
   }
+  auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
 
-  auto input_token_num = tensor::Tensor(base::DataType::kDataTypeInt32,
-                                        static_cast<int32_t>(tokens.size()));
+  auto input_token_num = tensor::Tensor::allocate(
+      base::DataType::kDataTypeInt32, {(int32_t)tokens.size()}, alloc_cpu);
   LOG_IF(FATAL, !llama_layers_->embedding_layer_)
       << "The embedding layer in the llama2 model is null pointer.";
-  STATUS_CHECK(llama_layers_->embedding_layer_->forward(
-      input_tokens, input_token_num, input_embeddings));
+  std::vector<tensor::Tensor> outputs;
+  auto status = llama_layers_->embedding_layer_->forward(
+      {input_tokens, input_token_num, input_embeddings}, outputs);
+  LOG_IF(FATAL, !status) << "The embedding layer forward failed.";
 
   op::EmbeddingOutput output(input_tokens, input_embeddings, input_token_num);
   return output;
@@ -660,7 +680,9 @@ void LLama2Model::attention_rms(int32_t layer_idx,
     LOG(FATAL)
         << "The attention rmsnorm layer is a null pointer in the llama2 model";
   }
-  STATUS_CHECK(rmsnorm_layer->forward(input, rmsnorm_output));
+  std::vector<tensor::Tensor> outputs{rmsnorm_output};
+  auto status = rmsnorm_layer->forward({input}, outputs);
+  LOG_IF(FATAL, !status) << "The attention rmsnorm layer failed.";
 }
 
 void LLama2Model::attention_qkv(int32_t layer_idx,
@@ -668,7 +690,7 @@ void LLama2Model::attention_qkv(int32_t layer_idx,
   CHECK(llama_layers_ != nullptr);
   // kv cache
   tensor::Tensor query = this->get_buffer(ModelBufferType::kQuery);
-  int32_t pos = pos_tensor.index<int32_t>(0);
+  int32_t pos = pos_tensor.at<int32_t>(0);
   // wq wk wv @ input
   const auto& [key, val] = slice_kv_cache(layer_idx, pos);
   // query
@@ -677,25 +699,35 @@ void LLama2Model::attention_qkv(int32_t layer_idx,
       << "The query layer in the attention block is null pointer.";
 
   auto rmsnorm_output = get_buffer(ModelBufferType::kOutputRMSNorm);
-  STATUS_CHECK(query_layer->forward(rmsnorm_output, query));
+  std::vector<tensor::Tensor> outputs{rmsnorm_output};
+  auto status = query_layer->forward({rmsnorm_output}, outputs);
+  LOG_IF(FATAL, !status) << "The query layer forward failed.";
 
   // key
   const auto& key_layer = llama_layers_->wk_layers_.at(layer_idx);
   CHECK_NE(key_layer, nullptr)
       << "The key layer in the attention block is null pointer.";
-  STATUS_CHECK(key_layer->forward(rmsnorm_output, key));
+  std::vector<tensor::Tensor> outputs2{key};
+  status = key_layer->forward({rmsnorm_output}, outputs2);
+  LOG_IF(FATAL, !status) << "The key layer forward failed.";
   // value
   const auto& value_layer = llama_layers_->wv_layers_.at(layer_idx);
   CHECK_NE(value_layer, nullptr)
       << "The value layer in the attention block is null pointer.";
-  STATUS_CHECK(value_layer->forward(rmsnorm_output, val));
+  std::vector<tensor::Tensor> outputs3{val};
+  status = value_layer->forward({rmsnorm_output}, outputs3);
+  LOG_IF(FATAL, !status) << "The value layer forward failed.";
 
   // rope
   CHECK_NE(llama_layers_->rope_layer_, nullptr)
       << "The RoPE layer in the attention block is null pointer.";
-  STATUS_CHECK(llama_layers_->rope_layer_->forward(
-      query, key, pos_tensor, get_buffer(ModelBufferType::kSinCache),
-      get_buffer(ModelBufferType::kCosCache), tensor::Tensor{}));
+  std::vector<tensor::Tensor> rope_outputs;
+
+  status = llama_layers_->rope_layer_->forward(
+      {query, key, pos_tensor, get_buffer(ModelBufferType::kSinCache),
+       get_buffer(ModelBufferType::kCosCache)},
+      rope_outputs);
+  LOG_IF(FATAL, !status) << "The rope layer forward failed.";
 }
 
 base::Status LLama2Model::predict(const tensor::Tensor& input,
@@ -725,18 +757,22 @@ void LLama2Model::attention_mha(int32_t layer_idx,
   const auto& mha_layer = llama_layers_->mha_layer_;
   CHECK_NE(mha_layer, nullptr)
       << "The multi head attention layer is null pointer.";
-  int pos = pos_tensor.index<int32_t>(0);
+  int pos = pos_tensor.at<int32_t>(0);
   std::dynamic_pointer_cast<op::MultiHeadAttention>(mha_layer)->set_pos(pos);
   std::dynamic_pointer_cast<op::MultiHeadAttention>(mha_layer)->set_layer_idx(
       layer_idx);
-  STATUS_CHECK(mha_layer->forward(query, score_storage, key_cache, val_cache,
-                                  mha_output));
+  std::vector<tensor::Tensor> outputs{mha_output};
+  auto status =
+      mha_layer->forward({query, score_storage, key_cache, val_cache}, outputs);
+  LOG_IF(FATAL, !status) << "The multi head attention layer failed.";
 
   // wo @ attention output
   tensor::Tensor attn_output = get_buffer(ModelBufferType::kAttnOutput);
   const auto& wo_layer = llama_layers_->wo_layers_.at(layer_idx);
   CHECK_NE(wo_layer, nullptr) << "The weight output layer is null pointer.";
-  STATUS_CHECK(wo_layer->forward(mha_output, attn_output));
+  std::vector<tensor::Tensor> outputs2{attn_output};
+  status = wo_layer->forward({mha_output}, outputs2);
+  LOG_IF(FATAL, !status) << "The weight output layer failed.";
 }
 
 void LLama2Model::feed_forward(int32_t layer_idx,
@@ -745,8 +781,10 @@ void LLama2Model::feed_forward(int32_t layer_idx,
   // residual add
   CHECK_NE(llama_layers_->add_layer_, nullptr)
       << "The add layer in the feedforward block is null pointer";
-  STATUS_CHECK(llama_layers_->add_layer_->forward(
-      input, get_buffer(ModelBufferType::kAttnOutput), input));
+  std::vector<tensor::Tensor> outputs{input};
+  auto status = llama_layers_->add_layer_->forward(
+      {input, get_buffer(ModelBufferType::kAttnOutput)}, outputs);
+  LOG_IF(FATAL, !status) << "The add layer failed.";
 
   // ffn rmsnorm
   tensor::Tensor ffn_norm_output = get_buffer(ModelBufferType::kFFNRMSNorm);
@@ -754,50 +792,57 @@ void LLama2Model::feed_forward(int32_t layer_idx,
       llama_layers_->rmsnorm_layers_.at(layer_idx + config_->layer_num_);
   CHECK_NE(ffn_rmsnorm, nullptr)
       << "The final rmsnorm layer in the feedforward block is null pointer";
-  STATUS_CHECK(ffn_rmsnorm->forward(input, ffn_norm_output));
+  std::vector<tensor::Tensor> outputs2{ffn_norm_output};
+  status = ffn_rmsnorm->forward({input}, outputs2);
+  LOG_IF(FATAL, !status) << "The final rmsnorm layer failed.";
 
   // w1
   tensor::Tensor w1_output = get_buffer(ModelBufferType::kW1Output);
   const auto& w1_layer = llama_layers_->w1_layers_.at(layer_idx);
   CHECK_NE(w1_layer, nullptr)
       << "The w1 layer in the feedforward block is null pointer";
-  STATUS_CHECK(w1_layer->forward(ffn_norm_output, w1_output));
+  std::vector<tensor::Tensor> outputs3{w1_output};
+  status = w1_layer->forward({ffn_norm_output}, outputs3);
+  LOG_IF(FATAL, !status) << "The w1 layer failed.";
 
   // w3
   tensor::Tensor w3_ouput = get_buffer(ModelBufferType::kW3Output);
   const auto& w3_layer = llama_layers_->w3_layers_.at(layer_idx);
   CHECK_NE(w3_layer, nullptr)
       << "The w3 layer in the feedforward block is null pointer";
-  STATUS_CHECK(w3_layer->forward(ffn_norm_output, w3_ouput));
+  std::vector<tensor::Tensor> outputs4{w3_ouput};
+  status = w3_layer->forward({ffn_norm_output}, outputs4);
+  LOG_IF(FATAL, !status) << "The w3 layer failed.";
 
   // SwiGLU
   CHECK_NE(llama_layers_->swiglu_layer_, nullptr)
       << "The swiglu layer in the feedforward block is null pointer";
-  STATUS_CHECK(
-      llama_layers_->swiglu_layer_->forward(w1_output, w3_ouput, w1_output));
+  std::vector<tensor::Tensor> outputs5{w3_ouput, w1_output};
+  status = llama_layers_->swiglu_layer_->forward({w1_output}, outputs5);
+  LOG_IF(FATAL, !status) << "The swiglu layer failed.";
 
   // w2
   tensor::Tensor w2_output = get_buffer(ModelBufferType::kW2Output);
   const auto& w2_layer = llama_layers_->w2_layers_.at(layer_idx);
   CHECK_NE(w2_layer, nullptr)
       << "The w2 layer in the feedforward block is null pointer";
-  STATUS_CHECK(w2_layer->forward(w1_output, w2_output));
+  // STATUS_CHECK(w2_layer->forward(w1_output, w2_output));
 
   // residual add
   CHECK_NE(llama_layers_->add_layer_, nullptr)
       << "The add layer in the feedforward block is null pointer";
-  STATUS_CHECK(llama_layers_->add_layer_->forward(input, w2_output, input));
+  // STATUS_CHECK(llama_layers_->add_layer_->forward(input, w2_output, input));
 }
 
 void LLama2Model::cls_logits(const tensor::Tensor& input) const {
   CHECK(llama_layers_ != nullptr);
   const auto& norm = llama_layers_->rmsnorm_layers_.at(2 * config_->layer_num_);
   CHECK_NE(norm, nullptr);
-  STATUS_CHECK(norm->forward(input, input));
+  // STATUS_CHECK(norm->forward(input, input));
 
   tensor::Tensor forward_output = get_buffer(ModelBufferType::kForwardOutput);
   CHECK_NE(llama_layers_->cls_layer_, nullptr);
-  STATUS_CHECK(llama_layers_->cls_layer_->forward(input, forward_output));
+  // STATUS_CHECK(llama_layers_->cls_layer_->forward(input, forward_output));
 }
 
 int32_t LLama2Model::post_processing(const tensor::Tensor& pos,

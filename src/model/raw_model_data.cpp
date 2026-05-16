@@ -1,3 +1,10 @@
+#include "model/raw_model_data.h"
+
+#include <sys/mman.h>
+#include <unistd.h>
+
+#include <cuda/std/detail/libcxx/include/cstdint>
+
 namespace model {
 RawModelData::~RawModelData() {
   if (data != nullptr && data != MAP_FAILED) {

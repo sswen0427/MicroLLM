@@ -1,5 +1,8 @@
 #pragma once
 
+#include "op/embedding.h"
+#include "op/layer.h"
+
 namespace model {
 struct QWen3TransformerConfig {
   int32_t kv_dim_ = 0;
@@ -36,7 +39,7 @@ struct Qwen3Layers {
 
   std::shared_ptr<op::Layer> embedding_layer_;
 
-  void to_cuda(std::shared_ptr<kernel::CudaConfig> config);
+  void to_cuda(std::shared_ptr<base::CudaConfig> config);
 };
 
 class Qwen3Model : public Model {
@@ -82,7 +85,7 @@ class Qwen3Model : public Model {
                           bool is_prompt) const override;
 
  private:
-  std::shared_ptr<kernel::CudaConfig> cuda_config_;
+  std::shared_ptr<base::CudaConfig> cuda_config_;
   std::unique_ptr<Qwen3Layers> qwen_layers_;
 };
 }  // namespace model

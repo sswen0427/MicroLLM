@@ -1,7 +1,6 @@
 #pragma once
 
-#include <cstddef>
-#include <cstdint>
+#include "base/base.h"
 namespace sampler {
 class Sampler {
  public:

@@ -1,7 +1,11 @@
+#if 0
+#include "model/qwen2.h"
+
+#include "base/base.h"
 
 namespace model {
 
-void Qwen2Layers::to_cuda(std::shared_ptr<kernel::CudaConfig> config) {
+void Qwen2Layers::to_cuda(std::shared_ptr<base::CudaConfig> config) {
   if (add_layer_) {
     add_layer_->set_cuda_config(config);
     add_layer_->to_cuda();
@@ -822,3 +826,5 @@ int32_t Qwen2Model::post_processing(const tensor::Tensor& pos,
 }
 
 }  // namespace model
+
+#endif

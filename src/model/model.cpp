@@ -1,5 +1,9 @@
 #include "model/model.h"
 
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+
 #include <iostream>
 
 namespace model {
@@ -236,10 +240,10 @@ std::pair<tensor::Tensor, tensor::Tensor> Model::slice_kv_cache(
   float* val_cache_ptr = const_cast<float*>(
       get_buffer(ModelBufferType::kValueCache).ptr<float>(cache_offset));
 
-  tensor::Tensor key(base::DataType::kDataTypeFp32, config_->kv_dim_, false,
-                     nullptr, key_cache_ptr);
-  tensor::Tensor val(base::DataType::kDataTypeFp32, config_->kv_dim_, false,
-                     nullptr, val_cache_ptr);
+  tensor::Tensor key = tensor::Tensor::from_external(
+      base::DataType::kDataTypeFp32, {config_->kv_dim_}, key_cache_ptr);
+  tensor::Tensor val = tensor::Tensor::from_external(
+      base::DataType::kDataTypeFp32, {config_->kv_dim_}, val_cache_ptr);
   key.set_device_type(device_type_);
   val.set_device_type(device_type_);
   return {key, val};
@@ -248,7 +252,7 @@ std::pair<tensor::Tensor, tensor::Tensor> Model::slice_kv_cache(
 tensor::Tensor Model::fill_input(const tensor::Tensor& pos_tensor,
                                  const op::EmbeddingOutput& embedding_output,
                                  bool is_prompt) const {
-  const int32_t pos = pos_tensor.index<int32_t>(0);
+  const int32_t pos = pos_tensor.at<int32_t>(0);
   auto [input_tokens, input_embeddings, input_token_num] = embedding_output;
 
   int32_t index = 0;
@@ -266,10 +270,10 @@ tensor::Tensor Model::fill_input(const tensor::Tensor& pos_tensor,
   std::shared_ptr<base::Buffer> input_emb_buffer =
       std::make_shared<base::Buffer>(
           config_->dim_ * sizeof(float), nullptr,
-          input_embeddings.ptr<float>(index * config_->dim_), true);
-  tensor::Tensor input(base::DataType::kDataTypeFp32, config_->dim_);
+          input_embeddings.ptr<float>(index * config_->dim_));
+  tensor::Tensor input = tensor::Tensor::from_external(
+      base::DataType::kDataTypeFp32, {config_->dim_}, input_emb_buffer->ptr());
 #endif
-  input.assign(input_emb_buffer);
   input.set_device_type(device_type_);
   return input;
 }
