@@ -56,7 +56,7 @@ typedef void (*RoPEKernel)(int32_t dim, int32_t kv_dim, int32_t head_size,
 typedef void (*ScaleKernel)(float scale, const tensor::Tensor& input,
                             void* stream);
 
-typedef void (*SoftmaxInplaceKernel)(const tensor::Tensor& input, void* stream);
+typedef void (*SoftmaxInplaceKernel)(tensor::Tensor& input, void* stream);
 
 typedef void (*ScaleSumKernel)(const tensor::Tensor& value,
                                const tensor::Tensor& scale,
