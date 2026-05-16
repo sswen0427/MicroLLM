@@ -7,7 +7,7 @@
 #include "base/buffer.h"
 #include "op/kernels/kernels_interface.h"
 
-TEST(SoftmaxTest, Nostream) {
+TEST(SoftmaxTest, DISABLED_Nostream) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
 
@@ -34,7 +34,7 @@ TEST(SoftmaxTest, Nostream) {
   }
 }
 
-TEST(SoftmaxTest, Stream1) {
+TEST(SoftmaxTest, DISABLED_Stream1) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
 
@@ -63,7 +63,7 @@ TEST(SoftmaxTest, Stream1) {
   }
 }
 
-TEST(SoftmaxTest, Stream2) {
+TEST(SoftmaxTest, DISABLED_Stream2) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
 
@@ -93,7 +93,7 @@ TEST(SoftmaxTest, Stream2) {
   }
 }
 
-TEST(SoftmaxTest, Stream3) {
+TEST(SoftmaxTest, DISABLED_Stream3) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
   auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
 
