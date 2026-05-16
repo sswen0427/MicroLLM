@@ -1,10 +1,8 @@
 #pragma once
 
-#include "base/base.h"
-#include "model/model.h"
-
 namespace model {
-struct LLama2Layers {
+
+struct Qwen2Layers {
   std::shared_ptr<op::Layer> add_layer_;
   std::shared_ptr<op::Layer> rope_layer_;
   std::shared_ptr<op::Layer> swiglu_layer_;
@@ -23,14 +21,14 @@ struct LLama2Layers {
 
   std::shared_ptr<op::Layer> embedding_layer_;
 
-  void to_cuda(std::shared_ptr<base::CudaConfig> config);
+  void to_cuda(std::shared_ptr<kernel::CudaConfig> config);
 };
 
-class LLama2Model : public Model {
+class Qwen2Model : public Model {
  public:
-  explicit LLama2Model(base::TokenizerType tokenizer_type,
-                       std::string token_path, std::string model_path,
-                       bool is_quant_model);
+  explicit Qwen2Model(base::TokenizerType tokenizer_type,
+                      std::string token_path, std::string model_path,
+                      bool is_quant_model);
 
   base::Status init(base::DeviceType device_type) override;
 
@@ -69,8 +67,7 @@ class LLama2Model : public Model {
                           bool is_prompt) const override;
 
  private:
-  std::shared_ptr<base::CudaConfig> cuda_config_;
-  std::unique_ptr<LLama2Layers> llama_layers_;
+  std::shared_ptr<kernel::CudaConfig> cuda_config_;
+  std::unique_ptr<Qwen2Layers> qwen_layers_;
 };
-
 }  // namespace model

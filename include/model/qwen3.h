@@ -1,10 +1,23 @@
 #pragma once
 
-#include "base/base.h"
-#include "model/model.h"
-
 namespace model {
-struct LLama2Layers {
+struct QWen3TransformerConfig {
+  int32_t kv_dim_ = 0;
+  int32_t kv_mul_ = 0;
+  int32_t head_size_ = 0;
+  int32_t immediate_size_ = 0;
+  int32_t vocab_size_ = 0;
+
+  int32_t dim_ = 0;
+  int32_t hidden_dim_ = 0;
+  int32_t layer_num_ = 0;
+  int32_t head_num_ = 0;
+  int32_t kv_head_num_ = 0;
+  int32_t seq_len_ = 0;
+  bool is_shared_weight_ = false;
+};
+
+struct Qwen3Layers {
   std::shared_ptr<op::Layer> add_layer_;
   std::shared_ptr<op::Layer> rope_layer_;
   std::shared_ptr<op::Layer> swiglu_layer_;
@@ -23,14 +36,14 @@ struct LLama2Layers {
 
   std::shared_ptr<op::Layer> embedding_layer_;
 
-  void to_cuda(std::shared_ptr<base::CudaConfig> config);
+  void to_cuda(std::shared_ptr<kernel::CudaConfig> config);
 };
 
-class LLama2Model : public Model {
+class Qwen3Model : public Model {
  public:
-  explicit LLama2Model(base::TokenizerType tokenizer_type,
-                       std::string token_path, std::string model_path,
-                       bool is_quant_model);
+  explicit Qwen3Model(base::TokenizerType tokenizer_type,
+                      std::string token_path, std::string model_path,
+                      bool is_quant_model);
 
   base::Status init(base::DeviceType device_type) override;
 
@@ -69,8 +82,7 @@ class LLama2Model : public Model {
                           bool is_prompt) const override;
 
  private:
-  std::shared_ptr<base::CudaConfig> cuda_config_;
-  std::unique_ptr<LLama2Layers> llama_layers_;
+  std::shared_ptr<kernel::CudaConfig> cuda_config_;
+  std::unique_ptr<Qwen3Layers> qwen_layers_;
 };
-
 }  // namespace model
