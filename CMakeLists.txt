@@ -66,6 +66,9 @@ file(GLOB_RECURSE ALL_SRC_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/s
 # Build Target Definition
 # ==============================================================================
 set(MICRO_LLM_DEPS
+        absl::status
+        absl::statusor
+        absl::strings
         armadillo
         Boost::boost
         CUDA::cudart
