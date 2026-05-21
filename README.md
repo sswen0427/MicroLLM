@@ -44,9 +44,9 @@ model-type plumbing are still evolving.
 
 ```text
 .
-├── include/              # Public headers
 ├── src/
 │   ├── base/             # Allocators, buffers, status helpers
+│   ├── cli/              # Executable command-line parsing
 │   ├── model/            # LLaMA/Qwen model implementations and model loader
 │   ├── op/               # Runtime operators and CPU/CUDA kernels
 │   ├── sampler/          # Token sampling
