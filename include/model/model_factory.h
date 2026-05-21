@@ -3,6 +3,8 @@
 #include <memory>
 #include <string>
 
+#include <absl/status/statusor.h>
+
 #include "base/base.h"
 #include "model/model.h"
 
@@ -16,7 +18,7 @@ struct ModelFactoryConfig {
   bool quantized = false;
 };
 
-std::unique_ptr<Model> CreateModel(const ModelFactoryConfig &config,
-                                   std::string *error);
+absl::StatusOr<std::unique_ptr<Model>>
+CreateModel(const ModelFactoryConfig &config);
 
 } // namespace model

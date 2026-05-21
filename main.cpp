@@ -93,12 +93,12 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  std::string error;
-  auto model = model::CreateModel(model_config, &error);
-  if (!model) {
-    std::cerr << "Error: " << error << "\n";
+  auto model_or = model::CreateModel(model_config);
+  if (!model_or.ok()) {
+    std::cerr << "Error: " << model_or.status().message() << "\n";
     return 1;
   }
+  auto model = std::move(*model_or);
 
   const base::DeviceType device_type = cli::ParseDevice(options.device);
   const auto init_status = model->init(device_type);
