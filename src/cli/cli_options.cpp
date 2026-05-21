@@ -34,7 +34,7 @@ absl::Status ValidateCliOptions(const CliOptions &options) {
   return absl::OkStatus();
 }
 
-} // namespace
+}  // namespace
 
 absl::StatusOr<CliOptions> ParseCliOptions(int argc, char *argv[]) {
   gflags::SetUsageMessage(
@@ -85,4 +85,4 @@ base::TokenizerType ParseTokenizerType(const std::string &tokenizer_type) {
   return base::TokenizerType::kEncodeUnknown;
 }
 
-} // namespace cli
+}  // namespace cli

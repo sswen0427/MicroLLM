@@ -1,9 +1,8 @@
 #pragma once
 
-#include <cstdint>
-#include <string>
-
 #include <absl/status/statusor.h>
+
+#include <string>
 
 #include "base/base.h"
 
@@ -26,4 +25,4 @@ base::DeviceType ParseDevice(const std::string &device);
 
 base::TokenizerType ParseTokenizerType(const std::string &tokenizer_type);
 
-} // namespace cli
+}  // namespace cli
