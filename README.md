@@ -143,19 +143,44 @@ See [tools/README.md](tools/README.md) for more details.
 The current demo entrypoint expects:
 
 ```bash
-./build/MicroLLM <checkpoint_path> <tokenizer_path>
+./build/MicroLLM --checkpoint <path> --tokenizer <path> [options]
 ```
 
 Example:
 
 ```bash
 ./build/MicroLLM \
-  tools/chat_q8.bin \
-  tools/my_tinyllama/AI-ModelScope/TinyLlama-1.1B-Chat-v1.0/tokenizer.model
+  --model-type llama2 \
+  --checkpoint tools/chat_q8.bin \
+  --tokenizer tools/my_tinyllama/AI-ModelScope/TinyLlama-1.1B-Chat-v1.0/tokenizer.model \
+  --prompt "Write a short poem about CUDA" \
+  --steps 128 \
+  --device cuda \
+  --quantized
 ```
 
-At the moment, `main.cpp` is intentionally minimal: it initializes a
-`LLama2Model`, uses CUDA, prompts with `"hello"`, and prints generated text.
+Useful options:
+
+```text
+--model-type <llama2>      Model family. qwen2/qwen3 are not wired into the CLI yet.
+--checkpoint <path>        MicroLLM checkpoint file.
+--tokenizer <path>         Tokenizer model path.
+--tokenizer-type <spe>     Tokenizer type. Currently spe is the stable path.
+--prompt <text>            Prompt text. Default: hello
+--steps <n>                Maximum generation steps. Default: 128
+--device <cpu|cuda>        Runtime device. Default: cuda
+--quantized                Load checkpoint as int8 Q8_0 weights.
+```
+
+The legacy positional form is still supported:
+
+```bash
+./build/MicroLLM <checkpoint_path> <tokenizer_path>
+```
+
+At the moment, `main.cpp` initializes `LLama2Model` for the stable path. The CLI
+already exposes `--model-type` so Qwen2/Qwen3 can be wired into the same
+entrypoint later.
 
 ## Model File Format
 
@@ -182,7 +207,7 @@ loading logic.
 
 ## Current Limitations
 
-- The main executable is still hardcoded around `LLama2Model`.
+- The main executable currently only instantiates `LLama2Model`.
 - Qwen2/Qwen3 code exists, but model selection and end-to-end examples are not
   fully wired into the CLI.
 - Sampling is currently argmax-only.
