@@ -1,9 +1,9 @@
 #pragma once
 
+#include <absl/status/statusor.h>
+
 #include <memory>
 #include <string>
-
-#include <absl/status/statusor.h>
 
 #include "base/base.h"
 #include "model/model.h"
@@ -18,7 +18,7 @@ struct ModelFactoryConfig {
   bool quantized = false;
 };
 
-absl::StatusOr<std::unique_ptr<Model>>
-CreateModel(const ModelFactoryConfig &config);
+absl::StatusOr<std::unique_ptr<Model>> CreateModel(
+    const ModelFactoryConfig &config);
 
-} // namespace model
+}  // namespace model

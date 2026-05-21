@@ -6,8 +6,8 @@
 
 namespace model {
 
-absl::StatusOr<std::unique_ptr<Model>>
-CreateModel(const ModelFactoryConfig &config) {
+absl::StatusOr<std::unique_ptr<Model>> CreateModel(
+    const ModelFactoryConfig &config) {
   if (config.tokenizer_type == base::TokenizerType::kEncodeUnknown) {
     return absl::InvalidArgumentError("Unsupported tokenizer type.");
   }
@@ -30,4 +30,4 @@ CreateModel(const ModelFactoryConfig &config) {
                                     config.model_type);
 }
 
-} // namespace model
+}  // namespace model

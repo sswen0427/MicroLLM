@@ -72,7 +72,7 @@ model::ModelFactoryConfig BuildModelConfig(const cli::CliOptions &options) {
   return config;
 }
 
-} // namespace
+}  // namespace
 
 int main(int argc, char *argv[]) {
   google::InitGoogleLogging(argv[0]);
