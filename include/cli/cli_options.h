@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <iosfwd>
 #include <string>
 
 #include "base/base.h"
@@ -17,10 +16,7 @@ struct CliOptions {
   std::string device = "cuda";
   int32_t steps = 128;
   bool quantized = false;
-  bool help = false;
 };
-
-void PrintUsage(std::ostream &os, const char *program);
 
 bool ParseCliOptions(int argc, char *argv[], CliOptions *options,
                      std::string *error);

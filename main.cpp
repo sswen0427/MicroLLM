@@ -82,14 +82,8 @@ int main(int argc, char *argv[]) {
   std::string error;
   if (!cli::ParseCliOptions(argc, argv, &options, &error) ||
       !cli::ValidateCliOptions(options, &error)) {
-    std::cerr << "Error: " << error << "\n\n";
-    cli::PrintUsage(std::cerr, argv[0]);
+    std::cerr << "Error: " << error << "\nUse --help to see available flags.\n";
     return 1;
-  }
-
-  if (options.help) {
-    cli::PrintUsage(std::cout, argv[0]);
-    return 0;
   }
 
   model::ModelFactoryConfig model_config = BuildModelConfig(options);
