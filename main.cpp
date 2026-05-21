@@ -1,25 +1,34 @@
 #include <glog/logging.h>
 
+#include <algorithm>
+#include <chrono>
+#include <cstdint>
+#include <iostream>
+#include <string>
+#include <vector>
+
 #include "base/base.h"
-#include "model/llama2.h"
+#include "cli/cli_options.h"
+#include "model/model.h"
+#include "model/model_factory.h"
 
-int32_t generate(const model::LLama2Model& model, const std::string& sentence,
-                 int total_steps, bool need_output = false) {
-  // Step1: Encode the sentence to tokens.
-  auto tokens = model.encode(sentence);
-  LOG_IF(FATAL, tokens.empty()) << "The tokens is empty.";
+namespace {
 
-  // Step2: Get the prompt embedding.
-  const auto& prompt_embedding = model.embedding(tokens);
+int32_t Generate(const model::Model &model, const std::string &prompt,
+                 int32_t total_steps, bool need_output = false) {
+  auto tokens = model.encode(prompt);
+  LOG_IF(FATAL, tokens.empty()) << "The token list is empty.";
+
+  const auto &prompt_embedding = model.embedding(tokens);
   tensor::Tensor pos_tensor =
       model.get_buffer(model::ModelBufferType::kInputPos);
 
-  int32_t prompt_len = tokens.size();
+  const int32_t prompt_len = static_cast<int32_t>(tokens.size());
   int32_t pos = 0;
   int32_t next = -1;
   bool is_prompt = true;
   std::vector<int32_t> words;
-  // Step3: Generate the sentence.
+
   while (pos < total_steps) {
     pos_tensor.at<int32_t>(0) = pos;
     if (pos < prompt_len - 1) {
@@ -29,11 +38,12 @@ int32_t generate(const model::LLama2Model& model, const std::string& sentence,
     } else {
       is_prompt = false;
       tokens = std::vector<int32_t>{next};
-      const auto& token_embedding = model.embedding(tokens);
+      const auto &token_embedding = model.embedding(tokens);
       tensor::Tensor input =
           model.fill_input(pos_tensor, token_embedding, is_prompt);
       model.predict(input, pos_tensor, is_prompt, next);
     }
+
     if (model.is_sentence_ending(next)) {
       break;
     }
@@ -43,40 +53,73 @@ int32_t generate(const model::LLama2Model& model, const std::string& sentence,
     } else {
       words.push_back(next);
     }
-
-    pos += 1;
+    ++pos;
   }
+
   if (need_output) {
-    printf("%s ", model.decode(words).data());
-    fflush(stdout);
+    std::cout << model.decode(words) << std::flush;
   }
   return std::min(pos, total_steps);
 }
 
-// ./main /data00/home/wensisi.0427/MicroLLM/tools/chat_q8.bin
-// /home/wensisi.0427/MicroLLM/tools/my_tinyllama/AI-ModelScope/TinyLlama-1.1B-Chat-v1.0/tokenizer.model
-int main(int argc, char* argv[]) {
-  CHECK_EQ(argc, 3) << "Usage: ./main checkpoint_path tokenizer_path";
-  const char* checkpoint_path = argv[1];  // e.g. out/model.bin
-  const char* tokenizer_path = argv[2];
+model::ModelFactoryConfig BuildModelConfig(const cli::CliOptions &options) {
+  model::ModelFactoryConfig config;
+  config.model_type = options.model_type;
+  config.tokenizer_type = cli::ParseTokenizerType(options.tokenizer_type);
+  config.tokenizer_path = options.tokenizer_path;
+  config.checkpoint_path = options.checkpoint_path;
+  config.quantized = options.quantized;
+  return config;
+}
 
-  // Step1: Init the model.
-  model::LLama2Model model(base::TokenizerType::kEncodeSpe, tokenizer_path,
-                           checkpoint_path, false);
-  auto init_status = model.init(base::DeviceType::kDeviceCUDA);
-  if (!init_status) {
-    LOG(FATAL) << "The model init failed, the error code is: "
-               << init_status.get_err_code();
+}  // namespace
+
+int main(int argc, char *argv[]) {
+  google::InitGoogleLogging(argv[0]);
+  google::InstallFailureSignalHandler();
+
+  auto options_or = cli::ParseCliOptions(argc, argv);
+  if (!options_or.ok()) {
+    std::cerr << "Error: " << options_or.status().message()
+              << "\nUse --help to see available flags.\n";
+    return 1;
+  }
+  const cli::CliOptions &options = *options_or;
+
+  model::ModelFactoryConfig model_config = BuildModelConfig(options);
+  if (model_config.tokenizer_type == base::TokenizerType::kEncodeUnknown) {
+    std::cerr << "Error: Unsupported tokenizer type: " << options.tokenizer_type
+              << "\n";
+    return 1;
   }
 
-  // Step2: Generate the sentence.
-  LOG(INFO) << "Start Generating...";
+  auto model_or = model::CreateModel(model_config);
+  if (!model_or.ok()) {
+    std::cerr << "Error: " << model_or.status().message() << "\n";
+    return 1;
+  }
+  auto model = std::move(*model_or);
+
+  const base::DeviceType device_type = cli::ParseDevice(options.device);
+  const auto init_status = model->init(device_type);
+  if (!init_status) {
+    LOG(FATAL) << "Model init failed, error code: "
+               << init_status.get_err_code()
+               << ", message: " << init_status.get_err_msg();
+  }
+
+  LOG(INFO) << "Start generating with model_type=" << options.model_type
+            << ", device=" << options.device
+            << ", quantized=" << options.quantized
+            << ", steps=" << options.steps;
+
   const auto start = std::chrono::steady_clock::now();
-  const std::string& sentence = "hello";
-  const int steps = generate(model, sentence, 128, true);
+  const int32_t steps = Generate(*model, options.prompt, options.steps, true);
   const auto end = std::chrono::steady_clock::now();
-  const auto duration = std::chrono::duration<double>(end - start).count();
-  LOG(INFO) << "Finish Generating, the duration is: " << duration
-            << ", the steps/s:" << steps / duration;
+  const double duration = std::chrono::duration<double>(end - start).count();
+
+  std::cout << std::endl;
+  LOG(INFO) << "Finish generating, duration: " << duration
+            << "s, steps/s: " << steps / duration;
   return 0;
 }
