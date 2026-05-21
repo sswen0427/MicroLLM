@@ -172,12 +172,6 @@ Useful options:
 --quantized                Load checkpoint as int8 Q8_0 weights.
 ```
 
-The legacy positional form is still supported:
-
-```bash
-./build/MicroLLM <checkpoint_path> <tokenizer_path>
-```
-
 At the moment, `main.cpp` initializes `LLama2Model` for the stable path. The CLI
 already exposes `--model-type` so Qwen2/Qwen3 can be wired into the same
 entrypoint later.

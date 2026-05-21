@@ -1,7 +1,5 @@
 #include "cli/cli_options.h"
 
-#include <string_view>
-
 #include <absl/status/status.h>
 #include <absl/strings/ascii.h>
 #include <gflags/gflags.h>
@@ -42,18 +40,13 @@ absl::StatusOr<CliOptions> ParseCliOptions(int argc, char *argv[]) {
   gflags::SetUsageMessage(
       "MicroLLM inference runtime.\n\n"
       "Usage:\n"
-      "  MicroLLM --checkpoint <path> --tokenizer <path> [options]\n"
-      "  MicroLLM <checkpoint_path> <tokenizer_path>");
+      "  MicroLLM --checkpoint <path> --tokenizer <path> [options]");
 
   int parsed_argc = argc;
   char **parsed_argv = argv;
   gflags::ParseCommandLineFlags(&parsed_argc, &parsed_argv, true);
 
-  if (parsed_argc == 3 &&
-      std::string_view(parsed_argv[1]).rfind("--", 0) != 0) {
-    FLAGS_checkpoint = parsed_argv[1];
-    FLAGS_tokenizer = parsed_argv[2];
-  } else if (parsed_argc > 1) {
+  if (parsed_argc > 1) {
     return absl::InvalidArgumentError("Unexpected positional argument: " +
                                       std::string(parsed_argv[1]));
   }
