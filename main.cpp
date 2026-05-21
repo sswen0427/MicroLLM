@@ -78,13 +78,13 @@ int main(int argc, char *argv[]) {
   google::InitGoogleLogging(argv[0]);
   google::InstallFailureSignalHandler();
 
-  cli::CliOptions options;
-  std::string error;
-  if (!cli::ParseCliOptions(argc, argv, &options, &error) ||
-      !cli::ValidateCliOptions(options, &error)) {
-    std::cerr << "Error: " << error << "\nUse --help to see available flags.\n";
+  auto options_or = cli::ParseCliOptions(argc, argv);
+  if (!options_or.ok()) {
+    std::cerr << "Error: " << options_or.status().message()
+              << "\nUse --help to see available flags.\n";
     return 1;
   }
+  const cli::CliOptions &options = *options_or;
 
   model::ModelFactoryConfig model_config = BuildModelConfig(options);
   if (model_config.tokenizer_type == base::TokenizerType::kEncodeUnknown) {
@@ -93,6 +93,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  std::string error;
   auto model = model::CreateModel(model_config, &error);
   if (!model) {
     std::cerr << "Error: " << error << "\n";

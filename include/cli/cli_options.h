@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <string>
 
+#include <absl/status/statusor.h>
+
 #include "base/base.h"
 
 namespace cli {
@@ -18,10 +20,7 @@ struct CliOptions {
   bool quantized = false;
 };
 
-bool ParseCliOptions(int argc, char *argv[], CliOptions *options,
-                     std::string *error);
-
-bool ValidateCliOptions(const CliOptions &options, std::string *error);
+absl::StatusOr<CliOptions> ParseCliOptions(int argc, char *argv[]);
 
 base::DeviceType ParseDevice(const std::string &device);
 

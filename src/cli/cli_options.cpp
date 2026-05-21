@@ -1,9 +1,9 @@
 #include "cli/cli_options.h"
 
-#include <algorithm>
-#include <cctype>
 #include <string_view>
 
+#include <absl/status/status.h>
+#include <absl/strings/ascii.h>
 #include <gflags/gflags.h>
 
 DEFINE_string(model_type, "llama2",
@@ -20,16 +20,25 @@ DEFINE_bool(quantized, false, "Load checkpoint as int8 Q8_0 weights.");
 namespace cli {
 namespace {
 
-std::string ToLower(std::string value) {
-  std::transform(value.begin(), value.end(), value.begin(),
-                 [](unsigned char c) { return std::tolower(c); });
-  return value;
+absl::Status ValidateCliOptions(const CliOptions &options) {
+  if (options.checkpoint_path.empty()) {
+    return absl::InvalidArgumentError("--checkpoint is required.");
+  }
+  if (options.tokenizer_path.empty()) {
+    return absl::InvalidArgumentError("--tokenizer is required.");
+  }
+  if (options.steps <= 0) {
+    return absl::InvalidArgumentError("--steps must be greater than 0.");
+  }
+  if (ParseDevice(options.device) == base::DeviceType::kDeviceUnknown) {
+    return absl::InvalidArgumentError("Unsupported device: " + options.device);
+  }
+  return absl::OkStatus();
 }
 
 } // namespace
 
-bool ParseCliOptions(int argc, char *argv[], CliOptions *options,
-                     std::string *error) {
+absl::StatusOr<CliOptions> ParseCliOptions(int argc, char *argv[]) {
   gflags::SetUsageMessage(
       "MicroLLM inference runtime.\n\n"
       "Usage:\n"
@@ -45,39 +54,25 @@ bool ParseCliOptions(int argc, char *argv[], CliOptions *options,
     FLAGS_checkpoint = parsed_argv[1];
     FLAGS_tokenizer = parsed_argv[2];
   } else if (parsed_argc > 1) {
-    *error = "Unexpected positional argument: " + std::string(parsed_argv[1]);
-    return false;
+    return absl::InvalidArgumentError("Unexpected positional argument: " +
+                                      std::string(parsed_argv[1]));
   }
 
-  options->model_type = ToLower(FLAGS_model_type);
-  options->checkpoint_path = FLAGS_checkpoint;
-  options->tokenizer_path = FLAGS_tokenizer;
-  options->tokenizer_type = ToLower(FLAGS_tokenizer_type);
-  options->prompt = FLAGS_prompt;
-  options->device = ToLower(FLAGS_device);
-  options->steps = FLAGS_steps;
-  options->quantized = FLAGS_quantized;
-  return true;
-}
+  CliOptions options;
+  options.model_type = absl::AsciiStrToLower(FLAGS_model_type);
+  options.checkpoint_path = FLAGS_checkpoint;
+  options.tokenizer_path = FLAGS_tokenizer;
+  options.tokenizer_type = absl::AsciiStrToLower(FLAGS_tokenizer_type);
+  options.prompt = FLAGS_prompt;
+  options.device = absl::AsciiStrToLower(FLAGS_device);
+  options.steps = FLAGS_steps;
+  options.quantized = FLAGS_quantized;
 
-bool ValidateCliOptions(const CliOptions &options, std::string *error) {
-  if (options.checkpoint_path.empty()) {
-    *error = "--checkpoint is required.";
-    return false;
+  const absl::Status status = ValidateCliOptions(options);
+  if (!status.ok()) {
+    return status;
   }
-  if (options.tokenizer_path.empty()) {
-    *error = "--tokenizer is required.";
-    return false;
-  }
-  if (options.steps <= 0) {
-    *error = "--steps must be greater than 0.";
-    return false;
-  }
-  if (ParseDevice(options.device) == base::DeviceType::kDeviceUnknown) {
-    *error = "Unsupported device: " + options.device;
-    return false;
-  }
-  return true;
+  return options;
 }
 
 base::DeviceType ParseDevice(const std::string &device) {
