@@ -59,7 +59,7 @@ find_package(CUDAToolkit REQUIRED)
 # ==============================================================================
 # Source & Header Files Collection
 # ==============================================================================
-set(ALL_HEADER_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/src")
+set(ALL_HEADER_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src")
 file(GLOB_RECURSE ALL_SRC_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*")
 
 # ==============================================================================
