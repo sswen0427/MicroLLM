@@ -1,66 +1,16 @@
 #include <glog/logging.h>
 
-#include <algorithm>
 #include <chrono>
-#include <cstdint>
 #include <iostream>
 #include <string>
-#include <vector>
 
 #include "base/base.h"
 #include "cli/cli_options.h"
 #include "model/model.h"
 #include "model/model_factory.h"
+#include "runtime/generator.h"
 
 namespace {
-
-int32_t Generate(const model::Model &model, const std::string &prompt,
-                 int32_t total_steps, bool need_output = false) {
-  auto tokens = model.encode(prompt);
-  LOG_IF(FATAL, tokens.empty()) << "The token list is empty.";
-
-  const auto &prompt_embedding = model.embedding(tokens);
-  tensor::Tensor pos_tensor =
-      model.get_buffer(model::ModelBufferType::kInputPos);
-
-  const int32_t prompt_len = static_cast<int32_t>(tokens.size());
-  int32_t pos = 0;
-  int32_t next = -1;
-  bool is_prompt = true;
-  std::vector<int32_t> words;
-
-  while (pos < total_steps) {
-    pos_tensor.at<int32_t>(0) = pos;
-    if (pos < prompt_len - 1) {
-      tensor::Tensor input =
-          model.fill_input(pos_tensor, prompt_embedding, is_prompt);
-      model.predict(input, pos_tensor, is_prompt, next);
-    } else {
-      is_prompt = false;
-      tokens = std::vector<int32_t>{next};
-      const auto &token_embedding = model.embedding(tokens);
-      tensor::Tensor input =
-          model.fill_input(pos_tensor, token_embedding, is_prompt);
-      model.predict(input, pos_tensor, is_prompt, next);
-    }
-
-    if (model.is_sentence_ending(next)) {
-      break;
-    }
-    if (is_prompt) {
-      next = tokens.at(pos + 1);
-      words.push_back(next);
-    } else {
-      words.push_back(next);
-    }
-    ++pos;
-  }
-
-  if (need_output) {
-    std::cout << model.decode(words) << std::flush;
-  }
-  return std::min(pos, total_steps);
-}
 
 model::ModelFactoryConfig BuildModelConfig(const cli::CliOptions &options) {
   model::ModelFactoryConfig config;
@@ -72,7 +22,7 @@ model::ModelFactoryConfig BuildModelConfig(const cli::CliOptions &options) {
   return config;
 }
 
-}  // namespace
+} // namespace
 
 int main(int argc, char *argv[]) {
   google::InitGoogleLogging(argv[0]);
@@ -114,12 +64,20 @@ int main(int argc, char *argv[]) {
             << ", steps=" << options.steps;
 
   const auto start = std::chrono::steady_clock::now();
-  const int32_t steps = Generate(*model, options.prompt, options.steps, true);
+  runtime::GenerationConfig generation_config;
+  generation_config.max_steps = options.steps;
+  const runtime::GenerationResult generation_result =
+      runtime::Generate(*model, options.prompt, generation_config);
   const auto end = std::chrono::steady_clock::now();
+  if (!generation_result.status) {
+    std::cerr << "Error: " << generation_result.status.get_err_msg() << "\n";
+    return 1;
+  }
+
+  std::cout << generation_result.text << std::endl;
   const double duration = std::chrono::duration<double>(end - start).count();
 
-  std::cout << std::endl;
   LOG(INFO) << "Finish generating, duration: " << duration
-            << "s, steps/s: " << steps / duration;
+            << "s, steps/s: " << generation_result.steps / duration;
   return 0;
 }
