@@ -36,7 +36,7 @@ std::string FormatShape(const std::vector<std::size_t>& shape) {
   return text;
 }
 
-absl::StatusOr<safetensors::safetensors_t> OpenSafetensorsFile(
+absl::StatusOr<safetensors::safetensors_t> LoadSafetensorsFile(
     const std::string& safetensors_path) {
   safetensors::safetensors_t safetensors;
   std::string warn;
@@ -52,6 +52,8 @@ absl::StatusOr<safetensors::safetensors_t> OpenSafetensorsFile(
                  << warn;
   }
 
+  // File-level integrity is delegated to safetensors-cpp. MicroLLM only
+  // validates model-level tensor names and shapes below.
   std::string offset_error;
   if (!safetensors::validate_data_offsets(safetensors, offset_error)) {
     return absl::InvalidArgumentError(absl::StrCat(
@@ -73,7 +75,7 @@ absl::StatusOr<safetensors::tensor_t> FindTensor(
 
 absl::Status ValidateSupportedLlamaConfig(const HfLlamaConfig& config) {
   if (config.model_type != "llama") {
-    return absl::InvalidArgumentError(absl::StrCat(
+    return absl::UnimplementedError(absl::StrCat(
         "Only llama model_type is supported by this inspector, got ",
         config.model_type));
   }
@@ -88,11 +90,11 @@ absl::Status ValidateSupportedLlamaConfig(const HfLlamaConfig& config) {
         "hidden_size must be divisible by num_attention_heads.");
   }
   if (config.attention_bias) {
-    return absl::InvalidArgumentError(
+    return absl::UnimplementedError(
         "attention_bias=true is not supported yet.");
   }
   if (config.hidden_act != "silu") {
-    return absl::InvalidArgumentError(absl::StrCat(
+    return absl::UnimplementedError(absl::StrCat(
         "Only hidden_act=silu is supported, got: ", config.hidden_act));
   }
   return absl::OkStatus();
@@ -201,7 +203,7 @@ absl::Status InspectLlamaSafetensorsFile(const HfLlamaConfig& config,
     return config_status;
   }
 
-  auto safetensors_or = OpenSafetensorsFile(safetensors_path);
+  auto safetensors_or = LoadSafetensorsFile(safetensors_path);
   if (!safetensors_or.ok()) {
     return safetensors_or.status();
   }
@@ -235,7 +237,8 @@ absl::Status InspectLlamaSafetensorsFile(const HfLlamaConfig& config,
   LOG(INFO) << "validating LLaMA safetensors tensor shapes";
 
   for (const auto& expected : BuildExpectedTensors(config)) {
-    const absl::Status status = LogAndValidateTensor(safetensors, expected);
+    const absl::Status status =
+        LogAndValidateTensorShape(safetensors, expected);
     if (!status.ok()) {
       return status;
     }
