@@ -9,7 +9,11 @@ namespace model {
 
 struct HfLlamaConfig {
   std::string architecture;
+  bool attention_bias = false;
+  int32_t bos_token_id = -1;
+  int32_t eos_token_id = -1;
   int32_t hidden_size = 0;
+  std::string hidden_act;
   int32_t intermediate_size = 0;
   int32_t max_position_embeddings = 0;
   std::string model_type;

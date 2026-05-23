@@ -147,8 +147,12 @@ absl::Status InspectLlamaSafetensorsFile(const HfLlamaConfig& config,
   LOG(INFO) << "torch_dtype: " << config.torch_dtype;
   LOG(INFO) << "safetensors: " << safetensors_path;
   LOG(INFO) << "tensor_count: " << reader.tensor_count();
+  LOG(INFO) << "attention_bias: " << config.attention_bias;
+  LOG(INFO) << "bos_token_id: " << config.bos_token_id;
+  LOG(INFO) << "eos_token_id: " << config.eos_token_id;
   LOG(INFO) << "layers: " << config.num_hidden_layers;
   LOG(INFO) << "hidden_size: " << config.hidden_size;
+  LOG(INFO) << "hidden_act: " << config.hidden_act;
   LOG(INFO) << "intermediate_size: " << config.intermediate_size;
   LOG(INFO) << "attention_heads: " << config.num_attention_heads;
   LOG(INFO) << "kv_heads: " << config.num_key_value_heads;

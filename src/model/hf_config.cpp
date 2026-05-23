@@ -16,7 +16,11 @@ void from_json(const nlohmann::json& json, HfLlamaConfig& config) {
     config.architecture = json.at("architectures").front().get<std::string>();
   }
 
+  config.attention_bias = json.value("attention_bias", false);
+  config.bos_token_id = json.value("bos_token_id", -1);
+  config.eos_token_id = json.value("eos_token_id", -1);
   config.hidden_size = json.at("hidden_size").get<int32_t>();
+  config.hidden_act = json.value("hidden_act", "");
   config.intermediate_size = json.at("intermediate_size").get<int32_t>();
   config.max_position_embeddings = json.value("max_position_embeddings", 0);
   config.model_type = json.at("model_type").get<std::string>();
@@ -59,6 +63,15 @@ absl::StatusOr<HfLlamaConfig> LoadHfLlamaConfig(const std::string& model_dir) {
   if (config.hidden_size % config.num_attention_heads != 0) {
     return absl::InvalidArgumentError(
         "hidden_size must be divisible by num_attention_heads.");
+  }
+  if (config.attention_bias) {
+    return absl::InvalidArgumentError(
+        "attention_bias=true is not supported yet.");
+  }
+  if (config.hidden_act != "silu") {
+    return absl::InvalidArgumentError(
+        absl::StrCat("Only hidden_act=silu is supported, got: ",
+                     config.hidden_act));
   }
   return config;
 }
