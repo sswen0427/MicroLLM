@@ -6,17 +6,16 @@ runtime pieces by hand, including tensor storage, model loading, transformer
 layers, CPU/CUDA operators, KV cache management, tokenization, and simple
 sampling.
 
-The current runnable path is closest to TinyLlama/LLaMA-style decoder-only
-models exported into MicroLLM's custom binary format. Qwen2 and Qwen3 model
-implementations are present in the codebase, but the public entrypoint and
-model-type plumbing are still evolving.
+The current public entrypoint targets HuggingFace-style LLaMA/TinyLlama model
+directories and reads model structure directly from `config.json` and
+`.safetensors` files. Qwen2 and Qwen3 model implementations are present in the
+codebase, but the public entrypoint and model-type plumbing are still evolving.
 
 ## Goals
 
 - Provide a compact LLM inference engine that is easy to inspect and modify.
 - Implement the main transformer inference path in C++ with CUDA acceleration.
-- Support exported HuggingFace-style model weights through a simple binary
-  format.
+- Load model metadata and weights from HuggingFace-style model directories.
 - Keep the codebase useful for learning, debugging, and experimenting with LLM
   runtime internals.
 
@@ -33,10 +32,12 @@ model-type plumbing are still evolving.
   - SwiGLU
   - vector add
 - KV cache allocation and slicing.
-- SentencePiece tokenizer support.
+- HuggingFace `config.json` parsing for LLaMA-style models.
+- safetensors metadata inspection and tensor shape validation.
+- SentencePiece tokenizer support in the lower-level runtime.
 - Argmax sampler.
-- FP32 model loading through memory-mapped checkpoint files.
-- INT8 Q8_0-style quantized weight path for CUDA matmul.
+- Legacy FP32 and INT8 binary weight loaders remain in the lower-level runtime,
+  but they are no longer exposed by the public executable.
 - Unit tests for core tensor and operator behavior.
 - Export utilities adapted from `llama2.c`.
 
@@ -125,60 +126,35 @@ ctest --output-on-failure
 Some tests exercise CUDA operators, so they require a working CUDA runtime and
 compatible GPU.
 
-## Export a Model
+## Inspect a Model
 
-The export tools live in `tools/`. Example TinyLlama export:
-
-```bash
-python3 tools/export_llama3.py \
-  --version 3 \
-  --hf tools/my_tinyllama/AI-ModelScope/TinyLlama-1.1B-Chat-v1.0 \
-  tools/chat_q8.bin
-```
-
-See [tools/README.md](tools/README.md) for more details.
-
-## Run Inference
-
-The current demo entrypoint expects:
+The executable currently accepts a HuggingFace model directory and validates
+that its `config.json` matches the tensor names and shapes in the safetensors
+weights:
 
 ```bash
-./build/MicroLLM --checkpoint <path> --tokenizer <path> [options]
+./build/MicroLLM --model_dir <hf_model_dir>
 ```
 
 Example:
 
 ```bash
 ./build/MicroLLM \
-  --model-type llama2 \
-  --checkpoint tools/chat_q8.bin \
-  --tokenizer tools/my_tinyllama/AI-ModelScope/TinyLlama-1.1B-Chat-v1.0/tokenizer.model \
-  --prompt "Write a short poem about CUDA" \
-  --steps 128 \
-  --device cuda \
-  --quantized
+  --model_dir data/my_tinyllama/AI-ModelScope/TinyLlama-1___1B-Chat-v1___0
 ```
 
-Useful options:
+The output includes the model type, hidden size, attention head count, KV head
+count, vocabulary size, tensor count, and every validated LLaMA weight tensor.
 
 ```text
---model-type <llama2>      Model family. qwen2/qwen3 are not wired into the CLI yet.
---checkpoint <path>        MicroLLM checkpoint file.
---tokenizer <path>         Tokenizer model path.
---tokenizer-type <spe>     Tokenizer type. Currently spe is the stable path.
---prompt <text>            Prompt text. Default: hello
---steps <n>                Maximum generation steps. Default: 128
---device <cpu|cuda>        Runtime device. Default: cuda
---quantized                Load checkpoint as int8 Q8_0 weights.
+--model_dir <path>         HuggingFace model directory.
 ```
 
-At the moment, `main.cpp` initializes `LLama2Model` for the stable path. The CLI
-already exposes `--model-type` so Qwen2/Qwen3 can be wired into the same
-entrypoint later.
+## Legacy Model File Format
 
-## Model File Format
-
-Model checkpoints begin with a fixed `ModelConfig` header:
+The older internal binary loader is still present in the lower-level runtime,
+but it is no longer exposed through the public executable. Legacy binary model
+files begin with a fixed `ModelConfig` header:
 
 ```cpp
 struct ModelConfig {
@@ -192,32 +168,33 @@ struct ModelConfig {
 };
 ```
 
-Quantized checkpoints additionally store an `int32_t group_size` after the
+Quantized legacy files additionally store an `int32_t group_size` after the
 header. The remaining bytes are interpreted as model weights in the order
 expected by the corresponding model implementation.
 
-Do not change the layout of `ModelConfig` without also updating the export and
-loading logic.
+The project is moving toward direct HuggingFace safetensors loading so users can
+run against downloaded model directories without an offline export step.
 
 ## Current Limitations
 
-- The main executable currently only instantiates `LLama2Model`.
+- The main executable currently inspects HuggingFace LLaMA/TinyLlama model
+  directories; safetensors-backed inference loading is still being wired in.
 - Qwen2/Qwen3 code exists, but model selection and end-to-end examples are not
-  fully wired into the CLI.
+  fully wired into the public entrypoint.
 - Sampling is currently argmax-only.
 - CPU inference exists for parts of the runtime, but quantized inference is
   CUDA-only.
 - Error handling and configuration are still rough in several places.
-- The custom checkpoint format is tightly coupled to the current loader.
-- There is no stable user-facing CLI yet.
+- The legacy custom checkpoint format is tightly coupled to the old loader.
 
 ## Roadmap Ideas
 
-- Add a real CLI for model type, device, prompt, generation length, and
-  quantization mode.
+- Load LLaMA/TinyLlama weights directly from safetensors into the runtime.
+- Add a real CLI for prompt, device, generation length, and sampling settings.
 - Unify model selection across LLaMA, Qwen2, and Qwen3.
 - Add top-k/top-p/temperature sampling.
-- Improve export documentation and checkpoint compatibility checks.
+- Add safetensors compatibility checks for sharded models and additional model
+  families.
 - Add benchmark scripts for tokens/s, memory usage, and kernel timings.
 - Expand tests from operator-level checks to end-to-end small-model inference.
 - Improve CUDA kernels and reduce host/device synchronization.
