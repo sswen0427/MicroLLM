@@ -4,11 +4,11 @@
 #include <absl/status/statusor.h>
 #include <absl/strings/str_cat.h>
 #include <glog/logging.h>
-#include <safetensors.hh>
 
 #include <algorithm>
 #include <cstddef>
 #include <filesystem>
+#include <safetensors.hh>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -182,8 +182,7 @@ absl::Status LogAndValidateTensor(const safetensors::safetensors_t& safetensors,
   }
 
   const auto& tensor = *tensor_or;
-  const std::size_t byte_size =
-      tensor.data_offsets[1] - tensor.data_offsets[0];
+  const std::size_t byte_size = tensor.data_offsets[1] - tensor.data_offsets[0];
   LOG(INFO) << "tensor: " << expected.name
             << ", shape=" << FormatShape(tensor.shape)
             << ", dtype=" << safetensors::get_dtype_str(tensor.dtype)
