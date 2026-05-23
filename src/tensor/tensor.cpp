@@ -24,7 +24,7 @@ std::size_t ComputeElementCount(const std::vector<int32_t>& dims) {
 
 std::size_t ComputeByteSize(std::size_t element_count,
                             base::DataType data_type) {
-  CHECK_NE(data_type, base::DataType::kDataTypeUnknown)
+  CHECK(data_type != base::DataType::kDataTypeUnknown)
       << "Tensor data type must be known.";
 
   const std::size_t type_size = DataTypeSize(data_type);
