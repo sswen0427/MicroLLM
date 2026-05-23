@@ -1,10 +1,9 @@
-#include "tensor/tensor.h"
-
 #include <cfloat>
 #include <cub/cub.cuh>
 
 #include "base/base.h"
 #include "mha_kernel.cuh"
+#include "tensor/tensor.h"
 namespace kernel {
 constexpr static int thread_num = 256;
 __device__ void softmax_gpu(float* __restrict__ x, int size) {

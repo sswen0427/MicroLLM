@@ -1,9 +1,8 @@
-#include "tensor/tensor.h"
-
 #include <cub/block/block_reduce.cuh>
 
 #include "base/base.h"
 #include "matmul_kernel.cuh"
+#include "tensor/tensor.h"
 
 namespace kernel {
 /**

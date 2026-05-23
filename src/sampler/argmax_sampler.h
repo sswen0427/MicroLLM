@@ -1,7 +1,6 @@
 #pragma once
 
 #include "base/base.h"
-
 #include "sampler.h"
 namespace sampler {
 class ArgmaxSampler : public Sampler {
