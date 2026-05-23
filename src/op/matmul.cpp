@@ -11,7 +11,7 @@ tensor::Tensor MakeExternalTensor(base::DataType data_type,
                                   const std::vector<int32_t>& dims,
                                   const void* ptr,
                                   base::DeviceType device_type) {
-  CHECK_NE(device_type, base::DeviceType::kDeviceUnknown);
+  CHECK(device_type != base::DeviceType::kDeviceUnknown);
   if (device_type == base::DeviceType::kDeviceCUDA) {
     return tensor::Tensor::from_external_cuda(data_type, dims,
                                               const_cast<void*>(ptr));

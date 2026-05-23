@@ -57,7 +57,7 @@ Tensor Tensor::from_external(base::DataType data_type,
                              const std::vector<int32_t>& dims, void* data,
                              base::DeviceType device_type) {
   CHECK_NE(data, nullptr) << "External tensor data pointer must be non-null.";
-  CHECK_NE(device_type, base::DeviceType::kDeviceUnknown)
+  CHECK(device_type != base::DeviceType::kDeviceUnknown)
       << "External tensor device type must be known.";
 
   Tensor tensor;
