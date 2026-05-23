@@ -116,8 +116,8 @@ absl::Status LogAndValidateTensor(const io::SafetensorsReader& reader,
 
   const auto& info = *info_or;
   LOG(INFO) << "tensor: " << expected.name
-            << ", shape=" << FormatShape(info.shape)
-            << ", dtype=" << info.dtype << ", bytes=" << info.byte_size;
+            << ", shape=" << FormatShape(info.shape) << ", dtype=" << info.dtype
+            << ", bytes=" << info.byte_size;
   if (info.shape != expected.shape) {
     return absl::InvalidArgumentError(absl::StrCat(
         "Unexpected shape for ", expected.name, ": got ",
