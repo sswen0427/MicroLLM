@@ -57,24 +57,6 @@ absl::StatusOr<HfLlamaConfig> LoadHfLlamaConfig(const std::string& model_dir) {
         absl::StrCat("Failed to parse HuggingFace config.json: ", e.what()));
   }
 
-  if (config.hidden_size <= 0 || config.intermediate_size <= 0 ||
-      config.num_hidden_layers <= 0 || config.num_attention_heads <= 0 ||
-      config.num_key_value_heads <= 0 || config.vocab_size <= 0) {
-    return absl::InvalidArgumentError(
-        "Invalid non-positive value in config.json.");
-  }
-  if (config.hidden_size % config.num_attention_heads != 0) {
-    return absl::InvalidArgumentError(
-        "hidden_size must be divisible by num_attention_heads.");
-  }
-  if (config.attention_bias) {
-    return absl::InvalidArgumentError(
-        "attention_bias=true is not supported yet.");
-  }
-  if (config.hidden_act != "silu") {
-    return absl::InvalidArgumentError(absl::StrCat(
-        "Only hidden_act=silu is supported, got: ", config.hidden_act));
-  }
   return config;
 }
 

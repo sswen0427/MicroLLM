@@ -35,6 +35,33 @@ std::string FormatShape(const std::vector<std::size_t>& shape) {
   return text;
 }
 
+absl::Status ValidateSupportedLlamaConfig(const HfLlamaConfig& config) {
+  if (config.model_type != "llama") {
+    return absl::InvalidArgumentError(absl::StrCat(
+        "Only llama model_type is supported by this inspector, got ",
+        config.model_type));
+  }
+  if (config.hidden_size <= 0 || config.intermediate_size <= 0 ||
+      config.num_hidden_layers <= 0 || config.num_attention_heads <= 0 ||
+      config.num_key_value_heads <= 0 || config.vocab_size <= 0) {
+    return absl::InvalidArgumentError(
+        "Invalid non-positive LLaMA config value.");
+  }
+  if (config.hidden_size % config.num_attention_heads != 0) {
+    return absl::InvalidArgumentError(
+        "hidden_size must be divisible by num_attention_heads.");
+  }
+  if (config.attention_bias) {
+    return absl::InvalidArgumentError(
+        "attention_bias=true is not supported yet.");
+  }
+  if (config.hidden_act != "silu") {
+    return absl::InvalidArgumentError(absl::StrCat(
+        "Only hidden_act=silu is supported, got: ", config.hidden_act));
+  }
+  return absl::OkStatus();
+}
+
 absl::StatusOr<std::string> FindSingleSafetensorsFile(
     const std::string& model_dir) {
   const std::filesystem::path dir(model_dir);
@@ -65,7 +92,7 @@ absl::StatusOr<std::string> FindSingleSafetensorsFile(
         absl::StrCat("No .safetensors file found in: ", model_dir));
   }
   if (files.size() > 1) {
-    return absl::InvalidArgumentError(
+    return absl::UnimplementedError(
         absl::StrCat("Multiple .safetensors files found in ", model_dir,
                      ". Sharded safetensors are not supported yet."));
   }
@@ -130,10 +157,9 @@ absl::Status LogAndValidateTensor(const io::SafetensorsReader& reader,
 
 absl::Status InspectLlamaSafetensorsFile(const HfLlamaConfig& config,
                                          const std::string& safetensors_path) {
-  if (config.model_type != "llama") {
-    return absl::InvalidArgumentError(absl::StrCat(
-        "Only llama model_type is supported by this inspector, got ",
-        config.model_type));
+  const absl::Status config_status = ValidateSupportedLlamaConfig(config);
+  if (!config_status.ok()) {
+    return config_status;
   }
 
   auto reader_or = io::SafetensorsReader::Open(safetensors_path);
@@ -143,7 +169,8 @@ absl::Status InspectLlamaSafetensorsFile(const HfLlamaConfig& config,
   const auto& reader = **reader_or;
 
   LOG(INFO) << "model_type: " << config.model_type;
-  LOG(INFO) << "architecture: " << config.architectures[0];
+  LOG(INFO) << "architecture: "
+            << (config.architectures.empty() ? "" : config.architectures[0]);
   LOG(INFO) << "torch_dtype: " << config.torch_dtype;
   LOG(INFO) << "transformers_version: " << config.transformers_version;
   LOG(INFO) << "safetensors: " << safetensors_path;
