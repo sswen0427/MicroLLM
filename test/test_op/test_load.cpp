@@ -2,11 +2,11 @@
 #include <fcntl.h>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
-#include <model/config.h>
 #include <sys/mman.h>
 
 #include "base/alias.h"
 #include "base/buffer.h"
+#include "model/config.h"
 #include "op/matmul.h"
 #include "tensor/tensor.h"
 

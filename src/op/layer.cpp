@@ -3,7 +3,7 @@
 #include <numeric>
 
 #include "base/base.h"
-#include "glog/logging.h"
+#include <glog/logging.h>
 #include "tensor/tensor.h"
 
 // BaseLayer

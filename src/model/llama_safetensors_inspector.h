@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "absl/status/status.h"
+#include <absl/status/status.h>
 #include "model/hf_config.h"
 
 namespace model {

@@ -8,8 +8,8 @@
 #include <string_view>
 #include <vector>
 
-#include "absl/status/statusor.h"
-#include "safetensors.hh"
+#include <absl/status/statusor.h>
+#include <safetensors.hh>
 
 namespace io {
 
