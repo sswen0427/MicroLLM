@@ -5,15 +5,9 @@
 
 #include <cstring>
 
+#include "base/cuda_check.h"
+
 namespace base {
-namespace {
-
-void CheckCuda(cudaError_t state, const char *operation) {
-  CHECK_EQ(state, cudaSuccess)
-      << operation << " failed: " << cudaGetErrorString(state);
-}
-
-}  // namespace
 
 std::shared_ptr<DeviceAllocator> GetDeviceAllocator(DeviceType device_type) {
   static std::shared_ptr<DeviceAllocator> cpu_allocator =
@@ -41,28 +35,24 @@ void DeviceAllocator::memcpy(void *dst, const void *src, std::size_t size,
     std::memcpy(dst, src, size);
   } else if (kind == cudaMemcpyHostToDevice) {
     if (!stream) {
-      CheckCuda(cudaMemcpy(dst, src, size, cudaMemcpyHostToDevice),
-                "cudaMemcpyHostToDevice");
+      CHECK_CUDA(cudaMemcpy(dst, src, size, cudaMemcpyHostToDevice));
     } else {
-      CheckCuda(cudaMemcpyAsync(dst, src, size, cudaMemcpyHostToDevice, stream),
-                "cudaMemcpyAsyncHostToDevice");
+      CHECK_CUDA(
+          cudaMemcpyAsync(dst, src, size, cudaMemcpyHostToDevice, stream));
     }
   } else if (kind == cudaMemcpyDeviceToHost) {
     if (!stream) {
-      CheckCuda(cudaMemcpy(dst, src, size, cudaMemcpyDeviceToHost),
-                "cudaMemcpyDeviceToHost");
+      CHECK_CUDA(cudaMemcpy(dst, src, size, cudaMemcpyDeviceToHost));
     } else {
-      CheckCuda(cudaMemcpyAsync(dst, src, size, cudaMemcpyDeviceToHost, stream),
-                "cudaMemcpyAsyncDeviceToHost");
+      CHECK_CUDA(
+          cudaMemcpyAsync(dst, src, size, cudaMemcpyDeviceToHost, stream));
     }
   } else if (kind == cudaMemcpyDeviceToDevice) {
     if (!stream) {
-      CheckCuda(cudaMemcpy(dst, src, size, cudaMemcpyDeviceToDevice),
-                "cudaMemcpyDeviceToDevice");
+      CHECK_CUDA(cudaMemcpy(dst, src, size, cudaMemcpyDeviceToDevice));
     } else {
-      CheckCuda(
-          cudaMemcpyAsync(dst, src, size, cudaMemcpyDeviceToDevice, stream),
-          "cudaMemcpyAsyncDeviceToDevice");
+      CHECK_CUDA(
+          cudaMemcpyAsync(dst, src, size, cudaMemcpyDeviceToDevice, stream));
     }
   } else {
     LOG(FATAL) << "Unknown memcpy kind: " << int(kind);
@@ -78,9 +68,9 @@ void DeviceAllocator::memset_zero(void *ptr, std::size_t byte_size,
     std::memset(ptr, 0, byte_size);
   } else {
     if (stream) {
-      CheckCuda(cudaMemsetAsync(ptr, 0, byte_size, stream), "cudaMemsetAsync");
+      CHECK_CUDA(cudaMemsetAsync(ptr, 0, byte_size, stream));
     } else {
-      CheckCuda(cudaMemset(ptr, 0, byte_size), "cudaMemset");
+      CHECK_CUDA(cudaMemset(ptr, 0, byte_size));
     }
   }
 }
