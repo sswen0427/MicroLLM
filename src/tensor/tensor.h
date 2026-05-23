@@ -18,8 +18,7 @@ class Tensor {
                          base::DeviceType device_type);
 
   static Tensor from_external_cpu(base::DataType data_type,
-                                  const std::vector<int32_t>& dims,
-                                  void* data);
+                                  const std::vector<int32_t>& dims, void* data);
 
   static Tensor from_external_cuda(base::DataType data_type,
                                    const std::vector<int32_t>& dims,

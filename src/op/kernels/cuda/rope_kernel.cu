@@ -176,12 +176,14 @@ void rope_kernel_cu(int32_t dim, int32_t kv_dim, int32_t head_size,
   if (stream) {
     cudaStream_t stream_ = static_cast<cudaStream_t>(stream);
     rope_kernel_cu_fp32<<<blocks, threads, 0, stream_>>>(
-        pos, dim, kv_dim, head_size, input_q.data<float>(), input_k.data<float>(),
-        sin_cache.data<float>(), cos_cache.data<float>());
+        pos, dim, kv_dim, head_size, input_q.data<float>(),
+        input_k.data<float>(), sin_cache.data<float>(),
+        cos_cache.data<float>());
   } else {
     rope_kernel_cu_fp32<<<blocks, threads>>>(
-        pos, dim, kv_dim, head_size, input_q.data<float>(), input_k.data<float>(),
-        sin_cache.data<float>(), cos_cache.data<float>());
+        pos, dim, kv_dim, head_size, input_q.data<float>(),
+        input_k.data<float>(), sin_cache.data<float>(),
+        cos_cache.data<float>());
   }
 }
 }  // namespace kernel

@@ -8,7 +8,6 @@
 #include "op/kernels/kernels_interface.h"
 
 TEST(RMSNormTest, NoStream) {
-
   int32_t size = 32 * 15;
 
   tensor::Tensor in_cpu = tensor::Tensor::allocate(
@@ -44,15 +43,16 @@ TEST(RMSNormTest, NoStream) {
 }
 
 TEST(RMSNormTest, Stream1) {
-
   int dim_size = 4;
   int size = 1024;
-  tensor::Tensor in_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {dim_size, size}, base::DeviceType::kDeviceCPU);
+  tensor::Tensor in_cpu =
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim_size, size},
+                               base::DeviceType::kDeviceCPU);
   tensor::Tensor wei_cpu = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
-  tensor::Tensor out_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {dim_size, size}, base::DeviceType::kDeviceCPU);
+  tensor::Tensor out_cpu =
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim_size, size},
+                               base::DeviceType::kDeviceCPU);
 
   for (int i = 0; i < dim_size; ++i) {
     for (int j = 0; j < size; ++j) {
@@ -82,8 +82,8 @@ TEST(RMSNormTest, Stream1) {
       base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
   tensor::Tensor wei_cpu_golden = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
-  tensor::Tensor out_golden =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCUDA);
+  tensor::Tensor out_golden = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCUDA);
   cudaDeviceSynchronize();
   auto err = cudaGetLastError();
   ASSERT_EQ(err, cudaSuccess);
@@ -115,7 +115,6 @@ TEST(RMSNormTest, Stream1) {
 }
 
 TEST(RMSNormTest, Stream2) {
-
   int32_t size = 32;
 
   tensor::Tensor in_cpu = tensor::Tensor::allocate(
@@ -155,7 +154,6 @@ TEST(RMSNormTest, Stream2) {
 }
 
 TEST(RMSNormTest, Stream3) {
-
   int32_t size = 32 * 151 * 15;
 
   tensor::Tensor in_cpu = tensor::Tensor::allocate(

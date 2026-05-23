@@ -473,9 +473,8 @@ void LLama2Model::init_mem() {
     llama_layers_->to_cuda(cuda_config_);
   }
 
-  tensor::Tensor input_tokens =
-      tensor::Tensor::allocate(base::DataType::kDataTypeInt32, {1},
-                               base::DeviceType::kDeviceCPU);
+  tensor::Tensor input_tokens = tensor::Tensor::allocate(
+      base::DataType::kDataTypeInt32, {1}, base::DeviceType::kDeviceCPU);
   tensor::Tensor input_embeddings = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {1, config_->dim_}, device_type_);
   tensor::Tensor sin_cache = tensor::Tensor::allocate(
@@ -518,20 +517,19 @@ void LLama2Model::init_mem() {
   CHECK(insert_buffer(ModelBufferType::kValueCache, value_cache));
 
   // Wq query output
-  tensor::Tensor query = tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
-                                                  {config_->dim_}, device_type_);
+  tensor::Tensor query = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {config_->dim_}, device_type_);
   CHECK(insert_buffer(ModelBufferType::kQuery, query));
 
   // Pos tensor
-  tensor::Tensor pos_tensor =
-      tensor::Tensor::allocate(base::DataType::kDataTypeInt32, {1},
-                               base::DeviceType::kDeviceCPU);
+  tensor::Tensor pos_tensor = tensor::Tensor::allocate(
+      base::DataType::kDataTypeInt32, {1}, base::DeviceType::kDeviceCPU);
   CHECK(insert_buffer(ModelBufferType::kInputPos, pos_tensor));
 
   // Attention output
-  tensor::Tensor attn =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
-                               {config_->head_num_, config_->seq_len_}, device_type_);
+  tensor::Tensor attn = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {config_->head_num_, config_->seq_len_},
+      device_type_);
   CHECK(insert_buffer(ModelBufferType::kScoreStorage, attn));
   CHECK(insert_buffer(ModelBufferType::kAttnOutput, query));
 

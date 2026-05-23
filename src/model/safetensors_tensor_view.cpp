@@ -2,10 +2,10 @@
 
 #include <absl/status/status.h>
 #include <absl/strings/str_cat.h>
-#include <safetensors.hh>
 
 #include <cstdint>
 #include <limits>
+#include <safetensors.hh>
 #include <string>
 #include <vector>
 
@@ -25,8 +25,9 @@ absl::StatusOr<base::DataType> ToRuntimeDataType(safetensors::dtype dtype) {
     case safetensors::dtype::kINT32:
       return base::DataType::kDataTypeInt32;
     default:
-      return absl::UnimplementedError(absl::StrCat(
-          "Unsupported safetensors dtype: ", safetensors::get_dtype_str(dtype)));
+      return absl::UnimplementedError(
+          absl::StrCat("Unsupported safetensors dtype: ",
+                       safetensors::get_dtype_str(dtype)));
   }
 }
 
@@ -83,9 +84,9 @@ absl::StatusOr<tensor::TensorView> GetSafetensorsTensorView(
   const size_t begin = safetensors_tensor.data_offsets[0];
   const size_t end = safetensors_tensor.data_offsets[1];
   if (begin > end) {
-    return absl::InvalidArgumentError(absl::StrCat(
-        "Invalid data offsets for tensor ", tensor_name, ": [", begin, ", ",
-        end, "]"));
+    return absl::InvalidArgumentError(
+        absl::StrCat("Invalid data offsets for tensor ", tensor_name, ": [",
+                     begin, ", ", end, "]"));
   }
 
   tensor::TensorView view{

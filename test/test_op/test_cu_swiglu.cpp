@@ -8,7 +8,6 @@
 #include "op/kernels/kernels_interface.h"
 
 TEST(SwiGLUTest, NoStream) {
-
   int32_t size = 32 * 151;
 
   tensor::Tensor in_cpu = tensor::Tensor::allocate(
@@ -46,7 +45,6 @@ TEST(SwiGLUTest, NoStream) {
 }
 
 TEST(SwiGLUTest, Stream) {
-
   int32_t size = 32 * 151;
 
   tensor::Tensor in_cpu = tensor::Tensor::allocate(

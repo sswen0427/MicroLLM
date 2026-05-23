@@ -6,12 +6,12 @@
 #include "op/kernels/kernels_interface.h"
 TEST(CudaAddTest, NoStream) {
   int32_t size = 32 * 151;
-  tensor::Tensor t1 =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCUDA);
-  tensor::Tensor t2 =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCUDA);
-  tensor::Tensor out =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCUDA);
+  tensor::Tensor t1 = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCUDA);
+  tensor::Tensor t2 = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCUDA);
+  tensor::Tensor out = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCUDA);
 
   std::vector<float> vec_2(size, 2.f);
   std::vector<float> vec_3(size, 3.f);
@@ -32,12 +32,12 @@ TEST(CudaAddTest, NoStream) {
 
 TEST(CudaAddTest, Stream) {
   int32_t size = 32 * 151;
-  tensor::Tensor t1 =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCUDA);
-  tensor::Tensor t2 =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCUDA);
-  tensor::Tensor out =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCUDA);
+  tensor::Tensor t1 = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCUDA);
+  tensor::Tensor t2 = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCUDA);
+  tensor::Tensor out = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCUDA);
   std::vector<float> vec_2(size, 2.f);
   std::vector<float> vec_3(size, 3.f);
   cudaMemcpy(t1.data<float>(), vec_2.data(), size * sizeof(float),
@@ -60,12 +60,12 @@ TEST(CudaAddTest, Stream) {
 
 TEST(CudaAddTest, Align) {
   int32_t size = 32 * 151 * 13;
-  tensor::Tensor t1 =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCUDA);
-  tensor::Tensor t2 =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCUDA);
-  tensor::Tensor out =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCUDA);
+  tensor::Tensor t1 = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCUDA);
+  tensor::Tensor t2 = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCUDA);
+  tensor::Tensor out = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCUDA);
 
   std::vector<float> vec_2(size, 2.1f);
   std::vector<float> vec_3(size, 3.3f);

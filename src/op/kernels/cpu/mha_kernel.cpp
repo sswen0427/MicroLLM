@@ -43,28 +43,26 @@ void mha_kernel(int32_t pos, int32_t head_num, int32_t layer_index,
     float* query_head_addr =
         const_cast<float*>(query_tensor.data<float>() + h * head_size);
 
-    tensor::Tensor query_mat = MakeExternalTensor(
-        base::DataType::kDataTypeFp32, {head_size}, query_head_addr,
-        device_type);
+    tensor::Tensor query_mat =
+        MakeExternalTensor(base::DataType::kDataTypeFp32, {head_size},
+                           query_head_addr, device_type);
 
     for (int32_t t = 0; t <= pos; t++) {
       int32_t cache_offset = t * kv_dim + (h / kv_mul) * head_size;
       const float* key_head_addr =
           key_cache_tensor.data<float>() + layer_offset + cache_offset;
-      tensor::Tensor key_mat = MakeExternalTensor(
-          base::DataType::kDataTypeFp32, {1, head_size},
-          const_cast<float*>(key_head_addr), device_type);
+      tensor::Tensor key_mat =
+          MakeExternalTensor(base::DataType::kDataTypeFp32, {1, head_size},
+                             const_cast<float*>(key_head_addr), device_type);
 
       tensor::Tensor score_mat = MakeExternalTensor(
-          base::DataType::kDataTypeFp32, {1}, score_head_addr + t,
-          device_type);
+          base::DataType::kDataTypeFp32, {1}, score_head_addr + t, device_type);
       get_matmul_kernel(device_type)(query_mat, key_mat, score_mat, scale,
                                      config);
     }
 
     tensor::Tensor score_head_tensor = MakeExternalTensor(
-        base::DataType::kDataTypeFp32, {pos + 1}, score_head_addr,
-        device_type);
+        base::DataType::kDataTypeFp32, {pos + 1}, score_head_addr, device_type);
     get_softmax_kernel(device_type)(score_head_tensor,
                                     config ? config->stream : nullptr);
 
@@ -72,17 +70,17 @@ void mha_kernel(int32_t pos, int32_t head_num, int32_t layer_index,
         const_cast<float*>(mha_out.data<float>()) + h * head_size;
     allocator->memset_zero(output_head_ptr, sizeof(float) * head_size,
                            config ? config->stream : nullptr);
-    tensor::Tensor output_tensor = MakeExternalTensor(
-        base::DataType::kDataTypeFp32, {head_size}, output_head_ptr,
-        device_type);
+    tensor::Tensor output_tensor =
+        MakeExternalTensor(base::DataType::kDataTypeFp32, {head_size},
+                           output_head_ptr, device_type);
 
     int32_t cache_offset = (h / kv_mul) * head_size;
     float* value_head_addr =
         const_cast<float*>(value_cache_tensor.data<float>()) + layer_offset +
         cache_offset;
-    tensor::Tensor value_tensor = MakeExternalTensor(
-        base::DataType::kDataTypeFp32, {head_size}, value_head_addr,
-        device_type);
+    tensor::Tensor value_tensor =
+        MakeExternalTensor(base::DataType::kDataTypeFp32, {head_size},
+                           value_head_addr, device_type);
     get_scale_sum_kernel(device_type)(value_tensor, score_head_tensor,
                                       output_tensor, pos, head_size, kv_dim,
                                       config ? config->stream : nullptr);

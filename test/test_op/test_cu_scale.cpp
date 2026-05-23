@@ -9,8 +9,8 @@
 TEST(ScaleTest, Nostream) {
   int32_t size = 32 * 151;
 
-  tensor::Tensor t1 = tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
-                                               {size}, base::DeviceType::kDeviceCPU);
+  tensor::Tensor t1 = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
   std::vector<float> vec(size, 2.f);
   std::memcpy(t1.data<float>(), vec.data(), size * sizeof(float));
 

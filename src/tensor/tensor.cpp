@@ -71,8 +71,7 @@ Tensor Tensor::from_external(base::DataType data_type,
 }
 
 Tensor Tensor::from_external_cpu(base::DataType data_type,
-                                 const std::vector<int32_t>& dims,
-                                 void* data) {
+                                 const std::vector<int32_t>& dims, void* data) {
   return from_external(data_type, dims, data, base::DeviceType::kDeviceCPU);
 }
 

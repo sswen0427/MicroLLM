@@ -8,7 +8,7 @@
 namespace base {
 namespace {
 
-void CheckCuda(cudaError_t state, const char* operation) {
+void CheckCuda(cudaError_t state, const char *operation) {
   CHECK_EQ(state, cudaSuccess)
       << operation << " failed: " << cudaGetErrorString(state);
 }
@@ -78,8 +78,7 @@ void DeviceAllocator::memset_zero(void *ptr, std::size_t byte_size,
     std::memset(ptr, 0, byte_size);
   } else {
     if (stream) {
-      CheckCuda(cudaMemsetAsync(ptr, 0, byte_size, stream),
-                "cudaMemsetAsync");
+      CheckCuda(cudaMemsetAsync(ptr, 0, byte_size, stream), "cudaMemsetAsync");
     } else {
       CheckCuda(cudaMemset(ptr, 0, byte_size), "cudaMemset");
     }

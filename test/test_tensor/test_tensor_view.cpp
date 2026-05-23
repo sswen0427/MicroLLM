@@ -1,8 +1,8 @@
-#include "tensor/tensor_view.h"
-
 #include <gtest/gtest.h>
 
 #include <cstdint>
+
+#include "tensor/tensor_view.h"
 
 namespace {
 

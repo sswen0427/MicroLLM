@@ -8,8 +8,8 @@
 #include "op/kernels/kernels_interface.h"
 
 TEST(SoftmaxTest, OneDimensionCPU) {
-  tensor::Tensor t1 =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {3}, base::DeviceType::kDeviceCPU);
+  tensor::Tensor t1 = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {3}, base::DeviceType::kDeviceCPU);
   t1.at<float>(0) = 1.0;
   t1.at<float>(1) = 2.0;
   t1.at<float>(2) = 3.0;
@@ -21,7 +21,6 @@ TEST(SoftmaxTest, OneDimensionCPU) {
 }
 
 TEST(SoftmaxTest, DISABLED_Nostream) {
-
   int32_t size = 32 * 151;
 
   tensor::Tensor in_cpu = tensor::Tensor::allocate(
@@ -46,7 +45,6 @@ TEST(SoftmaxTest, DISABLED_Nostream) {
 }
 
 TEST(SoftmaxTest, DISABLED_Stream1) {
-
   int32_t size = 72 * 151;
 
   tensor::Tensor in_cpu = tensor::Tensor::allocate(
@@ -73,7 +71,6 @@ TEST(SoftmaxTest, DISABLED_Stream1) {
 }
 
 TEST(SoftmaxTest, DISABLED_Stream2) {
-
   int32_t size = 72 * 18;
 
   tensor::Tensor in_cpu = tensor::Tensor::allocate(
@@ -101,7 +98,6 @@ TEST(SoftmaxTest, DISABLED_Stream2) {
 }
 
 TEST(SoftmaxTest, DISABLED_Stream3) {
-
   int32_t size = 1;
 
   tensor::Tensor in_cpu = tensor::Tensor::allocate(

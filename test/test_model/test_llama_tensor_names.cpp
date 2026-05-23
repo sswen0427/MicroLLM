@@ -1,6 +1,6 @@
-#include "model/llama_tensor_names.h"
-
 #include <gtest/gtest.h>
+
+#include "model/llama_tensor_names.h"
 
 namespace {
 

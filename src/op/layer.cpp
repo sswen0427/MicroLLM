@@ -233,23 +233,22 @@ base::Status LayerParam::set_weight(int32_t idx,
   CHECK_NE(weight_ptr, nullptr);
 
   if (!is_quant_layer_) {
-    tensor::Tensor weight = MakeExternalTensor(
-        base::DataType::kDataTypeFp32, dims, weight_ptr, device_type);
+    tensor::Tensor weight = MakeExternalTensor(base::DataType::kDataTypeFp32,
+                                               dims, weight_ptr, device_type);
     weights_.at(idx) = weight;
   } else {
     // is quant layer
-    tensor::Tensor weight = MakeExternalTensor(
-        base::DataType::kDataTypeInt8, dims, weight_ptr, device_type);
+    tensor::Tensor weight = MakeExternalTensor(base::DataType::kDataTypeInt8,
+                                               dims, weight_ptr, device_type);
     weights_.at(idx) = weight;
 
     const int32_t weight_size = static_cast<int32_t>(weight.size());
     CHECK(weight_size % group_size_ == 0);
 
     int32_t scale_nums = weight_size / group_size_;
-    scales_ = MakeExternalTensor(base::DataType::kDataTypeFp32, {scale_nums},
-                                 reinterpret_cast<const int8_t*>(weight_ptr) +
-                                     weight_size,
-                                 device_type);
+    scales_ = MakeExternalTensor(
+        base::DataType::kDataTypeFp32, {scale_nums},
+        reinterpret_cast<const int8_t*>(weight_ptr) + weight_size, device_type);
   }
 
   return base::error::Success();

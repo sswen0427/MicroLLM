@@ -1,11 +1,11 @@
-#include "model/safetensors_tensor_view.h"
-
 #include <absl/status/status.h>
 #include <gtest/gtest.h>
-#include <safetensors.hh>
 
 #include <cstdint>
+#include <safetensors.hh>
 #include <vector>
+
+#include "model/safetensors_tensor_view.h"
 
 namespace {
 

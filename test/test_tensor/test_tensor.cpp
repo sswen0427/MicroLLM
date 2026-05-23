@@ -124,10 +124,9 @@ TEST(TensorTest, CloneExternalCPUTensorOwnsCopiedMemory) {
 }
 
 TEST(TensorTest, RejectsInvalidShape) {
-  EXPECT_DEATH(
-      (void)tensor::Tensor::allocate(base::DataType::kDataTypeInt32, {},
-                                     base::DeviceType::kDeviceCPU),
-      "Tensor dims must not be empty");
+  EXPECT_DEATH((void)tensor::Tensor::allocate(base::DataType::kDataTypeInt32,
+                                              {}, base::DeviceType::kDeviceCPU),
+               "Tensor dims must not be empty");
   EXPECT_DEATH(
       (void)tensor::Tensor::allocate(base::DataType::kDataTypeInt32, {2, 0},
                                      base::DeviceType::kDeviceCPU),
@@ -141,10 +140,9 @@ TEST(TensorTest, RejectsUnknownDataType) {
       (void)tensor::Tensor::allocate(base::DataType::kDataTypeUnknown, {4},
                                      base::DeviceType::kDeviceCPU),
       "Tensor data type must be known");
-  EXPECT_DEATH(
-      (void)tensor::Tensor::from_external_cpu(
-          base::DataType::kDataTypeUnknown, {4}, array),
-      "Tensor data type must be known");
+  EXPECT_DEATH((void)tensor::Tensor::from_external_cpu(
+                   base::DataType::kDataTypeUnknown, {4}, array),
+               "Tensor data type must be known");
 }
 
 TEST(TensorTest, RejectsDataAccessOnEmptyTensor) {

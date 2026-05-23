@@ -202,9 +202,9 @@ absl::Status InspectLlamaSafetensorsFile(const HfLlamaConfig& config,
   if (!layer_gate_status.ok()) {
     return layer_gate_status;
   }
-  const absl::Status final_norm_status = LogSafetensorsTensorView(
-      safetensors, "final_norm_tensor",
-      LlamaTensorName(LlamaTensorKind::kFinalNorm));
+  const absl::Status final_norm_status =
+      LogSafetensorsTensorView(safetensors, "final_norm_tensor",
+                               LlamaTensorName(LlamaTensorKind::kFinalNorm));
   if (!final_norm_status.ok()) {
     return final_norm_status;
   }

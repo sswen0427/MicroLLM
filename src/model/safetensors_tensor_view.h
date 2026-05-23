@@ -1,8 +1,8 @@
 #pragma once
 
 #include <absl/status/statusor.h>
-#include <safetensors.hh>
 
+#include <safetensors.hh>
 #include <string>
 
 #include "tensor/tensor_view.h"

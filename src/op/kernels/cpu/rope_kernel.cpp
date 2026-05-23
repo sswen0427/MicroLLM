@@ -41,7 +41,8 @@ void rope_kernel_cpu(int32_t dim, int32_t kv_dim, int32_t head_size,
         float* vec = const_cast<float*>(
             v == 0
                 ? input_q.data<float>()
-                : input_k.data<float>());  // the vector to rotate (query or key)
+                : input_k
+                      .data<float>());  // the vector to rotate (query or key)
         float v0 = vec[i + head_dim];
         float v1 = vec[i + head_dim + head_size / 2];
         vec[i + head_dim] = v0 * fcr - v1 * fci;
@@ -90,7 +91,8 @@ void rope_kernel_cpu(int32_t dim, int32_t kv_dim, int32_t head_size,
         float* vec = const_cast<float*>(
             v == 0
                 ? input_q.data<float>()
-                : input_k.data<float>());  // the vector to rotate (query or key)
+                : input_k
+                      .data<float>());  // the vector to rotate (query or key)
         float v0 = vec[i + head_dim];
         float v1 = vec[i + head_dim + head_size / 2];
         vec[i + head_dim] = v0 * fcr - v1 * fci;

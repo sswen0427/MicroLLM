@@ -131,10 +131,9 @@ base::Status MatmulLayer::set_bias(int32_t idx, int32_t dim,
     CHECK(bias_size % group_size_ == 0);
 
     int32_t scale_nums = bias_size / group_size_;
-    scales_ = MakeExternalTensor(base::DataType::kDataTypeFp32, {scale_nums},
-                                 reinterpret_cast<const int8_t*>(bias_ptr) +
-                                     bias_size,
-                                 device_type);
+    scales_ = MakeExternalTensor(
+        base::DataType::kDataTypeFp32, {scale_nums},
+        reinterpret_cast<const int8_t*>(bias_ptr) + bias_size, device_type);
   }
 
   return base::error::Success();
