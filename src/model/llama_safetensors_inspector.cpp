@@ -207,31 +207,31 @@ absl::Status InspectLlamaSafetensorsFile(const HfLlamaConfig& config,
   }
   const auto& safetensors = *safetensors_or;
 
-  LOG(INFO) << "model_type: " << config.model_type;
-  LOG(INFO) << "architecture: "
+  LOG(INFO) << "architectures[0]: "
             << (config.architectures.empty() ? "" : config.architectures[0]);
-  LOG(INFO) << "torch_dtype: " << config.torch_dtype;
-  LOG(INFO) << "transformers_version: " << config.transformers_version;
-  LOG(INFO) << "safetensors: " << safetensors_path;
-  LOG(INFO) << "tensor_count: " << safetensors.tensors.size();
   LOG(INFO) << "attention_bias: " << config.attention_bias;
   LOG(INFO) << "bos_token_id: " << config.bos_token_id;
   LOG(INFO) << "eos_token_id: " << config.eos_token_id;
-  LOG(INFO) << "layers: " << config.num_hidden_layers;
-  LOG(INFO) << "hidden_size: " << config.hidden_size;
   LOG(INFO) << "hidden_act: " << config.hidden_act;
+  LOG(INFO) << "hidden_size: " << config.hidden_size;
   LOG(INFO) << "initializer_range: " << config.initializer_range;
   LOG(INFO) << "intermediate_size: " << config.intermediate_size;
+  LOG(INFO) << "max_position_embeddings: " << config.max_position_embeddings;
+  LOG(INFO) << "model_type: " << config.model_type;
   LOG(INFO) << "attention_heads: " << config.num_attention_heads;
+  LOG(INFO) << "layers: " << config.num_hidden_layers;
   LOG(INFO) << "kv_heads: " << config.num_key_value_heads;
   LOG(INFO) << "pretraining_tp: " << config.pretraining_tp;
-  LOG(INFO) << "vocab_size: " << config.vocab_size;
-  LOG(INFO) << "tie_word_embeddings: " << config.tie_word_embeddings;
-  LOG(INFO) << "use_cache: " << config.use_cache;
-  LOG(INFO) << "max_position_embeddings: " << config.max_position_embeddings;
   LOG(INFO) << "rms_norm_eps: " << config.rms_norm_eps;
   LOG(INFO) << "rope_scaling: " << config.rope_scaling.dump();
   LOG(INFO) << "rope_theta: " << config.rope_theta;
+  LOG(INFO) << "tie_word_embeddings: " << config.tie_word_embeddings;
+  LOG(INFO) << "torch_dtype: " << config.torch_dtype;
+  LOG(INFO) << "transformers_version: " << config.transformers_version;
+  LOG(INFO) << "use_cache: " << config.use_cache;
+  LOG(INFO) << "vocab_size: " << config.vocab_size;
+  LOG(INFO) << "safetensors: " << safetensors_path;
+  LOG(INFO) << "tensor_count: " << safetensors.tensors.size();
   LOG(INFO) << "validating LLaMA safetensors tensor shapes";
 
   for (const auto& expected : BuildExpectedTensors(config)) {
