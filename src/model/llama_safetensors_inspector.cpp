@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "io/safetensors_reader.h"
+#include "model/hf_config.h"
 
 namespace model {
 namespace {
@@ -127,22 +128,8 @@ absl::Status LogAndValidateTensor(const io::SafetensorsReader& reader,
   return absl::OkStatus();
 }
 
-}  // namespace
-
-absl::Status InspectLlamaSafetensorsModel(const std::string& model_dir) {
-  auto config_or = LoadHfLlamaConfig(model_dir);
-  if (!config_or.ok()) {
-    return config_or.status();
-  }
-  auto safetensors_path_or = FindSingleSafetensorsFile(model_dir);
-  if (!safetensors_path_or.ok()) {
-    return safetensors_path_or.status();
-  }
-  return InspectLlamaSafetensorsModel(*config_or, *safetensors_path_or);
-}
-
-absl::Status InspectLlamaSafetensorsModel(const HfLlamaConfig& config,
-                                          const std::string& safetensors_path) {
+absl::Status InspectLlamaSafetensorsFile(const HfLlamaConfig& config,
+                                         const std::string& safetensors_path) {
   if (config.model_type != "llama") {
     return absl::InvalidArgumentError(absl::StrCat(
         "Only llama model_type is supported by this inspector, got ",
@@ -181,6 +168,20 @@ absl::Status InspectLlamaSafetensorsModel(const HfLlamaConfig& config,
 
   LOG(INFO) << "safetensors model inspection finished";
   return absl::OkStatus();
+}
+
+}  // namespace
+
+absl::Status InspectLlamaSafetensorsModel(const std::string& model_dir) {
+  auto config_or = LoadHfLlamaConfig(model_dir);
+  if (!config_or.ok()) {
+    return config_or.status();
+  }
+  auto safetensors_path_or = FindSingleSafetensorsFile(model_dir);
+  if (!safetensors_path_or.ok()) {
+    return safetensors_path_or.status();
+  }
+  return InspectLlamaSafetensorsFile(*config_or, *safetensors_path_or);
 }
 
 }  // namespace model
