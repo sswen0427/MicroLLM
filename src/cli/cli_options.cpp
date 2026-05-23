@@ -6,6 +6,7 @@
 
 DEFINE_string(model_type, "llama2",
               "Model family. Supported stable path: llama2.");
+DEFINE_string(model_dir, "", "HuggingFace model directory.");
 DEFINE_string(checkpoint, "", "MicroLLM checkpoint file.");
 DEFINE_string(tokenizer, "", "Tokenizer model path.");
 DEFINE_string(tokenizer_type, "spe",
@@ -14,11 +15,20 @@ DEFINE_string(prompt, "hello", "Prompt text.");
 DEFINE_string(device, "cuda", "Runtime device: cpu or cuda.");
 DEFINE_int32(steps, 128, "Maximum generation steps.");
 DEFINE_bool(quantized, false, "Load checkpoint as int8 Q8_0 weights.");
+DEFINE_bool(inspect_model, false,
+            "Inspect a HuggingFace safetensors model directory and exit.");
 
 namespace cli {
 namespace {
 
 absl::Status ValidateCliOptions(const CliOptions &options) {
+  if (options.inspect_model) {
+    if (options.model_dir.empty()) {
+      return absl::InvalidArgumentError(
+          "--model_dir is required when --inspect_model is set.");
+    }
+    return absl::OkStatus();
+  }
   if (options.checkpoint_path.empty()) {
     return absl::InvalidArgumentError("--checkpoint is required.");
   }
@@ -40,7 +50,8 @@ absl::StatusOr<CliOptions> ParseCliOptions(int argc, char *argv[]) {
   gflags::SetUsageMessage(
       "MicroLLM inference runtime.\n\n"
       "Usage:\n"
-      "  MicroLLM --checkpoint <path> --tokenizer <path> [options]");
+      "  MicroLLM --checkpoint <path> --tokenizer <path> [options]\n"
+      "  MicroLLM --model_dir <hf_model_dir> --inspect_model");
 
   int parsed_argc = argc;
   char **parsed_argv = argv;
@@ -53,6 +64,7 @@ absl::StatusOr<CliOptions> ParseCliOptions(int argc, char *argv[]) {
 
   CliOptions options;
   options.model_type = absl::AsciiStrToLower(FLAGS_model_type);
+  options.model_dir = FLAGS_model_dir;
   options.checkpoint_path = FLAGS_checkpoint;
   options.tokenizer_path = FLAGS_tokenizer;
   options.tokenizer_type = absl::AsciiStrToLower(FLAGS_tokenizer_type);
@@ -60,6 +72,7 @@ absl::StatusOr<CliOptions> ParseCliOptions(int argc, char *argv[]) {
   options.device = absl::AsciiStrToLower(FLAGS_device);
   options.steps = FLAGS_steps;
   options.quantized = FLAGS_quantized;
+  options.inspect_model = FLAGS_inspect_model;
 
   const absl::Status status = ValidateCliOptions(options);
   if (!status.ok()) {

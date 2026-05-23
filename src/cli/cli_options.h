@@ -10,6 +10,7 @@ namespace cli {
 
 struct CliOptions {
   std::string model_type = "llama2";
+  std::string model_dir;
   std::string checkpoint_path;
   std::string tokenizer_path;
   std::string tokenizer_type = "spe";
@@ -17,6 +18,7 @@ struct CliOptions {
   std::string device = "cuda";
   int32_t steps = 128;
   bool quantized = false;
+  bool inspect_model = false;
 };
 
 absl::StatusOr<CliOptions> ParseCliOptions(int argc, char *argv[]);

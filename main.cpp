@@ -6,6 +6,7 @@
 
 #include "base/base.h"
 #include "cli/cli_options.h"
+#include "model/llama_safetensors_inspector.h"
 #include "model/model.h"
 #include "model/model_factory.h"
 #include "runtime/generator.h"
@@ -35,6 +36,16 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   const cli::CliOptions &options = *options_or;
+
+  if (options.inspect_model) {
+    const absl::Status status =
+        model::InspectLlamaSafetensorsModel(options.model_dir, std::cout);
+    if (!status.ok()) {
+      std::cerr << "Error: " << status.message() << "\n";
+      return 1;
+    }
+    return 0;
+  }
 
   model::ModelFactoryConfig model_config = BuildModelConfig(options);
   if (model_config.tokenizer_type == base::TokenizerType::kEncodeUnknown) {
