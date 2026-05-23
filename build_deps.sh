@@ -17,6 +17,7 @@ mv gtest-1.17.0-debian12-x86_64-gcc12.2.0 gtest
 mv json-v3.12.0-debian12-x86_64-gcc12.2.0 json
 mv openblas-0.3.32-debian12-x86_64-gcc12.2.0 openblas
 mv re2-2025-11-05-debian12-x86_64-gcc12.2.0 re2
+mv safetensors-cpp-latest-debian12-x86_64-gcc12.2.0 safetensors-cpp
 mv sentencepiece-0.2.1-debian12-x86_64-gcc12.2.0 sentencepiece
 mv unordered_dense-4.8.1-debian12-x86_64-gcc12.2.0 unordered_dense
 mv unwind-1.8.3-debian12-x86_64-gcc12.2.0 unwind

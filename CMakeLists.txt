@@ -37,6 +37,7 @@ list(APPEND CMAKE_PREFIX_PATH
         "${THIRD_PARTY_DIR}/json"
         "${THIRD_PARTY_DIR}/openblas"
         "${THIRD_PARTY_DIR}/re2"
+        "${THIRD_PARTY_DIR}/safetensors-cpp"
         "${THIRD_PARTY_DIR}/sentencepiece"
         "${THIRD_PARTY_DIR}/unordered_dense"
         "${THIRD_PARTY_DIR}/unwind"
@@ -51,6 +52,7 @@ find_package(GTest REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(OpenBLAS REQUIRED)
 find_package(re2 REQUIRED)
+find_package(safetensors-cpp REQUIRED)
 find_package(sentencepiece REQUIRED)
 find_package(unordered_dense CONFIG REQUIRED)
 find_package(Unwind REQUIRED)
@@ -74,6 +76,7 @@ set(MICRO_LLM_DEPS
         CUDA::cudart
         glog::glog
         nlohmann_json::nlohmann_json
+        safetensors-cpp::safetensors_cpp
         re2::re2
         sentencepiece::sentencepiece
         unordered_dense::unordered_dense
