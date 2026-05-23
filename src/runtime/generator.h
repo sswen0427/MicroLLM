@@ -21,4 +21,4 @@ struct GenerationResult {
 GenerationResult Generate(const model::Model &model, const std::string &prompt,
                           const GenerationConfig &config);
 
-} // namespace runtime
+}  // namespace runtime

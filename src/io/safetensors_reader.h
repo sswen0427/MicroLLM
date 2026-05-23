@@ -8,8 +8,8 @@
 #include <string_view>
 #include <vector>
 
-#include "absl/status/statusor.h"
-#include "safetensors.hh"
+#include <absl/status/statusor.h>
+#include <safetensors.hh>
 
 namespace io {
 
@@ -33,10 +33,8 @@ class SafetensorsReader {
   std::size_t tensor_count() const;
   std::vector<std::string> tensor_names() const;
 
-  absl::StatusOr<SafetensorTensorInfo> tensor_info(
-      std::string_view name) const;
-  absl::StatusOr<const std::uint8_t*> tensor_data(
-      std::string_view name) const;
+  absl::StatusOr<SafetensorTensorInfo> tensor_info(std::string_view name) const;
+  absl::StatusOr<const std::uint8_t*> tensor_data(std::string_view name) const;
 
  private:
   explicit SafetensorsReader(std::string path);

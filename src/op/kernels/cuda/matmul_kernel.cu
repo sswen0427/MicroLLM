@@ -1,4 +1,4 @@
-#include <tensor/tensor.h>
+#include "tensor/tensor.h"
 
 #include <cub/block/block_reduce.cuh>
 

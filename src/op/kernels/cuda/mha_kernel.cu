@@ -1,4 +1,4 @@
-#include <tensor/tensor.h>
+#include "tensor/tensor.h"
 
 #include <cfloat>
 #include <cub/cub.cuh>

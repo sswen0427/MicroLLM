@@ -1,10 +1,10 @@
 #include <cuda_runtime_api.h>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
-#include <tensor/tensor.h>
 
 #include "base/base.h"
 #include "base/buffer.h"
+#include "tensor/tensor.h"
 
 TEST(TensorTest, TOCPU) {
   auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();

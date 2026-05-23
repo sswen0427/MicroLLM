@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tensor/tensor.h>
+#include "tensor/tensor.h"
 namespace kernel {
 void scale_sum_kernel_cpu(const tensor::Tensor& value,
                           const tensor::Tensor& scale,

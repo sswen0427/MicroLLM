@@ -1,9 +1,9 @@
 #include "runtime/generator.h"
 
+#include <glog/logging.h>
+
 #include <algorithm>
 #include <vector>
-
-#include <glog/logging.h>
 
 namespace runtime {
 
@@ -68,4 +68,4 @@ GenerationResult Generate(const model::Model &model, const std::string &prompt,
           std::min(pos, config.max_steps)};
 }
 
-} // namespace runtime
+}  // namespace runtime
