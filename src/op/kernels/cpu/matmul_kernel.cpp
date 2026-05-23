@@ -21,9 +21,9 @@ void matmul_kernel_cpu(const tensor::Tensor& input,
   CHECK(weight.device_type() == base::DeviceType::kDeviceCPU);
   CHECK(output.device_type() == base::DeviceType::kDeviceCPU);
 
-  const float* input_ptr = input.ptr<float>();
-  const float* weight_ptr = weight.ptr<float>();
-  const float* output_ptr = output.ptr<float>();
+  const float* input_ptr = input.data<float>();
+  const float* weight_ptr = weight.data<float>();
+  const float* output_ptr = output.data<float>();
   int32_t in_dim0 = 1;
   int32_t in_dim1 = 1;
   if (input.dims_size() == 2) {

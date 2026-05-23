@@ -8,7 +8,7 @@ namespace kernel {
 // One-dimension softmax
 void softmax_inplace_cpu(tensor::Tensor& input, void* stream) {
   size_t size = static_cast<int32_t>(input.size());
-  const float* input_ptr = input.ptr<float>();
+  const float* input_ptr = input.data<float>();
 
   float max_value = *std::max_element(input_ptr, input_ptr + size);
 
@@ -20,10 +20,9 @@ void softmax_inplace_cpu(tensor::Tensor& input, void* stream) {
 }
 
 void softmax_inplace_cpu(const float* input_ptr, size_t size) {
-  std::shared_ptr<base::Buffer> buffer = std::make_shared<base::Buffer>(
-      size * sizeof(float), nullptr, (void*)input_ptr);
-  tensor::Tensor input = tensor::Tensor::from_external(
-      base::DataType::kDataTypeFp32, {(int)size}, buffer.get());
+  tensor::Tensor input = tensor::Tensor::from_external_cpu(
+      base::DataType::kDataTypeFp32, {(int)size},
+      const_cast<float*>(input_ptr));
   return softmax_inplace_cpu(input);
 }
 }  // namespace kernel

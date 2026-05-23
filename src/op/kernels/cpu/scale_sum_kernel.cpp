@@ -13,13 +13,13 @@ void scale_sum_kernel_cpu(const tensor::Tensor& value,
   CHECK_EQ(output.is_empty(), false);
   CHECK_EQ(size, value.size());
   CHECK_EQ(size, output.size());
-  arma::fvec scale_vec(const_cast<float*>(scale.ptr<float>()), scale.size(),
+  arma::fvec scale_vec(const_cast<float*>(scale.data<float>()), scale.size(),
                        false, true);
-  arma::fvec output_vec(const_cast<float*>(output.ptr<float>()), output.size(),
+  arma::fvec output_vec(const_cast<float*>(output.data<float>()), output.size(),
                         false, true);
 
   for (int i = 0; i <= pos; ++i) {
-    arma::fvec value_vec(const_cast<float*>(value.ptr<float>()) + i * stride,
+    arma::fvec value_vec(const_cast<float*>(value.data<float>()) + i * stride,
                          value.size(), false, true);
     output_vec += scale_vec[i] * value_vec;
   }

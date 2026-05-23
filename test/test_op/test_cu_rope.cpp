@@ -8,23 +8,21 @@
 #include "op/kernels/kernels_interface.h"
 
 TEST(ROPETest, NoStream1) {
-  auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
-  auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
   int32_t dim = 256;
   int32_t head_size = 64;
   int32_t kv_dim = 128;
   int32_t pos = 3;
   tensor::Tensor input_pos =
-      tensor::Tensor::allocate(base::DataType::kDataTypeInt32, {1}, alloc_cpu);
+      tensor::Tensor::allocate(base::DataType::kDataTypeInt32, {1}, base::DeviceType::kDeviceCPU);
   input_pos.at<int32_t>(0) = pos;
 
   std::random_device rd;
   std::mt19937 mt(rd());
   std::uniform_real_distribution<float> dist(0.f, 1.f);
   tensor::Tensor input_q_cpu =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim}, alloc_cpu);
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim}, base::DeviceType::kDeviceCPU);
   tensor::Tensor input_k_cpu =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim}, alloc_cpu);
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim}, base::DeviceType::kDeviceCPU);
 
   for (int i = 0; i < dim; ++i) {
     input_q_cpu.at<float>(i) = dist(mt);
@@ -56,23 +54,21 @@ TEST(ROPETest, NoStream1) {
 }
 
 TEST(ROPETest, NoStream2) {
-  auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
-  auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
   int32_t dim = 512;
   int32_t head_size = 128;
   int32_t kv_dim = 32;
   int32_t pos = 4;
   tensor::Tensor input_pos =
-      tensor::Tensor::allocate(base::DataType::kDataTypeInt32, {1}, alloc_cpu);
+      tensor::Tensor::allocate(base::DataType::kDataTypeInt32, {1}, base::DeviceType::kDeviceCPU);
   input_pos.at<int32_t>(0) = pos;
 
   std::random_device rd;
   std::mt19937 mt(rd());
   std::uniform_real_distribution<float> dist(0.f, 1.f);
   tensor::Tensor input_q_cpu =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim}, alloc_cpu);
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim}, base::DeviceType::kDeviceCPU);
   tensor::Tensor input_k_cpu =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim}, alloc_cpu);
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim}, base::DeviceType::kDeviceCPU);
 
   for (int i = 0; i < dim; ++i) {
     input_q_cpu.at<float>(i) = dist(mt);
@@ -104,23 +100,21 @@ TEST(ROPETest, NoStream2) {
 }
 
 TEST(ROPETest, Stream) {
-  auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
-  auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
   int32_t dim = 512;
   int32_t head_size = 128;
   int32_t kv_dim = 32;
   int32_t pos = 4;
   tensor::Tensor input_pos =
-      tensor::Tensor::allocate(base::DataType::kDataTypeInt32, {1}, alloc_cpu);
+      tensor::Tensor::allocate(base::DataType::kDataTypeInt32, {1}, base::DeviceType::kDeviceCPU);
   input_pos.at<int32_t>(0) = pos;
 
   std::random_device rd;
   std::mt19937 mt(rd());
   std::uniform_real_distribution<float> dist(0.f, 1.f);
   tensor::Tensor input_q_cpu =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim}, alloc_cpu);
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim}, base::DeviceType::kDeviceCPU);
   tensor::Tensor input_k_cpu =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim}, alloc_cpu);
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim}, base::DeviceType::kDeviceCPU);
   cudaStream_t stream;
   cudaStreamCreate(&stream);
   for (int i = 0; i < dim; ++i) {

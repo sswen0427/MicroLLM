@@ -16,11 +16,11 @@ void swiglu_kernel_cpu(const tensor::Tensor& input1,
   CHECK(input2.device_type() == base::DeviceType::kDeviceCPU);
   CHECK(output.device_type() == base::DeviceType::kDeviceCPU);
 
-  arma::fvec input1_vec(const_cast<float*>(input1.ptr<float>()), input1.size(),
+  arma::fvec input1_vec(const_cast<float*>(input1.data<float>()), input1.size(),
                         false, true);
-  arma::fvec input2_vec(const_cast<float*>(input2.ptr<float>()), input2.size(),
+  arma::fvec input2_vec(const_cast<float*>(input2.data<float>()), input2.size(),
                         false, true);
-  arma::fvec output_vec(const_cast<float*>(output.ptr<float>()), output.size(),
+  arma::fvec output_vec(const_cast<float*>(output.data<float>()), output.size(),
                         false, true);
 
   input1_vec %= (1.0f / (1.0f + arma::exp(-input1_vec)));

@@ -15,10 +15,15 @@ class Tensor {
 
   static Tensor allocate(base::DataType data_type,
                          const std::vector<int32_t>& dims,
-                         const std::shared_ptr<base::DeviceAllocator>& alloc);
+                         base::DeviceType device_type);
 
-  static Tensor from_external(base::DataType data_type,
-                              const std::vector<int32_t>& dims, void* ptr);
+  static Tensor from_external_cpu(base::DataType data_type,
+                                  const std::vector<int32_t>& dims,
+                                  void* data);
+
+  static Tensor from_external_cuda(base::DataType data_type,
+                                   const std::vector<int32_t>& dims,
+                                   void* data);
 
   void to_cpu();
 
@@ -26,19 +31,19 @@ class Tensor {
 
   [[nodiscard]] bool is_empty() const;
 
+  [[nodiscard]] bool is_external() const;
+
+  [[nodiscard]] bool owns_memory() const;
+
   [[nodiscard]] size_t size() const;
 
   [[nodiscard]] size_t byte_size() const;
 
   [[nodiscard]] int32_t dims_size() const;
 
-  [[nodiscard]] std::shared_ptr<base::Buffer> get_buffer() const;
-
   [[nodiscard]] base::DataType data_type() const;
 
   [[nodiscard]] int32_t get_dim(int32_t idx) const;
-
-  [[nodiscard]] const std::vector<int32_t>& dims() const;
 
   [[nodiscard]] base::DeviceType device_type() const;
 
@@ -46,19 +51,11 @@ class Tensor {
 
   void reshape(const std::vector<int32_t>& dims);
 
-  void set_device_type(base::DeviceType device_type);
+  template <typename T>
+  [[nodiscard]] T* data();
 
   template <typename T>
-  [[nodiscard]] T* ptr();
-
-  template <typename T>
-  [[nodiscard]] const T* ptr() const;
-
-  template <typename T>
-  [[nodiscard]] T* ptr(int64_t offset);
-
-  template <typename T>
-  [[nodiscard]] const T* ptr(int64_t offset) const;
+  [[nodiscard]] const T* data() const;
 
   template <typename T>
   [[nodiscard]] T& at(int64_t offset);
@@ -67,6 +64,10 @@ class Tensor {
   [[nodiscard]] const T& at(int64_t offset) const;
 
  private:
+  static Tensor from_external(base::DataType data_type,
+                              const std::vector<int32_t>& dims, void* data,
+                              base::DeviceType device_type);
+
   /**
    * @brief The shape of the tensor (e.g., {Batch, Head, SeqLen, HeadDim}).
    */
@@ -90,35 +91,19 @@ class Tensor {
 };
 
 template <typename T>
-const T* Tensor::ptr() const {
-  if (!buffer_) {
-    return nullptr;
-  }
+const T* Tensor::data() const {
+  CHECK(buffer_ != nullptr && buffer_->ptr() != nullptr)
+      << "The data area buffer of this tensor is empty or it points to a null "
+         "pointer.";
   return static_cast<const T*>(buffer_->ptr());
 }
 
 template <typename T>
-T* Tensor::ptr() {
-  if (!buffer_) {
-    return nullptr;
-  }
+T* Tensor::data() {
+  CHECK(buffer_ != nullptr && buffer_->ptr() != nullptr)
+      << "The data area buffer of this tensor is empty or it points to a null "
+         "pointer.";
   return static_cast<T*>(buffer_->ptr());
-}
-
-template <typename T>
-T* Tensor::ptr(int64_t index) {
-  CHECK(buffer_ != nullptr && buffer_->ptr() != nullptr)
-      << "The data area buffer of this tensor is empty or it points to a null "
-         "pointer.";
-  return this->ptr<T>() + index;
-}
-
-template <typename T>
-const T* Tensor::ptr(int64_t index) const {
-  CHECK(buffer_ != nullptr && buffer_->ptr() != nullptr)
-      << "The data area buffer of this tensor is empty or it points to a null "
-         "pointer.";
-  return this->ptr<T>() + index;
 }
 
 template <typename T>
@@ -128,7 +113,7 @@ T& Tensor::at(int64_t offset) {
   CHECK(offset >= 0 && offset < this->size())
       << "Invalid offset " << offset << " for tensor with size "
       << this->size();
-  return *(this->ptr<T>(offset));
+  return *(this->data<T>() + offset);
 }
 
 template <typename T>
@@ -138,7 +123,7 @@ const T& Tensor::at(int64_t offset) const {
   CHECK(offset >= 0 && offset < this->size())
       << "Invalid offset " << offset << " for tensor with size "
       << this->size();
-  return *(this->ptr<T>(offset));
+  return *(this->data<T>() + offset);
 }
 
 }  // namespace tensor

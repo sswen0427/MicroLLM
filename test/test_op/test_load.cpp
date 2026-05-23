@@ -58,13 +58,11 @@ TEST(LoadTest, Matmul) {
   std::vector<float> in(config->hidden_dim, 1.f);
   std::vector<float> out(config->hidden_dim, 0.f);
 
-  tensor::Tensor tensor = tensor::Tensor::from_external(
+  tensor::Tensor tensor = tensor::Tensor::from_external_cpu(
       base::DataType::kDataTypeFp32, {config->hidden_dim}, in.data());
-  tensor.set_device_type(base::DeviceType::kDeviceCPU);
 
-  tensor::Tensor out_tensor = tensor::Tensor::from_external(
+  tensor::Tensor out_tensor = tensor::Tensor::from_external_cpu(
       base::DataType::kDataTypeFp32, {config->dim}, out.data());
-  out_tensor.set_device_type(base::DeviceType::kDeviceCPU);
 
   wq->set_input(0, tensor);
   wq->set_output(0, out_tensor);

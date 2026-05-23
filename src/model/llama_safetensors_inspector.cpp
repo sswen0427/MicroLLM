@@ -3,6 +3,7 @@
 #include <absl/status/status.h>
 #include <absl/status/statusor.h>
 #include <absl/strings/str_cat.h>
+#include <absl/strings/str_join.h>
 #include <glog/logging.h>
 
 #include <algorithm>
@@ -13,6 +14,9 @@
 #include <vector>
 
 #include "model/hf_config.h"
+#include "model/llama_tensor_names.h"
+#include "model/safetensors_tensor_view.h"
+#include "tensor/tensor_view.h"
 
 namespace model {
 namespace {
@@ -41,6 +45,40 @@ absl::StatusOr<safetensors::safetensors_t> LoadSafetensorsFile(
         offset_error.empty() ? "" : absl::StrCat(", error: ", offset_error)));
   }
   return safetensors;
+}
+
+std::string DataTypeName(base::DataType data_type) {
+  switch (data_type) {
+    case base::DataType::kDataTypeFp32:
+      return "fp32";
+    case base::DataType::kDataTypeInt8:
+      return "int8";
+    case base::DataType::kDataTypeInt32:
+      return "int32";
+    case base::DataType::kDataTypeBf16:
+      return "bf16";
+    default:
+      return "unknown";
+  }
+}
+
+void LogTensorView(const std::string& label, const std::string& tensor_name,
+                   const tensor::TensorView& view) {
+  LOG(INFO) << label << ": name=" << tensor_name
+            << ", dtype=" << DataTypeName(view.data_type)
+            << ", shape=" << absl::StrJoin(view.shape, "x")
+            << ", bytes=" << view.byte_size;
+}
+
+absl::Status LogSafetensorsTensorView(
+    const safetensors::safetensors_t& safetensors, const std::string& label,
+    const std::string& tensor_name) {
+  auto view_or = GetSafetensorsTensorView(safetensors, tensor_name);
+  if (!view_or.ok()) {
+    return view_or.status();
+  }
+  LogTensorView(label, tensor_name, *view_or);
+  return absl::OkStatus();
 }
 
 absl::Status ValidateSupportedLlamaConfig(const HfLlamaConfig& config) {
@@ -145,6 +183,36 @@ absl::Status InspectLlamaSafetensorsFile(const HfLlamaConfig& config,
   LOG(INFO) << "vocab_size: " << config.vocab_size;
   LOG(INFO) << "safetensors: " << safetensors_path;
   LOG(INFO) << "tensor_count: " << safetensors.tensors.size();
+
+  const absl::Status token_embedding_status = LogSafetensorsTensorView(
+      safetensors, "token_embedding_tensor",
+      LlamaTensorName(LlamaTensorKind::kTokenEmbedding));
+  if (!token_embedding_status.ok()) {
+    return token_embedding_status;
+  }
+  const absl::Status layer_q_status = LogSafetensorsTensorView(
+      safetensors, "layer_0_q_proj_tensor",
+      LlamaLayerTensorName(0, LlamaTensorKind::kQProj));
+  if (!layer_q_status.ok()) {
+    return layer_q_status;
+  }
+  const absl::Status layer_gate_status = LogSafetensorsTensorView(
+      safetensors, "layer_0_gate_proj_tensor",
+      LlamaLayerTensorName(0, LlamaTensorKind::kGateProj));
+  if (!layer_gate_status.ok()) {
+    return layer_gate_status;
+  }
+  const absl::Status final_norm_status = LogSafetensorsTensorView(
+      safetensors, "final_norm_tensor",
+      LlamaTensorName(LlamaTensorKind::kFinalNorm));
+  if (!final_norm_status.ok()) {
+    return final_norm_status;
+  }
+  const absl::Status lm_head_status = LogSafetensorsTensorView(
+      safetensors, "lm_head_tensor", LlamaTensorName(LlamaTensorKind::kLmHead));
+  if (!lm_head_status.ok()) {
+    return lm_head_status;
+  }
 
   LOG(INFO) << "safetensors model inspection finished";
   return absl::OkStatus();

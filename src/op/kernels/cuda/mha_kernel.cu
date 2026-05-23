@@ -114,12 +114,12 @@ void mha_kernel_cu(int32_t pos, int32_t head_num, int32_t layer_index,
                    [[maybe_unused]] base::DeviceType device_type,
                    base::CudaConfig* config) {
   int32_t layer_offset = layer_index * seq_len * kv_dim;
-  float* query = const_cast<float*>(query_tensor.ptr<float>());
-  float* score = const_cast<float*>(score_tensor.ptr<float>());
-  float* output = const_cast<float*>(mha_out.ptr<float>());
+  float* query = const_cast<float*>(query_tensor.data<float>());
+  float* score = const_cast<float*>(score_tensor.data<float>());
+  float* output = const_cast<float*>(mha_out.data<float>());
 
-  float* key_cache = const_cast<float*>(key_cache_tensor.ptr<float>());
-  float* value_cache = const_cast<float*>(value_cache_tensor.ptr<float>());
+  float* key_cache = const_cast<float*>(key_cache_tensor.data<float>());
+  float* value_cache = const_cast<float*>(value_cache_tensor.data<float>());
 
   cudaStream_t stream = config->stream;
   multi_head_attention_kernel<<<head_num, thread_num, head_size * sizeof(float),

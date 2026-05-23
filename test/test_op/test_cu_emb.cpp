@@ -6,20 +6,18 @@
 #include "op/kernels/kernels_interface.h"
 
 TEST(CudaEmbTest, NoStream) {
-  auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
-  auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
 
   int32_t token = 4;
   int32_t dim = 512;
 
   // init input
   tensor::Tensor input =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {1}, alloc_cpu);
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {1}, base::DeviceType::kDeviceCPU);
   input.at<int32_t>(0) = 1;
 
   // init weight
   tensor::Tensor weight = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {token, dim}, alloc_cpu);
+      base::DataType::kDataTypeFp32, {token, dim}, base::DeviceType::kDeviceCPU);
   for (int i = 0; i < token * dim; ++i) {
     weight.at<float>(i) = static_cast<float>(i);
   }
@@ -27,7 +25,7 @@ TEST(CudaEmbTest, NoStream) {
 
   // init output
   tensor::Tensor output =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim}, alloc_cu);
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim}, base::DeviceType::kDeviceCUDA);
 
   kernel::get_emb_kernel(base::DeviceType::kDeviceCUDA)(input, weight, output,
                                                         token, nullptr);
@@ -39,20 +37,18 @@ TEST(CudaEmbTest, NoStream) {
 }
 
 TEST(CudaEmbTest, NoStream2) {
-  auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
-  auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
 
   int32_t token = 4;
   int32_t dim = 512;
 
   // init input
   tensor::Tensor input =
-      tensor::Tensor::allocate(base::DataType::kDataTypeInt32, {1}, alloc_cpu);
+      tensor::Tensor::allocate(base::DataType::kDataTypeInt32, {1}, base::DeviceType::kDeviceCPU);
   input.at<int32_t>(0) = 2;
 
   // init weight
   tensor::Tensor weight = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {token, dim}, alloc_cpu);
+      base::DataType::kDataTypeFp32, {token, dim}, base::DeviceType::kDeviceCPU);
   for (int i = 0; i < token * dim; ++i) {
     weight.at<float>(i) = static_cast<float>(i);
   }
@@ -60,7 +56,7 @@ TEST(CudaEmbTest, NoStream2) {
 
   // init output
   tensor::Tensor output =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim}, alloc_cu);
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim}, base::DeviceType::kDeviceCUDA);
 
   kernel::get_emb_kernel(base::DeviceType::kDeviceCUDA)(input, weight, output,
                                                         token, nullptr);
@@ -71,20 +67,18 @@ TEST(CudaEmbTest, NoStream2) {
 }
 
 TEST(CudaEmbTest, Stream) {
-  auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
-  auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
 
   int32_t token = 4;
   int32_t dim = 512;
 
   // init input
   tensor::Tensor input =
-      tensor::Tensor::allocate(base::DataType::kDataTypeInt32, {1}, alloc_cpu);
+      tensor::Tensor::allocate(base::DataType::kDataTypeInt32, {1}, base::DeviceType::kDeviceCPU);
   input.at<int32_t>(0) = 1;
 
   // init weight
   tensor::Tensor weight = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {token, dim}, alloc_cpu);
+      base::DataType::kDataTypeFp32, {token, dim}, base::DeviceType::kDeviceCPU);
   for (int i = 0; i < token * dim; ++i) {
     weight.at<float>(i) = static_cast<float>(i);
   }
@@ -92,7 +86,7 @@ TEST(CudaEmbTest, Stream) {
 
   // init output
   tensor::Tensor output =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim}, alloc_cu);
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim}, base::DeviceType::kDeviceCUDA);
 
   // init stream
   cudaStream_t stream;

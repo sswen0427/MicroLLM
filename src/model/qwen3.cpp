@@ -129,8 +129,8 @@ base::Status Qwen3Model::init(base::DeviceType device_type) {
   if (device_type_ == base::DeviceType::kDeviceCPU) {
     kernel::sin_cos_cache_calc_cpu(
         config_->head_size_, config_->seq_len_,
-        get_buffer(ModelBufferType::kSinCache).ptr<float>(),
-        get_buffer(ModelBufferType::kCosCache).ptr<float>());
+        get_buffer(ModelBufferType::kSinCache).data<float>(),
+        get_buffer(ModelBufferType::kCosCache).data<float>());
   } else {
     CHECK_NE(cuda_config_, nullptr);
     kernel::sin_cos_cache_calc_cu(config_->head_size_, config_->seq_len_,
@@ -317,9 +317,9 @@ void Qwen3Model::create_param_layers() {
 void Qwen3Model::init_mem() {
   std::shared_ptr<base::DeviceAllocator> alloc;
   if (device_type_ == base::DeviceType::kDeviceCPU) {
-    alloc = base::CPUDeviceAllocatorFactory::get_instance();
+    alloc = base::GetDeviceAllocator(base::DeviceType::kDeviceCPU);
   } else {
-    alloc = base::CUDADeviceAllocatorFactory::get_instance();
+    alloc = base::GetDeviceAllocator(base::DeviceType::kDeviceCUDA);
   }
 
   if (device_type_ == base::DeviceType::kDeviceCUDA) {
@@ -328,9 +328,9 @@ void Qwen3Model::init_mem() {
   }
 
   std::shared_ptr<base::DeviceAllocator> alloc_cpu =
-      base::CPUDeviceAllocatorFactory::get_instance();
+      base::GetDeviceAllocator(base::DeviceType::kDeviceCPU);
   std::shared_ptr<base::DeviceAllocator> alloc_cu =
-      base::CUDADeviceAllocatorFactory::get_instance();
+      base::GetDeviceAllocator(base::DeviceType::kDeviceCUDA);
 
   tensor::Tensor input_tokens(base::DataType::kDataTypeInt32, 1, true,
                               alloc_cpu);
@@ -686,7 +686,7 @@ void Qwen3Model::cls_logits(const tensor::Tensor& input) const {
 int32_t Qwen3Model::post_processing(const tensor::Tensor& pos,
                                     bool is_prompt) const {
   tensor::Tensor forward_output = get_buffer(ModelBufferType::kForwardOutput);
-  const float* forward_logits = forward_output.ptr<float>();
+  const float* forward_logits = forward_output.data<float>();
 
   int32_t next = 0;
   if (is_prompt) {

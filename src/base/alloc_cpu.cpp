@@ -1,12 +1,14 @@
 #include <glog/logging.h>
 
+#include <cstdlib>
+
 #include "base/alloc.h"
 #include "base/base.h"
 namespace base {
 CPUDeviceAllocator::CPUDeviceAllocator()
     : DeviceAllocator(DeviceType::kDeviceCPU) {}
 
-void* CPUDeviceAllocator::allocate(size_t byte_size) const {
+void* CPUDeviceAllocator::allocate(std::size_t byte_size) const {
   CHECK(byte_size > 0) << "CPUDeviceAllocator::allocate(): byte_size is 0";
   const size_t alignment = (byte_size >= 1024) ? 32 : 16;
   const size_t aligned_size = (byte_size + alignment - 1) & ~(alignment - 1);
@@ -26,7 +28,4 @@ void CPUDeviceAllocator::release(void* ptr) const {
     free(ptr);
   }
 }
-
-std::shared_ptr<CPUDeviceAllocator> CPUDeviceAllocatorFactory::instance =
-    nullptr;
 }  // namespace base
