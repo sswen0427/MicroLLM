@@ -12,7 +12,7 @@ inline void CheckCuda(cudaError_t error, const char* expression) {
 
 }  // namespace base
 
-#define CHECK_CUDA(expression)                        \
-  do {                                                \
-    ::base::CheckCuda((expression), #expression);     \
+#define CHECK_CUDA(expression)                    \
+  do {                                            \
+    ::base::CheckCuda((expression), #expression); \
   } while (false)
