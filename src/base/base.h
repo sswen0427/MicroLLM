@@ -3,6 +3,8 @@
 #include <cuda_runtime_api.h>
 #include <glog/logging.h>
 
+#include <cstddef>
+#include <cstdint>
 #include <string>
 
 namespace base {
@@ -72,6 +74,7 @@ enum class DataType : uint8_t {
   kDataTypeFp32 = 1,   // 32-bit floating-point
   kDataTypeInt8 = 2,   // 8-bit integer
   kDataTypeInt32 = 3,  //
+  kDataTypeBf16 = 4,   // 16-bit bfloat
 };
 
 inline std::size_t DataTypeSize(DataType type) {
@@ -81,6 +84,8 @@ inline std::size_t DataTypeSize(DataType type) {
     return 1;
   } else if (type == DataType::kDataTypeInt32) {
     return 4;
+  } else if (type == DataType::kDataTypeBf16) {
+    return 2;
   } else {
     LOG(FATAL) << "Unknown data type";
     return 0;
