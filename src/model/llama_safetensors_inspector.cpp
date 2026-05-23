@@ -4,15 +4,16 @@
 #include <absl/status/statusor.h>
 #include <absl/strings/str_cat.h>
 #include <glog/logging.h>
+#include <safetensors.hh>
 
 #include <algorithm>
 #include <cstddef>
 #include <filesystem>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
-#include "io/safetensors_reader.h"
 #include "model/hf_config.h"
 
 namespace model {
@@ -33,6 +34,41 @@ std::string FormatShape(const std::vector<std::size_t>& shape) {
   }
   text += "]";
   return text;
+}
+
+absl::StatusOr<safetensors::safetensors_t> OpenSafetensorsFile(
+    const std::string& safetensors_path) {
+  safetensors::safetensors_t safetensors;
+  std::string warn;
+  std::string err;
+  if (!safetensors::mmap_from_file(safetensors_path, &safetensors, &warn,
+                                   &err)) {
+    return absl::InvalidArgumentError(
+        absl::StrCat("Failed to open safetensors file: ", safetensors_path,
+                     err.empty() ? "" : absl::StrCat(", error: ", err)));
+  }
+  if (!warn.empty()) {
+    LOG(WARNING) << "safetensors warning for " << safetensors_path << ": "
+                 << warn;
+  }
+
+  std::string offset_error;
+  if (!safetensors::validate_data_offsets(safetensors, offset_error)) {
+    return absl::InvalidArgumentError(absl::StrCat(
+        "Invalid safetensors data offsets in ", safetensors_path,
+        offset_error.empty() ? "" : absl::StrCat(", error: ", offset_error)));
+  }
+  return safetensors;
+}
+
+absl::StatusOr<safetensors::tensor_t> FindTensor(
+    const safetensors::safetensors_t& safetensors, std::string_view name) {
+  safetensors::tensor_t tensor;
+  if (!safetensors.tensors.at(std::string(name), &tensor)) {
+    return absl::NotFoundError(
+        absl::StrCat("Tensor not found in safetensors file: ", name));
+  }
+  return tensor;
 }
 
 absl::Status ValidateSupportedLlamaConfig(const HfLlamaConfig& config) {
@@ -136,21 +172,24 @@ std::vector<ExpectedTensor> BuildExpectedTensors(const HfLlamaConfig& config) {
   return expected;
 }
 
-absl::Status LogAndValidateTensor(const io::SafetensorsReader& reader,
+absl::Status LogAndValidateTensor(const safetensors::safetensors_t& safetensors,
                                   const ExpectedTensor& expected) {
-  auto info_or = reader.tensor_info(expected.name);
-  if (!info_or.ok()) {
-    return info_or.status();
+  auto tensor_or = FindTensor(safetensors, expected.name);
+  if (!tensor_or.ok()) {
+    return tensor_or.status();
   }
 
-  const auto& info = *info_or;
+  const auto& tensor = *tensor_or;
+  const std::size_t byte_size =
+      tensor.data_offsets[1] - tensor.data_offsets[0];
   LOG(INFO) << "tensor: " << expected.name
-            << ", shape=" << FormatShape(info.shape) << ", dtype=" << info.dtype
-            << ", bytes=" << info.byte_size;
-  if (info.shape != expected.shape) {
+            << ", shape=" << FormatShape(tensor.shape)
+            << ", dtype=" << safetensors::get_dtype_str(tensor.dtype)
+            << ", bytes=" << byte_size;
+  if (tensor.shape != expected.shape) {
     return absl::InvalidArgumentError(absl::StrCat(
         "Unexpected shape for ", expected.name, ": got ",
-        FormatShape(info.shape), ", expected ", FormatShape(expected.shape)));
+        FormatShape(tensor.shape), ", expected ", FormatShape(expected.shape)));
   }
   return absl::OkStatus();
 }
@@ -162,11 +201,11 @@ absl::Status InspectLlamaSafetensorsFile(const HfLlamaConfig& config,
     return config_status;
   }
 
-  auto reader_or = io::SafetensorsReader::Open(safetensors_path);
-  if (!reader_or.ok()) {
-    return reader_or.status();
+  auto safetensors_or = OpenSafetensorsFile(safetensors_path);
+  if (!safetensors_or.ok()) {
+    return safetensors_or.status();
   }
-  const auto& reader = **reader_or;
+  const auto& safetensors = *safetensors_or;
 
   LOG(INFO) << "model_type: " << config.model_type;
   LOG(INFO) << "architecture: "
@@ -174,7 +213,7 @@ absl::Status InspectLlamaSafetensorsFile(const HfLlamaConfig& config,
   LOG(INFO) << "torch_dtype: " << config.torch_dtype;
   LOG(INFO) << "transformers_version: " << config.transformers_version;
   LOG(INFO) << "safetensors: " << safetensors_path;
-  LOG(INFO) << "tensor_count: " << reader.tensor_count();
+  LOG(INFO) << "tensor_count: " << safetensors.tensors.size();
   LOG(INFO) << "attention_bias: " << config.attention_bias;
   LOG(INFO) << "bos_token_id: " << config.bos_token_id;
   LOG(INFO) << "eos_token_id: " << config.eos_token_id;
@@ -196,7 +235,7 @@ absl::Status InspectLlamaSafetensorsFile(const HfLlamaConfig& config,
   LOG(INFO) << "validating LLaMA safetensors tensor shapes";
 
   for (const auto& expected : BuildExpectedTensors(config)) {
-    const absl::Status status = LogAndValidateTensor(reader, expected);
+    const absl::Status status = LogAndValidateTensor(safetensors, expected);
     if (!status.ok()) {
       return status;
     }
