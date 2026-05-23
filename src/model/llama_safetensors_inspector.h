@@ -1,6 +1,5 @@
 #pragma once
 
-#include <iosfwd>
 #include <string>
 
 #include "absl/status/status.h"
@@ -8,11 +7,9 @@
 
 namespace model {
 
-absl::Status InspectLlamaSafetensorsModel(const std::string& model_dir,
-                                          std::ostream& output);
+absl::Status InspectLlamaSafetensorsModel(const std::string& model_dir);
 
 absl::Status InspectLlamaSafetensorsModel(const HfLlamaConfig& config,
-                                          const std::string& safetensors_path,
-                                          std::ostream& output);
+                                          const std::string& safetensors_path);
 
 }  // namespace model

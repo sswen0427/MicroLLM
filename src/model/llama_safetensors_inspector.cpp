@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <filesystem>
-#include <ostream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -11,6 +10,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
+#include "glog/logging.h"
 #include "io/safetensors_reader.h"
 
 namespace model {
@@ -107,17 +107,17 @@ std::vector<ExpectedTensor> BuildExpectedTensors(const HfLlamaConfig& config) {
   return expected;
 }
 
-absl::Status PrintAndValidateTensor(const io::SafetensorsReader& reader,
-                                    const ExpectedTensor& expected,
-                                    std::ostream& output) {
+absl::Status LogAndValidateTensor(const io::SafetensorsReader& reader,
+                                  const ExpectedTensor& expected) {
   auto info_or = reader.tensor_info(expected.name);
   if (!info_or.ok()) {
     return info_or.status();
   }
 
   const auto& info = *info_or;
-  output << "  " << expected.name << " " << FormatShape(info.shape) << " "
-         << info.dtype << " bytes=" << info.byte_size << "\n";
+  LOG(INFO) << "tensor: " << expected.name
+            << ", shape=" << FormatShape(info.shape)
+            << ", dtype=" << info.dtype << ", bytes=" << info.byte_size;
   if (info.shape != expected.shape) {
     return absl::InvalidArgumentError(absl::StrCat(
         "Unexpected shape for ", expected.name, ": got ",
@@ -128,8 +128,7 @@ absl::Status PrintAndValidateTensor(const io::SafetensorsReader& reader,
 
 }  // namespace
 
-absl::Status InspectLlamaSafetensorsModel(const std::string& model_dir,
-                                          std::ostream& output) {
+absl::Status InspectLlamaSafetensorsModel(const std::string& model_dir) {
   auto config_or = LoadHfLlamaConfig(model_dir);
   if (!config_or.ok()) {
     return config_or.status();
@@ -138,12 +137,11 @@ absl::Status InspectLlamaSafetensorsModel(const std::string& model_dir,
   if (!safetensors_path_or.ok()) {
     return safetensors_path_or.status();
   }
-  return InspectLlamaSafetensorsModel(*config_or, *safetensors_path_or, output);
+  return InspectLlamaSafetensorsModel(*config_or, *safetensors_path_or);
 }
 
 absl::Status InspectLlamaSafetensorsModel(const HfLlamaConfig& config,
-                                          const std::string& safetensors_path,
-                                          std::ostream& output) {
+                                          const std::string& safetensors_path) {
   if (config.model_type != "llama") {
     return absl::InvalidArgumentError(absl::StrCat(
         "Only llama model_type is supported by this inspector, got ",
@@ -156,33 +154,31 @@ absl::Status InspectLlamaSafetensorsModel(const HfLlamaConfig& config,
   }
   const auto& reader = **reader_or;
 
-  output << "model_type: " << config.model_type << "\n";
-  output << "architecture: " << config.architecture << "\n";
-  output << "torch_dtype: " << config.torch_dtype << "\n";
-  output << "safetensors: " << safetensors_path << "\n";
-  output << "tensor_count: " << reader.tensor_count() << "\n";
-  output << "layers: " << config.num_hidden_layers << "\n";
-  output << "hidden_size: " << config.hidden_size << "\n";
-  output << "intermediate_size: " << config.intermediate_size << "\n";
-  output << "attention_heads: " << config.num_attention_heads << "\n";
-  output << "kv_heads: " << config.num_key_value_heads << "\n";
-  output << "vocab_size: " << config.vocab_size << "\n";
-  output << "tie_word_embeddings: " << config.tie_word_embeddings << "\n";
-  output << "max_position_embeddings: " << config.max_position_embeddings
-         << "\n";
-  output << "rms_norm_eps: " << config.rms_norm_eps << "\n";
-  output << "rope_theta: " << config.rope_theta << "\n";
-  output << "\nvalidated_tensors:\n";
+  LOG(INFO) << "model_type: " << config.model_type;
+  LOG(INFO) << "architecture: " << config.architecture;
+  LOG(INFO) << "torch_dtype: " << config.torch_dtype;
+  LOG(INFO) << "safetensors: " << safetensors_path;
+  LOG(INFO) << "tensor_count: " << reader.tensor_count();
+  LOG(INFO) << "layers: " << config.num_hidden_layers;
+  LOG(INFO) << "hidden_size: " << config.hidden_size;
+  LOG(INFO) << "intermediate_size: " << config.intermediate_size;
+  LOG(INFO) << "attention_heads: " << config.num_attention_heads;
+  LOG(INFO) << "kv_heads: " << config.num_key_value_heads;
+  LOG(INFO) << "vocab_size: " << config.vocab_size;
+  LOG(INFO) << "tie_word_embeddings: " << config.tie_word_embeddings;
+  LOG(INFO) << "max_position_embeddings: " << config.max_position_embeddings;
+  LOG(INFO) << "rms_norm_eps: " << config.rms_norm_eps;
+  LOG(INFO) << "rope_theta: " << config.rope_theta;
+  LOG(INFO) << "validating LLaMA safetensors tensor shapes";
 
   for (const auto& expected : BuildExpectedTensors(config)) {
-    const absl::Status status =
-        PrintAndValidateTensor(reader, expected, output);
+    const absl::Status status = LogAndValidateTensor(reader, expected);
     if (!status.ok()) {
       return status;
     }
   }
 
-  output << "\nstatus: ok\n";
+  LOG(INFO) << "safetensors model inspection finished";
   return absl::OkStatus();
 }
 

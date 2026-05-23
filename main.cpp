@@ -4,7 +4,6 @@
 #include <gflags/gflags.h>
 
 #include <iostream>
-#include <string>
 
 #include "model/llama_safetensors_inspector.h"
 
@@ -35,7 +34,7 @@ int main(int argc, char *argv[]) {
   }
 
   const absl::Status status =
-      model::InspectLlamaSafetensorsModel(FLAGS_model_dir, std::cout);
+      model::InspectLlamaSafetensorsModel(FLAGS_model_dir);
   if (!status.ok()) {
     std::cerr << "Error: " << status.message() << "\n";
     return 1;
