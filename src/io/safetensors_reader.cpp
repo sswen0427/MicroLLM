@@ -1,5 +1,9 @@
 #include "io/safetensors_reader.h"
 
+#include <absl/status/status.h>
+#include <absl/strings/str_cat.h>
+#include <glog/logging.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -7,10 +11,6 @@
 #include <string_view>
 #include <utility>
 #include <vector>
-
-#include <absl/status/status.h>
-#include <absl/strings/str_cat.h>
-#include <glog/logging.h>
 
 namespace io {
 namespace {

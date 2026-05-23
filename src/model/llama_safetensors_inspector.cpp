@@ -1,5 +1,10 @@
 #include "model/llama_safetensors_inspector.h"
 
+#include <absl/status/status.h>
+#include <absl/status/statusor.h>
+#include <absl/strings/str_cat.h>
+#include <glog/logging.h>
+
 #include <algorithm>
 #include <cstddef>
 #include <filesystem>
@@ -7,10 +12,6 @@
 #include <utility>
 #include <vector>
 
-#include <absl/status/status.h>
-#include <absl/status/statusor.h>
-#include <absl/strings/str_cat.h>
-#include <glog/logging.h>
 #include "io/safetensors_reader.h"
 
 namespace model {
