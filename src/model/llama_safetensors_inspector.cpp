@@ -52,8 +52,7 @@ absl::StatusOr<std::string> FindSingleSafetensorsFile(
 
   std::vector<std::filesystem::path> files;
   for (const auto& entry : std::filesystem::directory_iterator(dir)) {
-    if (entry.is_regular_file() &&
-        entry.path().extension() == ".safetensors") {
+    if (entry.is_regular_file() && entry.path().extension() == ".safetensors") {
       files.push_back(entry.path());
     }
   }
@@ -75,8 +74,7 @@ std::vector<ExpectedTensor> BuildExpectedTensors(const HfLlamaConfig& config) {
   const std::size_t hidden_size = config.hidden_size;
   const std::size_t intermediate_size = config.intermediate_size;
   const std::size_t vocab_size = config.vocab_size;
-  const std::size_t head_dim =
-      config.hidden_size / config.num_attention_heads;
+  const std::size_t head_dim = config.hidden_size / config.num_attention_heads;
   const std::size_t kv_dim = config.num_key_value_heads * head_dim;
 
   std::vector<ExpectedTensor> expected;
@@ -87,10 +85,8 @@ std::vector<ExpectedTensor> BuildExpectedTensors(const HfLlamaConfig& config) {
   }
 
   for (int32_t layer = 0; layer < config.num_hidden_layers; ++layer) {
-    const std::string prefix =
-        absl::StrCat("model.layers.", layer, ".");
-    expected.push_back(
-        {prefix + "input_layernorm.weight", {hidden_size}});
+    const std::string prefix = absl::StrCat("model.layers.", layer, ".");
+    expected.push_back({prefix + "input_layernorm.weight", {hidden_size}});
     expected.push_back(
         {prefix + "post_attention_layernorm.weight", {hidden_size}});
     expected.push_back(
@@ -123,10 +119,9 @@ absl::Status PrintAndValidateTensor(const io::SafetensorsReader& reader,
   output << "  " << expected.name << " " << FormatShape(info.shape) << " "
          << info.dtype << " bytes=" << info.byte_size << "\n";
   if (info.shape != expected.shape) {
-    return absl::InvalidArgumentError(
-        absl::StrCat("Unexpected shape for ", expected.name, ": got ",
-                     FormatShape(info.shape), ", expected ",
-                     FormatShape(expected.shape)));
+    return absl::InvalidArgumentError(absl::StrCat(
+        "Unexpected shape for ", expected.name, ": got ",
+        FormatShape(info.shape), ", expected ", FormatShape(expected.shape)));
   }
   return absl::OkStatus();
 }
@@ -150,9 +145,9 @@ absl::Status InspectLlamaSafetensorsModel(const HfLlamaConfig& config,
                                           const std::string& safetensors_path,
                                           std::ostream& output) {
   if (config.model_type != "llama") {
-    return absl::InvalidArgumentError(
-        absl::StrCat("Only llama model_type is supported by this inspector, got ",
-                     config.model_type));
+    return absl::InvalidArgumentError(absl::StrCat(
+        "Only llama model_type is supported by this inspector, got ",
+        config.model_type));
   }
 
   auto reader_or = io::SafetensorsReader::Open(safetensors_path);

@@ -23,7 +23,6 @@ struct HfLlamaConfig {
   bool tie_word_embeddings = false;
 };
 
-absl::StatusOr<HfLlamaConfig> LoadHfLlamaConfig(
-    const std::string& model_dir);
+absl::StatusOr<HfLlamaConfig> LoadHfLlamaConfig(const std::string& model_dir);
 
 }  // namespace model

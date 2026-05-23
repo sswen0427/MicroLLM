@@ -23,8 +23,7 @@ absl::StatusOr<T> ReadRequired(const nlohmann::json& json,
 
 }  // namespace
 
-absl::StatusOr<HfLlamaConfig> LoadHfLlamaConfig(
-    const std::string& model_dir) {
+absl::StatusOr<HfLlamaConfig> LoadHfLlamaConfig(const std::string& model_dir) {
   const std::filesystem::path config_path =
       std::filesystem::path(model_dir) / "config.json";
   std::ifstream input(config_path);

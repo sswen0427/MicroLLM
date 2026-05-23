@@ -45,18 +45,16 @@ absl::StatusOr<std::unique_ptr<SafetensorsReader>> SafetensorsReader::Open(
   }
 
   if (!warn.empty()) {
-    // Keep warnings observable without making them fatal; malformed files should
-    // already be rejected by mmap_from_file or validate_data_offsets.
+    // Keep warnings observable without making them fatal; malformed files
+    // should already be rejected by mmap_from_file or validate_data_offsets.
     LOG(WARNING) << "safetensors warning for " << reader->path_ << ": " << warn;
   }
 
   std::string offset_error;
   if (!safetensors::validate_data_offsets(reader->safetensors_, offset_error)) {
-    return absl::InvalidArgumentError(
-        absl::StrCat("Invalid safetensors data offsets in ", reader->path_,
-                     offset_error.empty()
-                         ? ""
-                         : absl::StrCat(", error: ", offset_error)));
+    return absl::InvalidArgumentError(absl::StrCat(
+        "Invalid safetensors data offsets in ", reader->path_,
+        offset_error.empty() ? "" : absl::StrCat(", error: ", offset_error)));
   }
 
   return reader;
