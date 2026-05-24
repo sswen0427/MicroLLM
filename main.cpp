@@ -30,9 +30,11 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  FLAGS_log_dir =
-      std::filesystem::absolute(std::filesystem::path(FLAGS_model_dir))
-          .string();
+  const std::filesystem::path log_dir =
+      std::filesystem::absolute(std::filesystem::path(FLAGS_model_dir)) /
+      "logs";
+  std::filesystem::create_directories(log_dir);
+  FLAGS_log_dir = log_dir.string();
   google::InitGoogleLogging(argv[0]);
   google::InstallFailureSignalHandler();
   LOG(INFO) << "Writing logs to model directory: " << FLAGS_log_dir;
