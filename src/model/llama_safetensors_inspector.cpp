@@ -46,7 +46,7 @@ absl::StatusOr<safetensors::safetensors_t> LoadSafetensorsFile(
 }
 
 absl::Status LogSafetensorsTensorMetadata(
-    const safetensors::safetensors_t& safetensors, const std::string& label,
+    const safetensors::safetensors_t& safetensors,
     const std::string& tensor_name) {
   safetensors::tensor_t tensor;
   if (!safetensors.tensors.at(tensor_name, &tensor)) {
@@ -65,7 +65,7 @@ absl::Status LogSafetensorsTensorMetadata(
                      begin, ", ", end, "]"));
   }
 
-  LOG(INFO) << label << ": name=" << tensor_name
+  LOG(INFO) << "tensor: name=" << tensor_name
             << ", dtype=" << safetensors::get_dtype_str(tensor.dtype)
             << ", shape=" << absl::StrJoin(tensor.shape, "x")
             << ", bytes=" << end - begin;
@@ -176,31 +176,27 @@ absl::Status InspectLlamaSafetensorsFile(const HfLlamaConfig& config,
   LOG(INFO) << "tensor_count: " << safetensors.tensors.size();
 
   const absl::Status token_embedding_status = LogSafetensorsTensorMetadata(
-      safetensors, "token_embedding_tensor",
-      LlamaTensorName(LlamaTensorKind::kTokenEmbedding));
+      safetensors, LlamaTensorName(LlamaTensorKind::kTokenEmbedding));
   if (!token_embedding_status.ok()) {
     return token_embedding_status;
   }
   const absl::Status layer_q_status = LogSafetensorsTensorMetadata(
-      safetensors, "layer_0_q_proj_tensor",
-      LlamaLayerTensorName(0, LlamaTensorKind::kQProj));
+      safetensors, LlamaLayerTensorName(0, LlamaTensorKind::kQProj));
   if (!layer_q_status.ok()) {
     return layer_q_status;
   }
   const absl::Status layer_gate_status = LogSafetensorsTensorMetadata(
-      safetensors, "layer_0_gate_proj_tensor",
-      LlamaLayerTensorName(0, LlamaTensorKind::kGateProj));
+      safetensors, LlamaLayerTensorName(0, LlamaTensorKind::kGateProj));
   if (!layer_gate_status.ok()) {
     return layer_gate_status;
   }
   const absl::Status final_norm_status = LogSafetensorsTensorMetadata(
-      safetensors, "final_norm_tensor",
-      LlamaTensorName(LlamaTensorKind::kFinalNorm));
+      safetensors, LlamaTensorName(LlamaTensorKind::kFinalNorm));
   if (!final_norm_status.ok()) {
     return final_norm_status;
   }
   const absl::Status lm_head_status = LogSafetensorsTensorMetadata(
-      safetensors, "lm_head_tensor", LlamaTensorName(LlamaTensorKind::kLmHead));
+      safetensors, LlamaTensorName(LlamaTensorKind::kLmHead));
   if (!lm_head_status.ok()) {
     return lm_head_status;
   }
