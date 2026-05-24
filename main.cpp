@@ -1,21 +1,22 @@
-#include <absl/status/status.h>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
-#include <cstdint>
 #include <filesystem>
 #include <iostream>
 
-#include "model/llama_hf_forward.h"
 #include "model/llama_hf_model_loader.h"
+#include "op/encode.h"
+#include "runtime/generator.h"
 
 DEFINE_string(model_dir, "", "HuggingFace model directory.");
+DEFINE_string(prompt, "", "Prompt text to generate from.");
+DEFINE_int32(max_new_tokens, 32, "Maximum number of tokens to generate.");
 
 int main(int argc, char* argv[]) {
   gflags::SetUsageMessage(
       "MicroLLM inference runtime.\n\n"
       "Usage:\n"
-      "  MicroLLM --model_dir <hf_model_dir>");
+      "  MicroLLM --model_dir <hf_model_dir> --prompt <text>");
 
   int parsed_argc = argc;
   char** parsed_argv = argv;
@@ -29,6 +30,15 @@ int main(int argc, char* argv[]) {
   if (FLAGS_model_dir.empty()) {
     std::cerr << "Error: --model_dir is required.\n"
               << "Use --help to see available flags.\n";
+    return 1;
+  }
+  if (FLAGS_prompt.empty()) {
+    std::cerr << "Error: --prompt is required.\n"
+              << "Use --help to see available flags.\n";
+    return 1;
+  }
+  if (FLAGS_max_new_tokens <= 0) {
+    std::cerr << "Error: --max_new_tokens must be greater than 0.\n";
     return 1;
   }
 
@@ -47,18 +57,24 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  const int32_t first_token = (*model_or)->config.bos_token_id >= 0
-                                  ? (*model_or)->config.bos_token_id
-                                  : 0;
-  model::LlamaHfRuntime runtime(**model_or);
-  auto forward_or = runtime.ForwardToken(first_token, 0);
-  if (!forward_or.ok()) {
-    std::cerr << "Error: " << forward_or.status().message() << "\n";
+  const std::filesystem::path tokenizer_path =
+      std::filesystem::path(FLAGS_model_dir) / "tokenizer.model";
+  if (!std::filesystem::exists(tokenizer_path)) {
+    std::cerr << "Error: tokenizer.model does not exist: "
+              << tokenizer_path.string() << "\n";
     return 1;
   }
 
-  LOG(INFO) << "forward logits size: " << forward_or->logits.size();
-  LOG(INFO) << "forward next token: " << forward_or->next_token;
-  LOG(INFO) << "Model directory loading finished: " << FLAGS_model_dir;
+  op::SpeEncodeLayer tokenizer(tokenizer_path.string(), true, false);
+  runtime::GenerationConfig generation_config;
+  generation_config.max_new_tokens = FLAGS_max_new_tokens;
+  auto result_or = runtime::GenerateText(**model_or, tokenizer, FLAGS_prompt,
+                                         generation_config);
+  if (!result_or.ok()) {
+    std::cerr << "Error: " << result_or.status().message() << "\n";
+    return 1;
+  }
+
+  std::cout << result_or->text << "\n";
   return 0;
 }
