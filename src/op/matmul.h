@@ -1,6 +1,8 @@
 #pragma once
 
-#include "base/base.h"
+#include <absl/status/status.h>
+
+#include "base/types.h"
 #include "op/layer.h"
 
 namespace op {
@@ -30,13 +32,13 @@ class MatmulLayer : public LayerParam {
    * shapes.
    * @return Status indicating success or specific error during validation.
    */
-  [[nodiscard]] base::Status check() const override;
+  [[nodiscard]] absl::Status check() const override;
 
   /**
    * @brief Executes the forward pass of the matrix multiplication.
    * @return Status indicating success or runtime error during execution.
    */
-  base::Status forward() override;
+  absl::Status forward() override;
 
   /**
    * @brief Initializes and sets the bias tensor data.
@@ -47,7 +49,7 @@ class MatmulLayer : public LayerParam {
    * CUDA).
    * @return Status indicating if the bias was set successfully.
    */
-  base::Status set_bias(int32_t idx, int32_t dim, const void* bias_ptr,
+  absl::Status set_bias(int32_t idx, int32_t dim, const void* bias_ptr,
                         base::DeviceType device_type);
 
   /**

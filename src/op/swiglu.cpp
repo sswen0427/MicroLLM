@@ -10,13 +10,13 @@ SwiGLULayer::SwiGLULayer(base::DeviceType device_type, int32_t hidden_dim)
   reset_output_size(1);
 }
 
-base::Status SwiGLULayer::check() const {
-  base::Status status;
+absl::Status SwiGLULayer::check() const {
+  absl::Status status;
   const int32_t input_tensor_num = 2;
   for (int32_t i = 0; i < input_tensor_num; ++i) {
     status = check_tensor_with_dim(get_input(0), device_type_, data_type_,
                                    {hidden_dim_});
-    if (!status) {
+    if (!status.ok()) {
       LOG(ERROR) << "The input tensor " << std::to_string(i)
                  << " error in the swiglu layer.";
       return status;
@@ -25,16 +25,16 @@ base::Status SwiGLULayer::check() const {
 
   status = check_tensor_with_dim(get_output(0), device_type_, data_type_,
                                  {hidden_dim_});
-  if (!status) {
+  if (!status.ok()) {
     LOG(ERROR) << "The output tensor error in the swiglu layer.";
     return status;
   }
-  return base::error::Success();
+  return absl::OkStatus();
 }
 
-base::Status SwiGLULayer::forward() {
+absl::Status SwiGLULayer::forward() {
   auto status = check();
-  if (!status) {
+  if (!status.ok()) {
     return status;
   }
   auto input1 = this->get_input(0);
@@ -45,7 +45,7 @@ base::Status SwiGLULayer::forward() {
   }
   kernel::get_swiglu_kernel(device_type_)(
       input1, input2, output, cuda_config_ ? cuda_config_->stream : nullptr);
-  return base::error::Success();
+  return absl::OkStatus();
 }
 
 }  // namespace op

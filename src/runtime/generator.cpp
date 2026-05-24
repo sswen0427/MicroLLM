@@ -10,13 +10,13 @@ namespace runtime {
 GenerationResult Generate(const model::Model &model, const std::string &prompt,
                           const GenerationConfig &config) {
   if (config.max_steps <= 0) {
-    return {base::error::InvalidArgument("max_steps must be greater than 0."),
-            "", 0};
+    return {absl::InvalidArgumentError("max_steps must be greater than 0."), "",
+            0};
   }
 
   auto tokens = model.encode(prompt);
   if (tokens.empty()) {
-    return {base::error::InvalidArgument("The token list is empty."), "", 0};
+    return {absl::InvalidArgumentError("The token list is empty."), "", 0};
   }
 
   const auto &prompt_embedding = model.embedding(tokens);
@@ -34,9 +34,9 @@ GenerationResult Generate(const model::Model &model, const std::string &prompt,
     if (pos < prompt_len - 1) {
       tensor::Tensor input =
           model.fill_input(pos_tensor, prompt_embedding, is_prompt);
-      const base::Status status =
+      const absl::Status status =
           model.predict(input, pos_tensor, is_prompt, next);
-      if (!status) {
+      if (!status.ok()) {
         return {status, "", pos};
       }
     } else {
@@ -45,9 +45,9 @@ GenerationResult Generate(const model::Model &model, const std::string &prompt,
       const auto &token_embedding = model.embedding(tokens);
       tensor::Tensor input =
           model.fill_input(pos_tensor, token_embedding, is_prompt);
-      const base::Status status =
+      const absl::Status status =
           model.predict(input, pos_tensor, is_prompt, next);
-      if (!status) {
+      if (!status.ok()) {
         return {status, "", pos};
       }
     }
@@ -64,7 +64,7 @@ GenerationResult Generate(const model::Model &model, const std::string &prompt,
     ++pos;
   }
 
-  return {base::error::Success(), model.decode(words),
+  return {absl::OkStatus(), model.decode(words),
           std::min(pos, config.max_steps)};
 }
 

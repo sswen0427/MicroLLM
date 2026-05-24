@@ -1,10 +1,12 @@
 #pragma once
 
+#include <absl/status/status.h>
+
 #include <map>
 #include <string>
 #include <vector>
 
-#include "base/base.h"
+#include "base/types.h"
 #include "model/config.h"
 #include "model/raw_model_data.h"
 #include "op/embedding.h"
@@ -41,13 +43,13 @@ class Model {
                  std::string token_path, std::string model_path,
                  bool is_quant_model);
 
-  virtual base::Status init(base::DeviceType device_type) = 0;
+  virtual absl::Status init(base::DeviceType device_type) = 0;
 
-  virtual base::Status predict(const tensor::Tensor& input,
+  virtual absl::Status predict(const tensor::Tensor& input,
                                const tensor::Tensor& pos_tensor, bool is_prompt,
                                int& next) const = 0;
 
-  virtual base::Status forward(const tensor::Tensor& input,
+  virtual absl::Status forward(const tensor::Tensor& input,
                                const tensor::Tensor& pos_tensor,
                                int& next) const = 0;
 
@@ -82,16 +84,16 @@ class Model {
                                     bool is_prompt) const;
 
  protected:
-  virtual base::Status insert_buffer(ModelBufferType buffer_idx,
+  virtual absl::Status insert_buffer(ModelBufferType buffer_idx,
                                      const tensor::Tensor& tensor);
 
-  virtual base::Status read_model_file();
+  virtual absl::Status read_model_file();
 
-  virtual base::Status create_encode_layer();
+  virtual absl::Status create_encode_layer();
 
-  virtual base::Status gen_model_from_file();
+  virtual absl::Status gen_model_from_file();
 
-  virtual base::Status generate_model_infos(const ModelConfig& config) const;
+  virtual absl::Status generate_model_infos(const ModelConfig& config) const;
 
   virtual int32_t post_processing(const tensor::Tensor& pos,
                                   bool is_prompt) const = 0;
@@ -99,7 +101,7 @@ class Model {
  private:
   virtual void init_mem() = 0;
 
-  virtual base::Status create_layers() = 0;
+  virtual absl::Status create_layers() = 0;
 
   virtual void create_param_layers() = 0;
 

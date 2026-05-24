@@ -3,7 +3,7 @@
 #include <boost/noncopyable.hpp>
 
 #include "alloc.h"
-#include "base.h"
+#include "base/types.h"
 
 namespace base {
 class Buffer : private boost::noncopyable {

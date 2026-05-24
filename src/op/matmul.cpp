@@ -38,10 +38,10 @@ MatmulLayer::MatmulLayer(base::DeviceType device_type, int32_t dim0,
   }
 }
 
-base::Status MatmulLayer::check() const {
+absl::Status MatmulLayer::check() const {
   auto status =
       check_tensor_with_dim(get_input(0), device_type_, data_type_, {dim1_});
-  if (!status) {
+  if (!status.ok()) {
     LOG(ERROR) << "The input tensor error in the matmul layer.";
     return status;
   }
@@ -49,7 +49,7 @@ base::Status MatmulLayer::check() const {
   if (!is_quant_layer_) {
     status = check_tensor_with_dim(get_weight(0), device_type_, data_type_,
                                    {dim0_, dim1_});
-    if (!status) {
+    if (!status.ok()) {
       LOG(ERROR) << "The weight tensor error in the matmul layer.";
       return status;
     }
@@ -57,7 +57,7 @@ base::Status MatmulLayer::check() const {
     status =
         check_tensor_with_dim(get_weight(0), device_type_,
                               base::DataType::kDataTypeInt8, {dim0_, dim1_});
-    if (!status) {
+    if (!status.ok()) {
       LOG(ERROR) << "The weight tensor error in the matmul layer.";
       return status;
     }
@@ -67,7 +67,7 @@ base::Status MatmulLayer::check() const {
     status = check_tensor_with_dim(scales_, device_type_,
                                    base::DataType::kDataTypeFp32,
                                    {(int)scales_.size()});
-    if (!status) {
+    if (!status.ok()) {
       LOG(ERROR) << "The scale tensor error in the matmul layer.";
       return status;
     }
@@ -75,16 +75,16 @@ base::Status MatmulLayer::check() const {
 
   status =
       check_tensor_with_dim(get_output(0), device_type_, data_type_, {dim0_});
-  if (!status) {
+  if (!status.ok()) {
     LOG(ERROR) << "The output tensor error in the matmul layer.";
     return status;
   }
-  return base::error::Success();
+  return absl::OkStatus();
 }
 
-base::Status MatmulLayer::forward() {
+absl::Status MatmulLayer::forward() {
   auto status = check();
-  if (!status) {
+  if (!status.ok()) {
     return status;
   }
   if (device_type_ == base::DeviceType::kDeviceCUDA) {
@@ -106,10 +106,10 @@ base::Status MatmulLayer::forward() {
         cuda_config_ ? cuda_config_->stream : nullptr);
   }
 
-  return base::error::Success();
+  return absl::OkStatus();
 }
 
-base::Status MatmulLayer::set_bias(int32_t idx, int32_t dim,
+absl::Status MatmulLayer::set_bias(int32_t idx, int32_t dim,
                                    const void* bias_ptr,
                                    base::DeviceType device_type) {
   CHECK_GE(idx, 0);
@@ -136,7 +136,7 @@ base::Status MatmulLayer::set_bias(int32_t idx, int32_t dim,
         reinterpret_cast<const int8_t*>(bias_ptr) + bias_size, device_type);
   }
 
-  return base::error::Success();
+  return absl::OkStatus();
 }
 
 tensor::Tensor& MatmulLayer::get_bias(int32_t idx) {

@@ -4,7 +4,7 @@
 
 #include <cstring>
 
-#include "base/base.h"
+#include "base/types.h"
 #include "tensor/tensor.h"
 
 TEST(TensorCudaTest, TOCPU) {

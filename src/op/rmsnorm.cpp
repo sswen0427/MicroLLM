@@ -11,9 +11,9 @@ RmsNormLayer::RmsNormLayer(base::DeviceType device_type, int32_t dim)
   reset_weight_size(1);
 }
 
-base::Status RmsNormLayer::forward() {
+absl::Status RmsNormLayer::forward() {
   auto status = check();
-  if (!status) {
+  if (!status.ok()) {
     return status;
   }
   auto input = this->get_input(0);
@@ -31,41 +31,40 @@ base::Status RmsNormLayer::forward() {
         cuda_config_ ? cuda_config_->stream : nullptr);
   }
 
-  return base::error::Success();
+  return absl::OkStatus();
 }
 
-base::Status RmsNormLayer::check() const {
+absl::Status RmsNormLayer::check() const {
   int32_t dim_size = get_input(0).dims_size();
   if (dim_size > 1) {
     int dim_head_size = get_input(0).get_dim(dim_size - 1);
     if (dim_head_size == dim_) {
-      return base::error::Success();
+      return absl::OkStatus();
     } else {
-      return base::error::InvalidArgument(
-          "The tensor has a wrong dim in dim -1");
+      return absl::InvalidArgumentError("The tensor has a wrong dim in dim -1");
     }
   } else {
     auto status =
         check_tensor_with_dim(get_input(0), device_type_, data_type_, {dim_});
-    if (!status) {
+    if (!status.ok()) {
       LOG(ERROR) << "The input tensor error in the rmsnorm layer.";
       return status;
     }
 
     status =
         check_tensor_with_dim(get_weight(0), device_type_, data_type_, {dim_});
-    if (!status) {
+    if (!status.ok()) {
       LOG(ERROR) << "The weight tensor error in the rmsnorm layer.";
       return status;
     }
 
     status =
         check_tensor_with_dim(get_output(0), device_type_, data_type_, {dim_});
-    if (!status) {
+    if (!status.ok()) {
       LOG(ERROR) << "The output tensor error in the rmsnorm layer.";
       return status;
     }
-    return base::error::Success();
+    return absl::OkStatus();
   }
 }
 

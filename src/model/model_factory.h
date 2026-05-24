@@ -5,7 +5,7 @@
 #include <memory>
 #include <string>
 
-#include "base/base.h"
+#include "base/types.h"
 #include "model/model.h"
 
 namespace model {

@@ -1,9 +1,11 @@
 #pragma once
 
+#include <absl/status/status.h>
+
 #include <cstdint>
 #include <string>
 
-#include "base/base.h"
+#include "base/types.h"
 #include "model/model.h"
 
 namespace runtime {
@@ -13,7 +15,7 @@ struct GenerationConfig {
 };
 
 struct GenerationResult {
-  base::Status status;
+  absl::Status status;
   std::string text;
   int32_t steps = 0;
 };

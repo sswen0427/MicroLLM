@@ -1,7 +1,7 @@
 #if 0
 #include "model/qwen2.h"
 
-#include "base/base.h"
+#include "base/types.h"
 
 namespace model {
 
@@ -99,13 +99,13 @@ Qwen2Model::Qwen2Model(base::TokenizerType tokenizer_type,
     : Model(tokenizer_type, base::ModelType::kModelTypeLLama2,
             std::move(token_path), std::move(model_path), is_quant_model) {}
 
-base::Status Qwen2Model::init(base::DeviceType device_type) {
+absl::Status Qwen2Model::init(base::DeviceType device_type) {
   using namespace base;
   if (token_path_.empty()) {
-    return error::PathNotValid(token_path_);
+    return absl::NotFoundError(token_path_);
   }
   if (device_type == base::DeviceType::kDeviceCPU && is_quant_model_) {
-    return error::InternalError(
+    return absl::InternalError(
         "The cpu device do not support int8 quant model.");
   }
 
@@ -116,12 +116,12 @@ base::Status Qwen2Model::init(base::DeviceType device_type) {
     cudaStreamCreate(&cuda_config_->stream);
     cudaError_t err = cudaGetLastError();
     if (err != cudaSuccess) {
-      return error::InternalError("The cuda hanle create failed.");
+      return absl::InternalError("The cuda hanle create failed.");
     }
   }
 
-  Status read_status = gen_model_from_file();
-  if (!read_status) {
+  absl::Status read_status = gen_model_from_file();
+  if (!read_status.ok()) {
     return read_status;
   }
   init_mem();
@@ -139,17 +139,17 @@ base::Status Qwen2Model::init(base::DeviceType device_type) {
   }
 
   sampler_ = std::make_unique<sampler::ArgmaxSampler>(device_type_);
-  return error::Success();
+  return absl::OkStatus();
 }
 
-base::Status Qwen2Model::forward(const tensor::Tensor& input,
+absl::Status Qwen2Model::forward(const tensor::Tensor& input,
                                  const tensor::Tensor& pos_tensor,
                                  int& next) const {
   if (input.is_empty()) {
-    return base::error::InvalidArgument("The input tensor is empty.");
+    return absl::InvalidArgumentError("The input tensor is empty.");
   }
   if (device_type_ == base::DeviceType::kDeviceCPU && is_quant_model_) {
-    return base::error::InternalError(
+    return absl::InternalError(
         "Unsupported int8 quant in the cpu device");
   }
 
@@ -163,7 +163,7 @@ base::Status Qwen2Model::forward(const tensor::Tensor& input,
     feed_forward(layer_idx, input);
   }
   cls_logits(input);
-  return base::error::Success();
+  return absl::OkStatus();
 }
 
 void Qwen2Model::create_nonparam_layers() {
@@ -480,26 +480,26 @@ void Qwen2Model::init_mem() {
       base::DataType::kDataTypeFp32,
       {config_->head_size_ * config_->seq_len_}, device_type_);
 
-  CHECK(insert_buffer(ModelBufferType::kSinCache, sin_cache));
-  CHECK(insert_buffer(ModelBufferType::kCosCache, cos_cache));
+  CHECK(insert_buffer(ModelBufferType::kSinCache, sin_cache).ok());
+  CHECK(insert_buffer(ModelBufferType::kCosCache, cos_cache).ok());
 
-  CHECK(insert_buffer(ModelBufferType::kInputTokens, input_tokens));
-  CHECK(insert_buffer(ModelBufferType::kInputEmbeddings, input_embeddings));
+  CHECK(insert_buffer(ModelBufferType::kInputTokens, input_tokens).ok());
+  CHECK(insert_buffer(ModelBufferType::kInputEmbeddings, input_embeddings).ok());
 
   tensor::Tensor rms_output = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {config_->dim_}, device_type_);
-  CHECK(insert_buffer(ModelBufferType::kOutputRMSNorm, rms_output));
-  CHECK(insert_buffer(ModelBufferType::kOutputMHA, rms_output));
-  CHECK(insert_buffer(ModelBufferType::kW2Output, rms_output));
-  CHECK(insert_buffer(ModelBufferType::kFFNRMSNorm, rms_output));
+  CHECK(insert_buffer(ModelBufferType::kOutputRMSNorm, rms_output).ok());
+  CHECK(insert_buffer(ModelBufferType::kOutputMHA, rms_output).ok());
+  CHECK(insert_buffer(ModelBufferType::kW2Output, rms_output).ok());
+  CHECK(insert_buffer(ModelBufferType::kFFNRMSNorm, rms_output).ok());
 
   tensor::Tensor w1_output = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {config_->hidden_dim_}, device_type_);
   tensor::Tensor w3_output = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {config_->hidden_dim_}, device_type_);
 
-  CHECK(insert_buffer(ModelBufferType::kW1Output, w1_output));
-  CHECK(insert_buffer(ModelBufferType::kW3Output, w3_output));
+  CHECK(insert_buffer(ModelBufferType::kW1Output, w1_output).ok());
+  CHECK(insert_buffer(ModelBufferType::kW3Output, w3_output).ok());
 
   // kv cache
   tensor::Tensor key_cache = tensor::Tensor::allocate(
@@ -511,25 +511,25 @@ void Qwen2Model::init_mem() {
       {config_->layer_num_, config_->seq_len_, config_->kv_dim_},
       device_type_);
 
-  CHECK(insert_buffer(ModelBufferType::kKeyCache, key_cache));
-  CHECK(insert_buffer(ModelBufferType::kValueCache, value_cache));
+  CHECK(insert_buffer(ModelBufferType::kKeyCache, key_cache).ok());
+  CHECK(insert_buffer(ModelBufferType::kValueCache, value_cache).ok());
 
   // Wq query output
   tensor::Tensor query = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {config_->dim_}, device_type_);
-  CHECK(insert_buffer(ModelBufferType::kQuery, query));
+  CHECK(insert_buffer(ModelBufferType::kQuery, query).ok());
 
   // Pos tensor
   tensor::Tensor pos_tensor = tensor::Tensor::allocate(
       base::DataType::kDataTypeInt32, {1}, base::DeviceType::kDeviceCPU);
-  CHECK(insert_buffer(ModelBufferType::kInputPos, pos_tensor));
+  CHECK(insert_buffer(ModelBufferType::kInputPos, pos_tensor).ok());
 
   // Attention output
   tensor::Tensor attn = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {config_->head_num_, config_->seq_len_},
       device_type_);
-  CHECK(insert_buffer(ModelBufferType::kScoreStorage, attn));
-  CHECK(insert_buffer(ModelBufferType::kAttnOutput, query));
+  CHECK(insert_buffer(ModelBufferType::kScoreStorage, attn).ok());
+  CHECK(insert_buffer(ModelBufferType::kAttnOutput, query).ok());
 
   // final forward output
   tensor::Tensor forward_output = tensor::Tensor::allocate(
@@ -539,13 +539,14 @@ void Qwen2Model::init_mem() {
         base::DataType::kDataTypeFp32, {config_->vocab_size_},
         base::DeviceType::kDeviceCPU);
     CHECK(
-        insert_buffer(ModelBufferType::kForwardOutputCPU, forward_output_cpu));
+        insert_buffer(ModelBufferType::kForwardOutputCPU, forward_output_cpu)
+            .ok());
   }
 
-  CHECK(insert_buffer(ModelBufferType::kForwardOutput, forward_output));
+  CHECK(insert_buffer(ModelBufferType::kForwardOutput, forward_output).ok());
 }
 
-base::Status Qwen2Model::create_layers() {
+absl::Status Qwen2Model::create_layers() {
   using namespace base;
   if (!qwen_layers_) {
     qwen_layers_ = std::make_unique<Qwen2Layers>();
@@ -559,12 +560,12 @@ base::Status Qwen2Model::create_layers() {
   create_nonparam_layers();
 
   if (!qwen_layers_->embedding_layer_) {
-    return error::InternalError(
+    return absl::InternalError(
         "Create the embedding layer for the llama model failed!");
   }
 
   if (qwen_layers_->rmsnorm_layers_.size() != 2 * config_->layer_num_ + 1) {
-    return error::InternalError(
+    return absl::InternalError(
         "Create the rmsnorm layers for the llama model failed!");
   }
 
@@ -572,7 +573,7 @@ base::Status Qwen2Model::create_layers() {
       qwen_layers_->wk_layers_.size() != config_->layer_num_ ||
       qwen_layers_->wv_layers_.size() != config_->layer_num_ ||
       qwen_layers_->wo_layers_.size() != config_->layer_num_) {
-    return error::InternalError(
+    return absl::InternalError(
         "Create the matmul layer in the attention and ffn attention layers for "
         "the llama model "
         "failed.");
@@ -581,7 +582,7 @@ base::Status Qwen2Model::create_layers() {
   for (int32_t i = 0; i < config_->layer_num_; ++i) {
     if (!qwen_layers_->wq_layers_.at(i) || !qwen_layers_->wk_layers_.at(i) ||
         !qwen_layers_->wv_layers_.at(i) || !qwen_layers_->wo_layers_.at(i)) {
-      return error::InternalError(
+      return absl::InternalError(
           "Create the matmul layer in the attention and ffn attention layers "
           "for "
           "the llama model "
@@ -592,7 +593,7 @@ base::Status Qwen2Model::create_layers() {
   if (qwen_layers_->w1_layers_.size() != config_->layer_num_ ||
       qwen_layers_->w2_layers_.size() != config_->layer_num_ ||
       qwen_layers_->w3_layers_.size() != config_->layer_num_) {
-    return error::InternalError(
+    return absl::InternalError(
         "Create the matmul layer in the feedforward layers for the llama model "
         "failed.");
   }
@@ -600,7 +601,7 @@ base::Status Qwen2Model::create_layers() {
   for (int32_t i = 0; i < config_->layer_num_; ++i) {
     if (!qwen_layers_->w1_layers_.at(i) || !qwen_layers_->w2_layers_.at(i) ||
         !qwen_layers_->w3_layers_.at(i)) {
-      return error::InternalError(
+      return absl::InternalError(
           "Create the matmul layer in the feedforward layers for the llama "
           "model "
           "failed.");
@@ -608,25 +609,25 @@ base::Status Qwen2Model::create_layers() {
   }
 
   if (!qwen_layers_->rope_layer_) {
-    return error::InternalError(
+    return absl::InternalError(
         "Create the rope layer for the llama model failed!");
   }
 
   if (!qwen_layers_->add_layer_) {
-    return error::InternalError(
+    return absl::InternalError(
         "Create the add layer for the llama model failed!");
   }
 
   if (!qwen_layers_->mha_layer_) {
-    return error::InternalError(
+    return absl::InternalError(
         "Create the mha layer for the llama model failed!");
   }
 
   if (!qwen_layers_->swiglu_layer_) {
-    return error::InternalError(
+    return absl::InternalError(
         "Create the SwiGLU layer for the llama model failed!");
   }
-  return error::Success();
+  return absl::OkStatus();
 }
 
 void Qwen2Model::attention_rms(int32_t layer_idx,
@@ -678,15 +679,15 @@ void Qwen2Model::attention_qkv(int32_t layer_idx,
       get_buffer(ModelBufferType::kCosCache), tensor::Tensor{}));
 }
 
-base::Status Qwen2Model::predict(const tensor::Tensor& input,
+absl::Status Qwen2Model::predict(const tensor::Tensor& input,
                                  const tensor::Tensor& pos_tensor,
                                  bool is_prompt, int& next) const {
   auto status = forward(input, pos_tensor, next);
-  if (!status) {
+  if (!status.ok()) {
     return status;
   }
   next = post_processing(pos_tensor, is_prompt);
-  return base::error::Success();
+  return absl::OkStatus();
 }
 
 void Qwen2Model::attention_mha(int32_t layer_idx,

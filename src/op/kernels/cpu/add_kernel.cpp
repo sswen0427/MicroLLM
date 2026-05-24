@@ -2,7 +2,7 @@
 
 #include <armadillo>
 
-#include "base/base.h"
+#include "base/types.h"
 namespace kernel {
 void add_kernel_cpu(const tensor::Tensor& input1, const tensor::Tensor& input2,
                     const tensor::Tensor& output,

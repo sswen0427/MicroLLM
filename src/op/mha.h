@@ -1,6 +1,8 @@
 #pragma once
 
-#include "base/base.h"
+#include <absl/status/status.h>
+
+#include "base/types.h"
 #include "layer.h"
 namespace op {
 class MultiHeadAttention : public op::Layer {
@@ -9,12 +11,12 @@ class MultiHeadAttention : public op::Layer {
                               int32_t kv_mul, int32_t kv_dim, int32_t seq_len,
                               int32_t head_num, int32_t head_size);
 
-  base::Status check() const override;
+  absl::Status check() const override;
 
   void set_pos(int32_t pos);
   void set_layer_idx(int32_t layer_idx);
 
-  base::Status forward() override;
+  absl::Status forward() override;
 
  private:
   int32_t layer_index_ = 0;

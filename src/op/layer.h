@@ -1,8 +1,10 @@
 #pragma once
 
+#include <absl/status/status.h>
+
 #include <string>
 
-#include "base/base.h"
+#include "base/types.h"
 #include "tensor/tensor.h"
 
 namespace op {
@@ -28,9 +30,9 @@ class BaseLayer {
 
   virtual ~BaseLayer() = default;
 
-  virtual base::Status forward() = 0;
+  virtual absl::Status forward() = 0;
 
-  virtual base::Status forward(const std::vector<tensor::Tensor>& inputs,
+  virtual absl::Status forward(const std::vector<tensor::Tensor>& inputs,
                                std::vector<tensor::Tensor>& outputs) = 0;
 
   virtual void set_input(int32_t idx, const tensor::Tensor& input) = 0;
@@ -41,7 +43,7 @@ class BaseLayer {
 
   virtual size_t output_size() const = 0;
 
-  virtual base::Status check() const = 0;
+  virtual absl::Status check() const = 0;
 
   virtual tensor::Tensor& get_input(int32_t idx) = 0;
 
@@ -51,10 +53,10 @@ class BaseLayer {
 
   virtual const tensor::Tensor& get_output(int32_t idx) const = 0;
 
-  virtual base::Status set_weight(int32_t idx,
+  virtual absl::Status set_weight(int32_t idx,
                                   const tensor::Tensor& weight) = 0;
 
-  virtual base::Status set_weight(
+  virtual absl::Status set_weight(
       int32_t idx, const std::vector<int32_t>& dims, const void* weight_ptr,
       base::DeviceType device_type = base::DeviceType::kDeviceUnknown) = 0;
 
@@ -82,9 +84,9 @@ class Layer : public BaseLayer {
   explicit Layer(base::DeviceType device_type, LayerType layer_type,
                  std::string layer_name = "");
 
-  base::Status forward() override;
+  absl::Status forward() override;
 
-  base::Status forward(const std::vector<tensor::Tensor>& inputs,
+  absl::Status forward(const std::vector<tensor::Tensor>& inputs,
                        std::vector<tensor::Tensor>& outputs) override;
 
   void set_input(int32_t idx, const tensor::Tensor& input) override;
@@ -95,7 +97,7 @@ class Layer : public BaseLayer {
 
   size_t output_size() const override;
 
-  base::Status check() const override;
+  absl::Status check() const override;
 
   tensor::Tensor& get_input(int32_t idx) override;
 
@@ -105,17 +107,17 @@ class Layer : public BaseLayer {
 
   const tensor::Tensor& get_output(int32_t idx) const override;
 
-  base::Status set_weight(int32_t idx, const tensor::Tensor& weight) override;
+  absl::Status set_weight(int32_t idx, const tensor::Tensor& weight) override;
 
-  base::Status set_weight(
+  absl::Status set_weight(
       int32_t idx, const std::vector<int32_t>& dims, const void* weight_ptr,
       base::DeviceType device_type = base::DeviceType::kDeviceUnknown) override;
 
-  base::Status check_tensor(const tensor::Tensor& tensor,
+  absl::Status check_tensor(const tensor::Tensor& tensor,
                             base::DeviceType device_type,
                             base::DataType data_type) const;
 
-  base::Status check_tensor_with_dim(const tensor::Tensor& tensor,
+  absl::Status check_tensor_with_dim(const tensor::Tensor& tensor,
                                      base::DeviceType device_type,
                                      base::DataType data_type,
                                      std::initializer_list<int32_t> dims) const;
@@ -143,9 +145,9 @@ class LayerParam : public Layer {
 
   void to_cuda() override;
 
-  base::Status set_weight(int32_t idx, const tensor::Tensor& weight) override;
+  absl::Status set_weight(int32_t idx, const tensor::Tensor& weight) override;
 
-  base::Status set_weight(
+  absl::Status set_weight(
       int32_t idx, const std::vector<int32_t>& dims, const void* weight_ptr,
       base::DeviceType device_type = base::DeviceType::kDeviceUnknown) override;
 

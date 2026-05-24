@@ -1,6 +1,6 @@
 #pragma once
 
-#include "base/base.h"
+#include "base/types.h"
 #include "tensor/tensor.h"
 namespace kernel {
 void matmul_kernel_cpu(const tensor::Tensor& input,

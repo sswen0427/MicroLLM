@@ -1,6 +1,6 @@
 #pragma once
 
-#include "base/base.h"
+#include "base/types.h"
 namespace sampler {
 class Sampler {
  public:
