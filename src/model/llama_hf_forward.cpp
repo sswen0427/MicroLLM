@@ -16,59 +16,6 @@
 namespace model {
 namespace {
 
-bool IsFloatStorage(base::DataType data_type) {
-  return data_type == base::DataType::kDataTypeFp32 ||
-         data_type == base::DataType::kDataTypeFp16 ||
-         data_type == base::DataType::kDataTypeBf16;
-}
-
-absl::Status CheckFloatTensor(const tensor::Tensor& tensor,
-                              const std::string& name) {
-  if (tensor.is_empty()) {
-    return absl::InvalidArgumentError(absl::StrCat(name, " is empty."));
-  }
-  if (tensor.device_type() != base::DeviceType::kDeviceCPU) {
-    return absl::InvalidArgumentError(
-        absl::StrCat(name, " must be stored on CPU."));
-  }
-  if (!IsFloatStorage(tensor.data_type())) {
-    return absl::InvalidArgumentError(
-        absl::StrCat(name, " must be a floating point tensor, got data_type=",
-                     static_cast<int>(tensor.data_type())));
-  }
-  return absl::OkStatus();
-}
-
-absl::Status CheckMatrix(const tensor::Tensor& tensor, const std::string& name,
-                         int32_t rows, int32_t cols) {
-  const absl::Status status = CheckFloatTensor(tensor, name);
-  if (!status.ok()) {
-    return status;
-  }
-  if (tensor.dims_size() != 2 || tensor.get_dim(0) != rows ||
-      tensor.get_dim(1) != cols) {
-    return absl::InvalidArgumentError(absl::StrCat(
-        name, " shape mismatch, expected [", rows, ", ", cols, "], got [",
-        tensor.dims_size() > 0 ? tensor.get_dim(0) : -1, ", ",
-        tensor.dims_size() > 1 ? tensor.get_dim(1) : -1, "]."));
-  }
-  return absl::OkStatus();
-}
-
-absl::Status CheckVector(const tensor::Tensor& tensor, const std::string& name,
-                         int32_t size) {
-  const absl::Status status = CheckFloatTensor(tensor, name);
-  if (!status.ok()) {
-    return status;
-  }
-  if (tensor.dims_size() != 1 || tensor.get_dim(0) != size) {
-    return absl::InvalidArgumentError(
-        absl::StrCat(name, " shape mismatch, expected [", size, "], got [",
-                     tensor.dims_size() > 0 ? tensor.get_dim(0) : -1, "]."));
-  }
-  return absl::OkStatus();
-}
-
 float TensorElementAsFloat(const tensor::Tensor& tensor, size_t offset) {
   switch (tensor.data_type()) {
     case base::DataType::kDataTypeFp32:
@@ -243,110 +190,6 @@ int32_t ArgMaxToken(const tensor::Tensor& logits) {
   }
   return best;
 }
-
-absl::Status ValidateModel(const LlamaHfModel& model) {
-  const HfLlamaConfig& config = model.config;
-  if (config.hidden_size <= 0 || config.intermediate_size <= 0 ||
-      config.max_position_embeddings <= 0 || config.num_attention_heads <= 0 ||
-      config.num_hidden_layers <= 0 || config.num_key_value_heads <= 0 ||
-      config.vocab_size <= 0) {
-    return absl::InvalidArgumentError(
-        "Invalid non-positive LLaMA runtime config value.");
-  }
-  if (config.num_attention_heads % config.num_key_value_heads != 0) {
-    return absl::InvalidArgumentError(
-        "num_attention_heads must be divisible by num_key_value_heads.");
-  }
-  if (config.hidden_size % config.num_attention_heads != 0) {
-    return absl::InvalidArgumentError(
-        "hidden_size must be divisible by num_attention_heads.");
-  }
-  if (model.weights.layers.size() !=
-      static_cast<size_t>(config.num_hidden_layers)) {
-    return absl::InvalidArgumentError(absl::StrCat(
-        "Loaded layer count mismatch, expected ", config.num_hidden_layers,
-        ", got ", model.weights.layers.size()));
-  }
-
-  const int32_t head_size = config.hidden_size / config.num_attention_heads;
-  const int32_t kv_dim = config.num_key_value_heads * head_size;
-  if (const absl::Status status =
-          CheckMatrix(model.weights.token_embedding, "token_embedding",
-                      config.vocab_size, config.hidden_size);
-      !status.ok()) {
-    return status;
-  }
-  if (const absl::Status status = CheckVector(model.weights.final_norm,
-                                              "final_norm", config.hidden_size);
-      !status.ok()) {
-    return status;
-  }
-  if (const absl::Status status =
-          CheckMatrix(model.weights.lm_head, "lm_head", config.vocab_size,
-                      config.hidden_size);
-      !status.ok()) {
-    return status;
-  }
-
-  for (int32_t layer = 0; layer < config.num_hidden_layers; ++layer) {
-    const LlamaHfLayerWeights& weights = model.weights.layers[layer];
-    const std::string prefix = absl::StrCat("layer_", layer, ".");
-    if (const absl::Status status =
-            CheckVector(weights.input_layernorm, prefix + "input_layernorm",
-                        config.hidden_size);
-        !status.ok()) {
-      return status;
-    }
-    if (const absl::Status status = CheckVector(
-            weights.post_attention_layernorm,
-            prefix + "post_attention_layernorm", config.hidden_size);
-        !status.ok()) {
-      return status;
-    }
-    if (const absl::Status status =
-            CheckMatrix(weights.q_proj, prefix + "q_proj", config.hidden_size,
-                        config.hidden_size);
-        !status.ok()) {
-      return status;
-    }
-    if (const absl::Status status = CheckMatrix(
-            weights.k_proj, prefix + "k_proj", kv_dim, config.hidden_size);
-        !status.ok()) {
-      return status;
-    }
-    if (const absl::Status status = CheckMatrix(
-            weights.v_proj, prefix + "v_proj", kv_dim, config.hidden_size);
-        !status.ok()) {
-      return status;
-    }
-    if (const absl::Status status =
-            CheckMatrix(weights.o_proj, prefix + "o_proj", config.hidden_size,
-                        config.hidden_size);
-        !status.ok()) {
-      return status;
-    }
-    if (const absl::Status status =
-            CheckMatrix(weights.gate_proj, prefix + "gate_proj",
-                        config.intermediate_size, config.hidden_size);
-        !status.ok()) {
-      return status;
-    }
-    if (const absl::Status status =
-            CheckMatrix(weights.up_proj, prefix + "up_proj",
-                        config.intermediate_size, config.hidden_size);
-        !status.ok()) {
-      return status;
-    }
-    if (const absl::Status status =
-            CheckMatrix(weights.down_proj, prefix + "down_proj",
-                        config.hidden_size, config.intermediate_size);
-        !status.ok()) {
-      return status;
-    }
-  }
-  return absl::OkStatus();
-}
-
 }  // namespace
 
 LlamaHfRuntime::LlamaHfRuntime(const LlamaHfModel& model) : model_(model) {
@@ -375,11 +218,6 @@ LlamaHfRuntime::LlamaHfRuntime(const LlamaHfModel& model) : model_(model) {
 
 absl::StatusOr<LlamaForwardResult> LlamaHfRuntime::ForwardToken(
     int32_t token_id, int32_t position) {
-  const absl::Status model_status = ValidateModel(model_);
-  if (!model_status.ok()) {
-    return model_status;
-  }
-
   const HfLlamaConfig& config = model_.config;
   if (token_id < 0 || token_id >= config.vocab_size) {
     return absl::InvalidArgumentError(
