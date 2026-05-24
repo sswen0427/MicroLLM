@@ -35,6 +35,7 @@ enum class DataType : uint8_t {
   kDataTypeInt8 = 2,   // 8-bit integer
   kDataTypeInt32 = 3,  //
   kDataTypeBf16 = 4,   // 16-bit bfloat
+  kDataTypeFp16 = 5,   // 16-bit floating-point
 };
 
 inline std::size_t DataTypeSize(DataType type) {
@@ -45,6 +46,8 @@ inline std::size_t DataTypeSize(DataType type) {
   } else if (type == DataType::kDataTypeInt32) {
     return 4;
   } else if (type == DataType::kDataTypeBf16) {
+    return 2;
+  } else if (type == DataType::kDataTypeFp16) {
     return 2;
   } else {
     LOG(FATAL) << "Unknown data type";
