@@ -13,9 +13,9 @@ RoPELayer::RoPELayer(base::DeviceType device_type, int32_t dim, int32_t kv_dim,
   reset_output_size(1);
 }
 
-base::Status RoPELayer::forward() {
-  base::Status status = check();
-  if (!status) {
+absl::Status RoPELayer::forward() {
+  absl::Status status = check();
+  if (!status.ok()) {
     return status;
   }
 
@@ -32,33 +32,33 @@ base::Status RoPELayer::forward() {
   kernel::get_rope_kernel(device_type_)(
       dim_, kv_dim_, head_size_, input_q, input_k, input_pos, sin_cache,
       cos_cache, cuda_config_ ? cuda_config_->stream : nullptr);
-  return base::error::Success();
+  return absl::OkStatus();
 }
 
-base::Status RoPELayer::check() const {
+absl::Status RoPELayer::check() const {
   // pos tensor
   auto status =
       check_tensor_with_dim(get_input(2), base::DeviceType::kDeviceCPU,
                             base::DataType::kDataTypeInt32, {1});
-  if (!status) {
+  if (!status.ok()) {
     LOG(ERROR) << "The input tensor 2 error in the add layer.";
     return status;
   }
 
   status =
       check_tensor_with_dim(get_input(1), device_type_, data_type_, {kv_dim_});
-  if (!status) {
+  if (!status.ok()) {
     LOG(ERROR) << "The input tensor 1 error in the add layer.";
     return status;
   }
 
   status =
       check_tensor_with_dim(get_input(0), device_type_, data_type_, {dim_});
-  if (!status) {
+  if (!status.ok()) {
     LOG(ERROR) << "The input tensor 0 error in the add layer.";
     return status;
   }
-  return base::error::Success();
+  return absl::OkStatus();
 }
 
 }  // namespace op

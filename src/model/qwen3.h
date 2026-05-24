@@ -1,5 +1,7 @@
 #pragma once
 
+#include <absl/status/status.h>
+
 #include "op/embedding.h"
 #include "op/layer.h"
 
@@ -48,13 +50,13 @@ class Qwen3Model : public Model {
                       std::string token_path, std::string model_path,
                       bool is_quant_model);
 
-  base::Status init(base::DeviceType device_type) override;
+  absl::Status init(base::DeviceType device_type) override;
 
-  base::Status predict(const tensor::Tensor& input,
+  absl::Status predict(const tensor::Tensor& input,
                        const tensor::Tensor& pos_tensor, bool is_prompt,
                        int& next) const override;
 
-  base::Status forward(const tensor::Tensor& input,
+  absl::Status forward(const tensor::Tensor& input,
                        const tensor::Tensor& pos_tensor,
                        int& next) const override;
 
@@ -63,7 +65,7 @@ class Qwen3Model : public Model {
  private:
   void init_mem() override;
 
-  base::Status create_layers() override;
+  absl::Status create_layers() override;
 
   void create_param_layers() override;
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "base/base.h"
+#include "base/types.h"
 #include "tensor/tensor.h"
 namespace kernel {
 typedef void (*AddKernel)(const tensor::Tensor& input1,

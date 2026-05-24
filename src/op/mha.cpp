@@ -18,9 +18,9 @@ MultiHeadAttention::MultiHeadAttention(base::DeviceType device_type,
   reset_output_size(1);
 }
 
-base::Status MultiHeadAttention::forward() {
+absl::Status MultiHeadAttention::forward() {
   auto status = check();
-  if (!status) {
+  if (!status.ok()) {
     return status;
   }
   const tensor::Tensor& mha_out = this->get_output(0);
@@ -36,7 +36,7 @@ base::Status MultiHeadAttention::forward() {
       pos_, head_num_, layer_index_, seq_len_, kv_dim_, kv_mul_, head_size_,
       mha_out, query_tensor, score_tensor, key_cache_tensor, value_cache_tensor,
       device_type_, cuda_config_ ? cuda_config_.get() : nullptr);
-  return base::error::Success();
+  return absl::OkStatus();
 }
 
 void MultiHeadAttention::set_pos(int32_t pos) { this->pos_ = pos; }
@@ -45,13 +45,13 @@ void MultiHeadAttention::set_layer_idx(int32_t layer_idx) {
   this->layer_index_ = layer_idx;
 }
 
-base::Status MultiHeadAttention::check() const {
-  base::Status status;
+absl::Status MultiHeadAttention::check() const {
+  absl::Status status;
   const int32_t input_tensor_num = 4;
   for (int32_t i = 0; i < input_tensor_num; ++i) {
     // mha score tensor
     status = check_tensor(get_input(i), device_type_, data_type_);
-    if (!status) {
+    if (!status.ok()) {
       LOG(ERROR) << "The input tensor " << std::to_string(i)
                  << " error in the matmul layer.";
       return status;

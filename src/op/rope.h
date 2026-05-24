@@ -1,5 +1,7 @@
 #pragma once
 
+#include <absl/status/status.h>
+
 #include "layer.h"
 namespace op {
 class RoPELayer : public Layer {
@@ -7,9 +9,9 @@ class RoPELayer : public Layer {
   explicit RoPELayer(base::DeviceType device_type, int32_t dim, int32_t kv_dim,
                      int32_t head_size);
 
-  base::Status check() const override;
+  absl::Status check() const override;
 
-  base::Status forward() override;
+  absl::Status forward() override;
 
  private:
   int32_t dim_ = 0;

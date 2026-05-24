@@ -1,7 +1,7 @@
 #include <cfloat>
 #include <cub/cub.cuh>
 
-#include "base/base.h"
+#include "base/types.h"
 #include "mha_kernel.cuh"
 #include "tensor/tensor.h"
 namespace kernel {

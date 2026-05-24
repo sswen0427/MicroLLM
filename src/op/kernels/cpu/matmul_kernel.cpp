@@ -2,7 +2,7 @@
 
 #include <armadillo>
 
-#include "base/base.h"
+#include "base/types.h"
 
 namespace kernel {
 /**

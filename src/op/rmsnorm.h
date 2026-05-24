@@ -1,14 +1,16 @@
 #pragma once
 
+#include <absl/status/status.h>
+
 #include "layer.h"
 namespace op {
 class RmsNormLayer : public LayerParam {
  public:
   explicit RmsNormLayer(base::DeviceType device_type, int32_t dim);
 
-  base::Status check() const override;
+  absl::Status check() const override;
 
-  base::Status forward() override;
+  absl::Status forward() override;
 
  private:
   int32_t dim_ = 0;

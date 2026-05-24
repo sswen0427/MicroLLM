@@ -4,7 +4,7 @@
 
 #include <vector>
 
-#include "base/base.h"
+#include "base/types.h"
 #include "tensor/tensor.h"
 
 namespace {
@@ -56,9 +56,9 @@ Layer::Layer(base::DeviceType device_type, LayerType layer_type,
     : BaseLayer(device_type, layer_type, base::DataType::kDataTypeFp32,
                 std::move(layer_name)) {}
 
-base::Status Layer::forward() { return base::error::FunctionNotImplement(""); }
+absl::Status Layer::forward() { return absl::UnimplementedError(""); }
 
-base::Status Layer::forward(const std::vector<tensor::Tensor>& inputs,
+absl::Status Layer::forward(const std::vector<tensor::Tensor>& inputs,
                             std::vector<tensor::Tensor>& outputs) {
   for (const auto& input : inputs) {
     inputs_.emplace_back(input);
@@ -83,8 +83,8 @@ void Layer::set_output(int32_t idx, const tensor::Tensor& output) {
 size_t Layer::input_size() const { return inputs_.size(); }
 
 size_t Layer::output_size() const { return outputs_.size(); }
-base::Status Layer::check() const {
-  return base::error::FunctionNotImplement(
+absl::Status Layer::check() const {
+  return absl::UnimplementedError(
       "The check function is not implement yet");
 }
 tensor::Tensor& Layer::get_input(int32_t idx) {
@@ -111,45 +111,45 @@ const tensor::Tensor& Layer::get_output(int32_t idx) const {
   return outputs_.at(idx);
 }
 
-base::Status Layer::set_weight(int32_t idx, const tensor::Tensor& weight) {
-  return base::Status();
+absl::Status Layer::set_weight(int32_t idx, const tensor::Tensor& weight) {
+  return absl::OkStatus();
 }
 
-base::Status Layer::set_weight(int32_t idx, const std::vector<int32_t>& dims,
+absl::Status Layer::set_weight(int32_t idx, const std::vector<int32_t>& dims,
                                const void* weight_ptr,
                                base::DeviceType device_type) {
-  return base::Status();
+  return absl::OkStatus();
 }
 
-base::Status Layer::check_tensor(const tensor::Tensor& tensor,
+absl::Status Layer::check_tensor(const tensor::Tensor& tensor,
                                  base::DeviceType device_type,
                                  base::DataType data_type) const {
   if (tensor.is_empty()) {
-    return base::error::InvalidArgument("The tensor parameter is empty.");
+    return absl::InvalidArgumentError("The tensor parameter is empty.");
   }
   if (tensor.device_type() != device_type) {
-    return base::error::InvalidArgument("The tensor has a wrong device type.");
+    return absl::InvalidArgumentError("The tensor has a wrong device type.");
   }
   if (tensor.data_type() != data_type) {
-    return base::error::InvalidArgument("The tensor has a wrong data type.");
+    return absl::InvalidArgumentError("The tensor has a wrong data type.");
   }
-  return base::error::Success();
+  return absl::OkStatus();
 }
 
-base::Status Layer::check_tensor_with_dim(
+absl::Status Layer::check_tensor_with_dim(
     const tensor::Tensor& tensor, base::DeviceType device_type,
     base::DataType data_type, std::initializer_list<int32_t> dims) const {
   if (tensor.is_empty()) {
-    return base::error::InvalidArgument("The tensor parameter is empty.");
+    return absl::InvalidArgumentError("The tensor parameter is empty.");
   }
   if (tensor.device_type() != device_type) {
-    return base::error::InvalidArgument("The tensor has a wrong device type.");
+    return absl::InvalidArgumentError("The tensor has a wrong device type.");
   }
   if (tensor.data_type() != data_type) {
-    return base::error::InvalidArgument("The tensor has a wrong data type.");
+    return absl::InvalidArgumentError("The tensor has a wrong data type.");
   }
   if (tensor.dims_size() != static_cast<int32_t>(dims.size())) {
-    return base::error::InvalidArgument(
+    return absl::InvalidArgumentError(
         "The tensor dimension count mismatch. Expected: " +
         std::to_string(dims.size()) +
         ", Got: " + std::to_string(tensor.dims_size()));
@@ -157,14 +157,14 @@ base::Status Layer::check_tensor_with_dim(
   int32_t i = 0;
   for (int32_t expected_dim : dims) {
     if (tensor.get_dim(i) != expected_dim) {
-      return base::error::InvalidArgument(
+      return absl::InvalidArgumentError(
           "The tensor has a wrong dim at index " + std::to_string(i) +
           ". Expected: " + std::to_string(expected_dim) +
           ", Got: " + std::to_string(tensor.get_dim(i)));
     }
     ++i;
   }
-  return base::error::Success();
+  return absl::OkStatus();
 }
 
 void Layer::reset_input_size(size_t size) { inputs_.resize(size); }
@@ -213,7 +213,7 @@ void LayerParam::to_cuda() {
   }
 }
 
-base::Status LayerParam::set_weight(int32_t idx, const tensor::Tensor& weight) {
+absl::Status LayerParam::set_weight(int32_t idx, const tensor::Tensor& weight) {
   CHECK_GE(idx, 0);
   CHECK_LT(idx, weights_.size());
   CHECK(weight.data_type() == base::DataType::kDataTypeFp32);
@@ -221,10 +221,10 @@ base::Status LayerParam::set_weight(int32_t idx, const tensor::Tensor& weight) {
     CHECK(weight.device_type() == device_type_);
   }
   weights_.at(idx) = weight;
-  return base::error::Success();
+  return absl::OkStatus();
 }
 
-base::Status LayerParam::set_weight(int32_t idx,
+absl::Status LayerParam::set_weight(int32_t idx,
                                     const std::vector<int32_t>& dims,
                                     const void* weight_ptr,
                                     base::DeviceType device_type) {
@@ -251,7 +251,7 @@ base::Status LayerParam::set_weight(int32_t idx,
         reinterpret_cast<const int8_t*>(weight_ptr) + weight_size, device_type);
   }
 
-  return base::error::Success();
+  return absl::OkStatus();
 }
 
 size_t LayerParam::weight_size() const { return weights_.size(); }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "base/base.h"
+#include "base/types.h"
 #include "tensor/tensor.h"
 namespace kernel {
 void mha_kernel(int32_t pos, int32_t head_num, int32_t layer_index,
