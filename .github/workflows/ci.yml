@@ -10,9 +10,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-test:
-    name: Build and test
-    runs-on: [self-hosted, linux, x64, cuda]
+  cpu-build-and-test:
+    name: CPU build and test
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
 
     env:
@@ -22,10 +22,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up paths
+      - name: Install CUDA toolkit
+        run: |
+          wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb
+          sudo dpkg -i cuda-keyring_1.1-1_all.deb
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            gcc-12 \
+            g++-12 \
+            cuda-nvcc-12-8 \
+            cuda-cudart-dev-12-8
+
+      - name: Set up CUDA path
         run: |
           echo "/usr/local/cuda-12.8/bin" >> "$GITHUB_PATH"
-          echo "/usr/local/cmake/bin" >> "$GITHUB_PATH"
           echo "LD_LIBRARY_PATH=/usr/local/cuda-12.8/lib64:${LD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
 
       - name: Show toolchain
@@ -33,7 +44,6 @@ jobs:
           cmake --version
           c++ --version
           nvcc --version
-          nvidia-smi
 
       - name: Prepare third-party dependencies
         run: |
@@ -45,11 +55,13 @@ jobs:
         run: |
           cmake -S . -B build \
             -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_COMPILER=g++-12 \
+            -DCMAKE_CUDA_HOST_COMPILER=g++-12 \
             -DCMAKE_CXX_FLAGS="-DCUDA_DEBUG" \
             -DCMAKE_CUDA_FLAGS="-DCUDA_DEBUG"
 
       - name: Build
-        run: cmake --build build --parallel
+        run: cmake --build build --target MicroLLM_cpu_test --parallel
 
-      - name: Test
-        run: ctest --test-dir build --output-on-failure
+      - name: Run CPU tests
+        run: ctest --test-dir build -L cpu --output-on-failure
