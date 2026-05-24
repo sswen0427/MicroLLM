@@ -1,10 +1,10 @@
 #pragma once
 
 #include <absl/status/statusor.h>
+#include <sentencepiece_processor.h>
 
 #include <cstdint>
 #include <memory>
-#include <sentencepiece_processor.h>
 #include <string>
 #include <vector>
 
