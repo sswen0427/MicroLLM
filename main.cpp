@@ -2,6 +2,7 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
+#include <filesystem>
 #include <iostream>
 
 #include "model/llama_safetensors_inspector.h"
@@ -9,9 +10,6 @@
 DEFINE_string(model_dir, "", "HuggingFace model directory.");
 
 int main(int argc, char* argv[]) {
-  google::InitGoogleLogging(argv[0]);
-  google::InstallFailureSignalHandler();
-
   gflags::SetUsageMessage(
       "MicroLLM inference runtime.\n\n"
       "Usage:\n"
@@ -31,6 +29,13 @@ int main(int argc, char* argv[]) {
               << "Use --help to see available flags.\n";
     return 1;
   }
+
+  FLAGS_log_dir =
+      std::filesystem::absolute(std::filesystem::path(FLAGS_model_dir))
+          .string();
+  google::InitGoogleLogging(argv[0]);
+  google::InstallFailureSignalHandler();
+  LOG(INFO) << "Writing logs to model directory: " << FLAGS_log_dir;
 
   const absl::Status status =
       model::InspectLlamaSafetensorsModel(FLAGS_model_dir);
