@@ -155,8 +155,8 @@ absl::StatusOr<LlamaHfModelWeights> LoadWeights(
     const LlamaSafetensorsLoader& loader, const HfLlamaConfig& config) {
   LlamaHfModelWeights weights;
 
-  auto token_embedding = loader.LoadTensor(
-      LlamaTensorName(LlamaTensorKind::kTokenEmbedding));
+  auto token_embedding =
+      loader.LoadTensor(LlamaTensorName(LlamaTensorKind::kTokenEmbedding));
   if (!token_embedding.ok()) {
     return token_embedding.status();
   }
@@ -169,8 +169,7 @@ absl::StatusOr<LlamaHfModelWeights> LoadWeights(
   }
   weights.final_norm = std::move(*final_norm);
 
-  auto lm_head =
-      loader.LoadTensor(LlamaTensorName(LlamaTensorKind::kLmHead));
+  auto lm_head = loader.LoadTensor(LlamaTensorName(LlamaTensorKind::kLmHead));
   if (!lm_head.ok()) {
     return lm_head.status();
   }
