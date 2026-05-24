@@ -3,12 +3,12 @@
 #include <absl/status/status.h>
 #include <absl/strings/str_cat.h>
 #include <glog/logging.h>
-#include <safetensors.hh>
 
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <safetensors.hh>
 #include <vector>
 
 #include "base/types.h"
@@ -32,9 +32,9 @@ absl::Status CheckFloatTensor(const tensor::Tensor& tensor,
         absl::StrCat(name, " must be stored on CPU."));
   }
   if (!IsFloatStorage(tensor.data_type())) {
-    return absl::InvalidArgumentError(absl::StrCat(
-        name, " must be a floating point tensor, got data_type=",
-        static_cast<int>(tensor.data_type())));
+    return absl::InvalidArgumentError(
+        absl::StrCat(name, " must be a floating point tensor, got data_type=",
+                     static_cast<int>(tensor.data_type())));
   }
   return absl::OkStatus();
 }
@@ -62,9 +62,9 @@ absl::Status CheckVector(const tensor::Tensor& tensor, const std::string& name,
     return status;
   }
   if (tensor.dims_size() != 1 || tensor.get_dim(0) != size) {
-    return absl::InvalidArgumentError(absl::StrCat(
-        name, " shape mismatch, expected [", size, "], got [",
-        tensor.dims_size() > 0 ? tensor.get_dim(0) : -1, "]."));
+    return absl::InvalidArgumentError(
+        absl::StrCat(name, " shape mismatch, expected [", size, "], got [",
+                     tensor.dims_size() > 0 ? tensor.get_dim(0) : -1, "]."));
   }
   return absl::OkStatus();
 }
@@ -167,8 +167,9 @@ void ApplyRopeToHeads(std::vector<float>& values, int32_t head_count,
   }
 }
 
-void StoreKvCache(const std::vector<float>& key, const std::vector<float>& value,
-                  int32_t position, int32_t max_position, int32_t kv_dim,
+void StoreKvCache(const std::vector<float>& key,
+                  const std::vector<float>& value, int32_t position,
+                  int32_t max_position, int32_t kv_dim,
                   std::vector<float>& key_cache,
                   std::vector<float>& value_cache) {
   CHECK_EQ(static_cast<int32_t>(key.size()), kv_dim);
@@ -195,10 +196,9 @@ void SoftmaxInPlace(std::vector<float>& values) {
 
 void AttentionWithCache(const std::vector<float>& query,
                         const std::vector<float>& key_cache,
-                        const std::vector<float>& value_cache,
-                        int32_t position, int32_t head_count,
-                        int32_t head_size, int32_t kv_dim, int32_t kv_mul,
-                        std::vector<float>& output) {
+                        const std::vector<float>& value_cache, int32_t position,
+                        int32_t head_count, int32_t head_size, int32_t kv_dim,
+                        int32_t kv_mul, std::vector<float>& output) {
   CHECK_GE(position, 0);
   CHECK_EQ(static_cast<int32_t>(query.size()), head_count * head_size);
   output.assign(static_cast<size_t>(head_count) * head_size, 0.0f);
@@ -276,9 +276,8 @@ absl::Status ValidateModel(const LlamaHfModel& model) {
       !status.ok()) {
     return status;
   }
-  if (const absl::Status status =
-          CheckVector(model.weights.final_norm, "final_norm",
-                      config.hidden_size);
+  if (const absl::Status status = CheckVector(model.weights.final_norm,
+                                              "final_norm", config.hidden_size);
       !status.ok()) {
     return status;
   }
@@ -292,9 +291,9 @@ absl::Status ValidateModel(const LlamaHfModel& model) {
   for (int32_t layer = 0; layer < config.num_hidden_layers; ++layer) {
     const LlamaHfLayerWeights& weights = model.weights.layers[layer];
     const std::string prefix = absl::StrCat("layer_", layer, ".");
-    if (const absl::Status status = CheckVector(
-            weights.input_layernorm, prefix + "input_layernorm",
-            config.hidden_size);
+    if (const absl::Status status =
+            CheckVector(weights.input_layernorm, prefix + "input_layernorm",
+                        config.hidden_size);
         !status.ok()) {
       return status;
     }
@@ -310,15 +309,13 @@ absl::Status ValidateModel(const LlamaHfModel& model) {
         !status.ok()) {
       return status;
     }
-    if (const absl::Status status =
-            CheckMatrix(weights.k_proj, prefix + "k_proj", kv_dim,
-                        config.hidden_size);
+    if (const absl::Status status = CheckMatrix(
+            weights.k_proj, prefix + "k_proj", kv_dim, config.hidden_size);
         !status.ok()) {
       return status;
     }
-    if (const absl::Status status =
-            CheckMatrix(weights.v_proj, prefix + "v_proj", kv_dim,
-                        config.hidden_size);
+    if (const absl::Status status = CheckMatrix(
+            weights.v_proj, prefix + "v_proj", kv_dim, config.hidden_size);
         !status.ok()) {
       return status;
     }
@@ -328,9 +325,9 @@ absl::Status ValidateModel(const LlamaHfModel& model) {
         !status.ok()) {
       return status;
     }
-    if (const absl::Status status = CheckMatrix(
-            weights.gate_proj, prefix + "gate_proj", config.intermediate_size,
-            config.hidden_size);
+    if (const absl::Status status =
+            CheckMatrix(weights.gate_proj, prefix + "gate_proj",
+                        config.intermediate_size, config.hidden_size);
         !status.ok()) {
       return status;
     }
@@ -387,9 +384,9 @@ absl::StatusOr<LlamaForwardResult> LlamaHfRuntime::ForwardToken(
 
   const HfLlamaConfig& config = model_.config;
   if (token_id < 0 || token_id >= config.vocab_size) {
-    return absl::InvalidArgumentError(absl::StrCat(
-        "token_id is out of range: ", token_id, ", vocab_size=",
-        config.vocab_size));
+    return absl::InvalidArgumentError(
+        absl::StrCat("token_id is out of range: ", token_id,
+                     ", vocab_size=", config.vocab_size));
   }
   if (position < 0 || position >= config.max_position_embeddings) {
     return absl::InvalidArgumentError(absl::StrCat(
@@ -448,9 +445,9 @@ absl::StatusOr<LlamaForwardResult> LlamaHfRuntime::ForwardToken(
   RmsNorm(hidden_state, model_.weights.final_norm, config.rms_norm_eps, norm);
 
   LlamaForwardResult result;
-  result.logits = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {config.vocab_size},
-      base::DeviceType::kDeviceCPU);
+  result.logits = tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
+                                           {config.vocab_size},
+                                           base::DeviceType::kDeviceCPU);
   std::vector<float> logits;
   MatVec(model_.weights.lm_head, norm, logits);
   CHECK_EQ(static_cast<int32_t>(logits.size()), config.vocab_size);
