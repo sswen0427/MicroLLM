@@ -1,8 +1,6 @@
 #pragma once
 
 #include <boost/noncopyable.hpp>
-#include <memory>
-
 #include "alloc.h"
 #include "base.h"
 
@@ -20,21 +18,13 @@ class Buffer : private boost::noncopyable {
   DeviceType device_type_ = DeviceType::kDeviceUnknown;
 
  public:
-  explicit Buffer() = default;
+  explicit Buffer(std::size_t byte_size, DeviceType device_type);
 
-  /**
-   * @brief If the user provides a ptr, then the buffer will be external,
-   * otherwise it will be internal, and use the allocator to allocate memory.
-   */
-  explicit Buffer(std::size_t byte_size,
-                  std::shared_ptr<DeviceAllocator> allocator = nullptr,
-                  void* ptr = nullptr);
+  explicit Buffer(std::size_t byte_size, void* data, DeviceType device_type);
 
-  virtual ~Buffer();
+  ~Buffer();
 
   void copy_from(const Buffer& buffer);
-
-  [[nodiscard]] std::shared_ptr<DeviceAllocator> allocator() const;
 
   [[nodiscard]] size_t byte_size() const;
 
@@ -43,7 +33,5 @@ class Buffer : private boost::noncopyable {
   [[nodiscard]] bool is_external() const;
 
   [[nodiscard]] void* ptr() const;
-
-  void set_device_type(DeviceType device_type);
 };
 }  // namespace base

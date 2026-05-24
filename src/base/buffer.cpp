@@ -3,19 +3,24 @@
 #include <glog/logging.h>
 
 namespace base {
-Buffer::Buffer(const std::size_t byte_size,
-               std::shared_ptr<DeviceAllocator> allocator, void* ptr)
-    : byte_size_(byte_size), allocator_(std::move(allocator)), ptr_(ptr) {
-  CHECK(bool(allocator_) != bool(ptr_))
-      << "The two pointers must be different.";
-  if (allocator_) {
-    device_type_ = allocator_->device_type();
-    use_external_ = false;
-    ptr_ = allocator_->allocate(byte_size);
-  } else {
-    device_type_ = DeviceType::kDeviceCPU;
-    use_external_ = true;
-  }
+Buffer::Buffer(const std::size_t byte_size, DeviceType device_type)
+    : byte_size_(byte_size), device_type_(device_type) {
+  CHECK_GT(byte_size_, 0);
+  CHECK(device_type_ != DeviceType::kDeviceUnknown)
+      << "Buffer device type must be known.";
+  allocator_ = GetDeviceAllocator(device_type_);
+  use_external_ = false;
+  ptr_ = allocator_->allocate(byte_size_);
+}
+
+Buffer::Buffer(const std::size_t byte_size, void* data,
+               DeviceType device_type)
+    : byte_size_(byte_size), ptr_(data), use_external_(true),
+      device_type_(device_type) {
+  CHECK_GT(byte_size_, 0);
+  CHECK(ptr_ != nullptr) << "External buffer pointer must be non-null.";
+  CHECK(device_type_ != DeviceType::kDeviceUnknown)
+      << "External buffer device type must be known.";
 }
 
 Buffer::~Buffer() {
@@ -59,10 +64,6 @@ void Buffer::copy_from(const Buffer& buffer) {
   }
 }
 
-std::shared_ptr<DeviceAllocator> Buffer::allocator() const {
-  return allocator_;
-}
-
 size_t Buffer::byte_size() const { return byte_size_; }
 
 DeviceType Buffer::device_type() const { return device_type_; }
@@ -70,9 +71,5 @@ DeviceType Buffer::device_type() const { return device_type_; }
 bool Buffer::is_external() const { return this->use_external_; }
 
 void* Buffer::ptr() const { return ptr_; }
-
-void Buffer::set_device_type(DeviceType device_type) {
-  device_type_ = device_type;
-}
 
 }  // namespace base

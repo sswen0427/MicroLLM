@@ -268,27 +268,19 @@ tensor::Tensor Model::fill_input(const tensor::Tensor& pos_tensor,
     index = pos;
   }
 #if defined(QWEN3_SUPPORT)
-  std::shared_ptr<base::Buffer> input_emb_buffer =
-      std::make_shared<base::Buffer>(
-          config_->hidden_dim_ * sizeof(float), nullptr,
-          input_embeddings.data<float>() + (index * config_->hidden_dim_),
-          true);
-  tensor::Tensor input(base::DataType::kDataTypeFp32, config_->hidden_dim_);
-
+  const int32_t embedding_dim = config_->hidden_dim_;
 #else
-  std::shared_ptr<base::Buffer> input_emb_buffer =
-      std::make_shared<base::Buffer>(
-          config_->dim_ * sizeof(float), nullptr,
-          input_embeddings.data<float>() + (index * config_->dim_));
-  tensor::Tensor input = device_type_ == base::DeviceType::kDeviceCUDA
-                             ? tensor::Tensor::from_external_cuda(
-                                   base::DataType::kDataTypeFp32,
-                                   {config_->dim_}, input_emb_buffer->ptr())
-                             : tensor::Tensor::from_external_cpu(
-                                   base::DataType::kDataTypeFp32,
-                                   {config_->dim_}, input_emb_buffer->ptr());
+  const int32_t embedding_dim = config_->dim_;
 #endif
-  return input;
+  float* input_embedding =
+      input_embeddings.data<float>() + index * embedding_dim;
+  return device_type_ == base::DeviceType::kDeviceCUDA
+             ? tensor::Tensor::from_external_cuda(
+                   base::DataType::kDataTypeFp32, {embedding_dim},
+                   input_embedding)
+             : tensor::Tensor::from_external_cpu(
+                   base::DataType::kDataTypeFp32, {embedding_dim},
+                   input_embedding);
 }
 
 }  // namespace model
