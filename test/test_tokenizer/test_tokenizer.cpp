@@ -29,11 +29,11 @@ TEST(SentencePieceTokenizerTest, EncodesAndDecodesText) {
   EXPECT_EQ(encoded_ids, expected_encoded_ids);
 
   EXPECT_EQ(tokenizer.Decode(encoded_ids), input_text);
-  EXPECT_EQ(tokenizer.Decode(encoded_ids[0]), "");
-  EXPECT_EQ(tokenizer.Decode(encoded_ids[1]), "Hello");
-  EXPECT_EQ(tokenizer.Decode(encoded_ids[2]), "world");
-  EXPECT_EQ(tokenizer.Decode(encoded_ids[3]), "!");
-  EXPECT_EQ(tokenizer.Decode(encoded_ids[4]), "");
+  EXPECT_EQ(tokenizer.Decode({encoded_ids[0]}), "");
+  EXPECT_EQ(tokenizer.Decode({encoded_ids[1]}), "Hello");
+  EXPECT_EQ(tokenizer.Decode({encoded_ids[2]}), "world");
+  EXPECT_EQ(tokenizer.Decode({encoded_ids[3]}), "!");
+  EXPECT_EQ(tokenizer.Decode({encoded_ids[4]}), "");
   EXPECT_TRUE(tokenizer.IsEndToken(encoded_ids[4]));
   EXPECT_FALSE(tokenizer.IsEndToken(encoded_ids[3]));
 }

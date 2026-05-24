@@ -39,10 +39,6 @@ std::vector<int32_t> SentencePieceTokenizer::Encode(
   return token_ids;
 }
 
-std::string SentencePieceTokenizer::Decode(int32_t token_id) const {
-  return Decode(std::vector<int32_t>{token_id});
-}
-
 std::string SentencePieceTokenizer::Decode(
     const std::vector<int32_t>& token_ids) const {
   return processor_->DecodeIds(token_ids);

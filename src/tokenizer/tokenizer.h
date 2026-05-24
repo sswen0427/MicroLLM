@@ -21,8 +21,6 @@ class Tokenizer {
 
   virtual std::vector<int32_t> Encode(const std::string& text) const = 0;
 
-  virtual std::string Decode(int32_t token_id) const = 0;
-
   virtual std::string Decode(const std::vector<int32_t>& token_ids) const = 0;
 
   virtual bool IsEndToken(int32_t token_id) const = 0;
@@ -38,8 +36,6 @@ class SentencePieceTokenizer final : public Tokenizer {
   ~SentencePieceTokenizer() override;
 
   std::vector<int32_t> Encode(const std::string& text) const override;
-
-  std::string Decode(int32_t token_id) const override;
 
   std::string Decode(const std::vector<int32_t>& token_ids) const override;
 
