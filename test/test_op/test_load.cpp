@@ -4,13 +4,15 @@
 #include <gtest/gtest.h>
 #include <sys/mman.h>
 
-#include "base/alias.h"
+#include <filesystem>
+
 #include "base/buffer.h"
 #include "model/config.h"
 #include "op/matmul.h"
 #include "tensor/tensor.h"
 
 TEST(LoadTest, Matmul) {
+  using Path = std::filesystem::path;
   Path root_path = ROOT_PATH;
   Path bin_path = root_path / "data/test.bin";
 

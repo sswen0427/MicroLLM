@@ -3,8 +3,8 @@
 #include <cuda_runtime_api.h>
 #include <glog/logging.h>
 
-#include <cstring>
 #include <cstdlib>
+#include <cstring>
 
 #include "base/cuda_check.h"
 
@@ -66,7 +66,7 @@ std::shared_ptr<DeviceAllocator> GetDeviceAllocator(DeviceType device_type) {
   return nullptr;
 }
 
-void CopyMemory(void *dst, const void *src, std::size_t size,
+void CopyMemory(void* dst, const void* src, std::size_t size,
                 cudaMemcpyKind kind, cudaStream_t stream) {
   CHECK_NE(src, nullptr) << "src is nullptr";
   CHECK_NE(dst, nullptr) << "dst is nullptr";
@@ -100,7 +100,7 @@ void CopyMemory(void *dst, const void *src, std::size_t size,
   }
 }
 
-void MemsetZero(DeviceType device_type, void *ptr, std::size_t byte_size,
+void MemsetZero(DeviceType device_type, void* ptr, std::size_t byte_size,
                 cudaStream_t stream) {
   CHECK_NE(ptr, nullptr) << "ptr is nullptr";
   CHECK_NE(byte_size, 0) << "byte_size is 0";
