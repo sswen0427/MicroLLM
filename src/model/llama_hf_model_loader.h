@@ -6,6 +6,6 @@
 
 namespace model {
 
-absl::Status InspectLlamaSafetensorsModel(const std::string& model_dir);
+absl::Status LoadLlamaHfModel(const std::string& model_dir);
 
 }  // namespace model

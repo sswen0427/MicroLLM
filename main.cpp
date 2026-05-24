@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <iostream>
 
-#include "model/llama_safetensors_inspector.h"
+#include "model/llama_hf_model_loader.h"
 
 DEFINE_string(model_dir, "", "HuggingFace model directory.");
 
@@ -39,13 +39,12 @@ int main(int argc, char* argv[]) {
   google::InstallFailureSignalHandler();
   LOG(INFO) << "Writing logs to model directory: " << FLAGS_log_dir;
 
-  const absl::Status status =
-      model::InspectLlamaSafetensorsModel(FLAGS_model_dir);
+  const absl::Status status = model::LoadLlamaHfModel(FLAGS_model_dir);
   if (!status.ok()) {
     std::cerr << "Error: " << status.message() << "\n";
     return 1;
   }
 
-  LOG(INFO) << "Model directory inspection finished: " << FLAGS_model_dir;
+  LOG(INFO) << "Model directory loading finished: " << FLAGS_model_dir;
   return 0;
 }
