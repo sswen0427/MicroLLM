@@ -14,7 +14,7 @@
 namespace runtime {
 
 absl::StatusOr<GenerationResult> GenerateText(
-    const model::LlamaHfModel& model, const op::EncodeLayerBase& tokenizer,
+    const model::LlamaHfModel& model, const tokenizer::Tokenizer& tokenizer,
     const std::string& prompt, const GenerationConfig& config) {
   if (prompt.empty()) {
     return absl::InvalidArgumentError("prompt must not be empty.");
@@ -23,7 +23,7 @@ absl::StatusOr<GenerationResult> GenerateText(
     return absl::InvalidArgumentError("max_new_tokens must be greater than 0.");
   }
 
-  const std::vector<int32_t> prompt_tokens = tokenizer.encode(prompt);
+  const std::vector<int32_t> prompt_tokens = tokenizer.Encode(prompt);
   if (prompt_tokens.empty()) {
     return absl::InvalidArgumentError("prompt produced no tokens.");
   }
@@ -50,7 +50,7 @@ absl::StatusOr<GenerationResult> GenerateText(
   result.tokens.reserve(config.max_new_tokens);
   int32_t pos = static_cast<int32_t>(prompt_tokens.size());
   for (int32_t step = 0; step < config.max_new_tokens; ++step, ++pos) {
-    if (next_token < 0 || tokenizer.is_sentence_ending(next_token)) {
+    if (next_token < 0 || tokenizer.IsEndToken(next_token)) {
       break;
     }
     result.tokens.push_back(next_token);
@@ -62,7 +62,7 @@ absl::StatusOr<GenerationResult> GenerateText(
     next_token = forward_or->next_token;
   }
 
-  result.text = tokenizer.decode(result.tokens);
+  result.text = tokenizer.Decode(result.tokens);
   LOG(INFO) << "Generated tokens: " << result.tokens.size();
   return result;
 }

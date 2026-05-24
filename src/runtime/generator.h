@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "model/llama_hf_model_loader.h"
-#include "op/encode.h"
+#include "tokenizer/tokenizer.h"
 
 namespace runtime {
 
@@ -21,7 +21,7 @@ struct GenerationResult {
 };
 
 absl::StatusOr<GenerationResult> GenerateText(
-    const model::LlamaHfModel& model, const op::EncodeLayerBase& tokenizer,
+    const model::LlamaHfModel& model, const tokenizer::Tokenizer& tokenizer,
     const std::string& prompt, const GenerationConfig& config);
 
 }  // namespace runtime

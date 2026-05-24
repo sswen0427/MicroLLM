@@ -12,7 +12,6 @@ namespace op {
 enum class LayerType : uint8_t {
   kLayerUnknown = 0,
   kLayerLinear = 1,
-  kLayerEncode = 2,
   kLayerEmbedding = 3,
   kLayerRMSNorm = 4,
   kLayerMatmul = 5,

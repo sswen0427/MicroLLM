@@ -5,8 +5,8 @@
 #include <iostream>
 
 #include "model/llama_hf_model_loader.h"
-#include "op/encode.h"
 #include "runtime/generator.h"
+#include "tokenizer/tokenizer.h"
 
 DEFINE_string(model_dir, "", "HuggingFace model directory.");
 DEFINE_string(prompt, "", "Prompt text to generate from.");
@@ -65,11 +65,18 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  op::SpeEncodeLayer tokenizer(tokenizer_path.string(), true, false);
+  auto tokenizer_or = tokenizer::SentencePieceTokenizer::Load(
+      tokenizer_path.string(), tokenizer::TokenizerOptions{.add_bos = true,
+                                                           .add_eos = false});
+  if (!tokenizer_or.ok()) {
+    std::cerr << "Error: " << tokenizer_or.status().message() << "\n";
+    return 1;
+  }
+
   runtime::GenerationConfig generation_config;
   generation_config.max_new_tokens = FLAGS_max_new_tokens;
-  auto result_or = runtime::GenerateText(**model_or, tokenizer, FLAGS_prompt,
-                                         generation_config);
+  auto result_or = runtime::GenerateText(**model_or, **tokenizer_or,
+                                         FLAGS_prompt, generation_config);
   if (!result_or.ok()) {
     std::cerr << "Error: " << result_or.status().message() << "\n";
     return 1;
