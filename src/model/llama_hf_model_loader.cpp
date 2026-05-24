@@ -81,28 +81,18 @@ absl::Status ValidateSupportedLlamaConfig(const HfLlamaConfig& config) {
   return absl::OkStatus();
 }
 
-absl::StatusOr<tensor::Tensor> LoadRequiredTensor(
-    const LlamaSafetensorsLoader& loader, const std::string& tensor_name) {
-  auto tensor_or = loader.LoadTensor(tensor_name);
-  if (!tensor_or.ok()) {
-    return tensor_or.status();
-  }
-  return std::move(*tensor_or);
-}
-
 absl::StatusOr<LlamaHfLayerWeights> LoadLayerWeights(
     const LlamaSafetensorsLoader& loader, int32_t layer) {
   LlamaHfLayerWeights weights;
 
-  auto input_layernorm = LoadRequiredTensor(
-      loader, LlamaLayerTensorName(layer, LlamaTensorKind::kInputLayerNorm));
+  auto input_layernorm = loader.LoadTensor(
+      LlamaLayerTensorName(layer, LlamaTensorKind::kInputLayerNorm));
   if (!input_layernorm.ok()) {
     return input_layernorm.status();
   }
   weights.input_layernorm = std::move(*input_layernorm);
 
-  auto post_attention_layernorm = LoadRequiredTensor(
-      loader,
+  auto post_attention_layernorm = loader.LoadTensor(
       LlamaLayerTensorName(layer, LlamaTensorKind::kPostAttentionLayerNorm));
   if (!post_attention_layernorm.ok()) {
     return post_attention_layernorm.status();
@@ -110,54 +100,49 @@ absl::StatusOr<LlamaHfLayerWeights> LoadLayerWeights(
   weights.post_attention_layernorm = std::move(*post_attention_layernorm);
 
   auto q_proj =
-      LoadRequiredTensor(loader,
-                         LlamaLayerTensorName(layer, LlamaTensorKind::kQProj));
+      loader.LoadTensor(LlamaLayerTensorName(layer, LlamaTensorKind::kQProj));
   if (!q_proj.ok()) {
     return q_proj.status();
   }
   weights.q_proj = std::move(*q_proj);
 
   auto k_proj =
-      LoadRequiredTensor(loader,
-                         LlamaLayerTensorName(layer, LlamaTensorKind::kKProj));
+      loader.LoadTensor(LlamaLayerTensorName(layer, LlamaTensorKind::kKProj));
   if (!k_proj.ok()) {
     return k_proj.status();
   }
   weights.k_proj = std::move(*k_proj);
 
   auto v_proj =
-      LoadRequiredTensor(loader,
-                         LlamaLayerTensorName(layer, LlamaTensorKind::kVProj));
+      loader.LoadTensor(LlamaLayerTensorName(layer, LlamaTensorKind::kVProj));
   if (!v_proj.ok()) {
     return v_proj.status();
   }
   weights.v_proj = std::move(*v_proj);
 
   auto o_proj =
-      LoadRequiredTensor(loader,
-                         LlamaLayerTensorName(layer, LlamaTensorKind::kOProj));
+      loader.LoadTensor(LlamaLayerTensorName(layer, LlamaTensorKind::kOProj));
   if (!o_proj.ok()) {
     return o_proj.status();
   }
   weights.o_proj = std::move(*o_proj);
 
-  auto gate_proj = LoadRequiredTensor(
-      loader, LlamaLayerTensorName(layer, LlamaTensorKind::kGateProj));
+  auto gate_proj = loader.LoadTensor(
+      LlamaLayerTensorName(layer, LlamaTensorKind::kGateProj));
   if (!gate_proj.ok()) {
     return gate_proj.status();
   }
   weights.gate_proj = std::move(*gate_proj);
 
   auto up_proj =
-      LoadRequiredTensor(loader,
-                         LlamaLayerTensorName(layer, LlamaTensorKind::kUpProj));
+      loader.LoadTensor(LlamaLayerTensorName(layer, LlamaTensorKind::kUpProj));
   if (!up_proj.ok()) {
     return up_proj.status();
   }
   weights.up_proj = std::move(*up_proj);
 
-  auto down_proj = LoadRequiredTensor(
-      loader, LlamaLayerTensorName(layer, LlamaTensorKind::kDownProj));
+  auto down_proj = loader.LoadTensor(
+      LlamaLayerTensorName(layer, LlamaTensorKind::kDownProj));
   if (!down_proj.ok()) {
     return down_proj.status();
   }
@@ -170,22 +155,22 @@ absl::StatusOr<LlamaHfModelWeights> LoadWeights(
     const LlamaSafetensorsLoader& loader, const HfLlamaConfig& config) {
   LlamaHfModelWeights weights;
 
-  auto token_embedding = LoadRequiredTensor(
-      loader, LlamaTensorName(LlamaTensorKind::kTokenEmbedding));
+  auto token_embedding = loader.LoadTensor(
+      LlamaTensorName(LlamaTensorKind::kTokenEmbedding));
   if (!token_embedding.ok()) {
     return token_embedding.status();
   }
   weights.token_embedding = std::move(*token_embedding);
 
   auto final_norm =
-      LoadRequiredTensor(loader, LlamaTensorName(LlamaTensorKind::kFinalNorm));
+      loader.LoadTensor(LlamaTensorName(LlamaTensorKind::kFinalNorm));
   if (!final_norm.ok()) {
     return final_norm.status();
   }
   weights.final_norm = std::move(*final_norm);
 
   auto lm_head =
-      LoadRequiredTensor(loader, LlamaTensorName(LlamaTensorKind::kLmHead));
+      loader.LoadTensor(LlamaTensorName(LlamaTensorKind::kLmHead));
   if (!lm_head.ok()) {
     return lm_head.status();
   }
