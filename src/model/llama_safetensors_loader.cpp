@@ -27,8 +27,9 @@ absl::StatusOr<base::DataType> ToDataType(safetensors::dtype dtype) {
     case safetensors::kFLOAT16:
       return base::DataType::kDataTypeFp16;
     default:
-      return absl::UnimplementedError(absl::StrCat(
-          "Unsupported safetensors dtype: ", safetensors::get_dtype_str(dtype)));
+      return absl::UnimplementedError(
+          absl::StrCat("Unsupported safetensors dtype: ",
+                       safetensors::get_dtype_str(dtype)));
   }
 }
 
@@ -130,9 +131,8 @@ absl::StatusOr<tensor::Tensor> LlamaSafetensorsLoader::LoadTensor(
       *data_type_or, *dims_or, base::DeviceType::kDeviceCPU);
   if (output.byte_size() != end - begin) {
     return absl::InvalidArgumentError(absl::StrCat(
-        "Tensor byte size mismatch for ", tensor_name,
-        ": expected from shape=", output.byte_size(),
-        ", safetensors bytes=", end - begin));
+        "Tensor byte size mismatch for ", tensor_name, ": expected from shape=",
+        output.byte_size(), ", safetensors bytes=", end - begin));
   }
 
   std::memcpy(output.data<uint8_t>(), DataBuffer(*safetensors_) + begin,
