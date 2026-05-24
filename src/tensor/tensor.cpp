@@ -148,7 +148,8 @@ void Tensor::reshape(const std::vector<int32_t>& dims) {
   std::size_t new_size = ComputeElementCount(dims);
   CHECK(new_size == element_count_)
       << "Fatal: Reshape cannot change total element count! "
-      << "Current size: " << this->element_count_ << ", Requested size: " << new_size;
+      << "Current size: " << this->element_count_
+      << ", Requested size: " << new_size;
   this->dims_ = dims;
 }
 

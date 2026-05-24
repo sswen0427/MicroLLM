@@ -2,13 +2,16 @@
 
 #include <filesystem>
 
-#include "base/alias.h"
 #include "op/encode.h"
 
 TEST(SpeEncodeTest, SpeEncode) {
+  using Path = std::filesystem::path;
   Path root_path = ROOT_PATH;
   Path path = root_path / "data/my_tinyllama/AI-ModelScope" /
               "TinyLlama-1___1B-Chat-v1___0/tokenizer.model";
+  if (!std::filesystem::exists(path)) {
+    GTEST_SKIP() << "Tokenizer model is not available: " << path;
+  }
   op::SpeEncodeLayer tokenizer(path, true, true);
   EXPECT_EQ(tokenizer.vocab_size(), 32000);
 
