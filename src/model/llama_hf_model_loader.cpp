@@ -109,33 +109,29 @@ absl::StatusOr<LlamaHfLayerWeights> LoadLayerWeights(
   }
   weights.post_attention_layernorm = std::move(*post_attention_layernorm);
 
-  auto q_proj =
-      LoadRequiredTensor(loader,
-                         LlamaLayerTensorName(layer, LlamaTensorKind::kQProj));
+  auto q_proj = LoadRequiredTensor(
+      loader, LlamaLayerTensorName(layer, LlamaTensorKind::kQProj));
   if (!q_proj.ok()) {
     return q_proj.status();
   }
   weights.q_proj = std::move(*q_proj);
 
-  auto k_proj =
-      LoadRequiredTensor(loader,
-                         LlamaLayerTensorName(layer, LlamaTensorKind::kKProj));
+  auto k_proj = LoadRequiredTensor(
+      loader, LlamaLayerTensorName(layer, LlamaTensorKind::kKProj));
   if (!k_proj.ok()) {
     return k_proj.status();
   }
   weights.k_proj = std::move(*k_proj);
 
-  auto v_proj =
-      LoadRequiredTensor(loader,
-                         LlamaLayerTensorName(layer, LlamaTensorKind::kVProj));
+  auto v_proj = LoadRequiredTensor(
+      loader, LlamaLayerTensorName(layer, LlamaTensorKind::kVProj));
   if (!v_proj.ok()) {
     return v_proj.status();
   }
   weights.v_proj = std::move(*v_proj);
 
-  auto o_proj =
-      LoadRequiredTensor(loader,
-                         LlamaLayerTensorName(layer, LlamaTensorKind::kOProj));
+  auto o_proj = LoadRequiredTensor(
+      loader, LlamaLayerTensorName(layer, LlamaTensorKind::kOProj));
   if (!o_proj.ok()) {
     return o_proj.status();
   }
@@ -148,9 +144,8 @@ absl::StatusOr<LlamaHfLayerWeights> LoadLayerWeights(
   }
   weights.gate_proj = std::move(*gate_proj);
 
-  auto up_proj =
-      LoadRequiredTensor(loader,
-                         LlamaLayerTensorName(layer, LlamaTensorKind::kUpProj));
+  auto up_proj = LoadRequiredTensor(
+      loader, LlamaLayerTensorName(layer, LlamaTensorKind::kUpProj));
   if (!up_proj.ok()) {
     return up_proj.status();
   }
