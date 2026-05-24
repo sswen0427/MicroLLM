@@ -3,6 +3,31 @@
 #include <glog/logging.h>
 
 namespace base {
+namespace {
+
+cudaMemcpyKind GetMemcpyKind(DeviceType dst_device_type,
+                             DeviceType src_device_type) {
+  CHECK(dst_device_type != DeviceType::kDeviceUnknown &&
+        src_device_type != DeviceType::kDeviceUnknown)
+      << "The device type must be known.";
+
+  if (src_device_type == DeviceType::kDeviceCPU &&
+      dst_device_type == DeviceType::kDeviceCPU) {
+    return cudaMemcpyHostToHost;
+  }
+  if (src_device_type == DeviceType::kDeviceCUDA &&
+      dst_device_type == DeviceType::kDeviceCPU) {
+    return cudaMemcpyDeviceToHost;
+  }
+  if (src_device_type == DeviceType::kDeviceCPU &&
+      dst_device_type == DeviceType::kDeviceCUDA) {
+    return cudaMemcpyHostToDevice;
+  }
+  return cudaMemcpyDeviceToDevice;
+}
+
+}  // namespace
+
 Buffer::Buffer(const std::size_t byte_size, DeviceType device_type)
     : byte_size_(byte_size), device_type_(device_type) {
   CHECK_GT(byte_size_, 0);
@@ -33,32 +58,14 @@ Buffer::~Buffer() {
 }
 
 void Buffer::copy_from(const Buffer& buffer) {
-  CHECK(allocator_ != nullptr) << "The allocator pointer must be non-null.";
+  CHECK(ptr_ != nullptr) << "The destination buffer pointer must be non-null.";
   CHECK(buffer.ptr_ != nullptr) << "The buffer pointer must be non-null.";
-  CHECK(byte_size_ >= buffer.byte_size_)
+  CHECK_EQ(byte_size_, buffer.byte_size_)
       << "The dst byte size " << byte_size_
-      << " must be greater than or equal to the src byte size "
-      << buffer.byte_size_;
+      << " must be equal to the src byte size " << buffer.byte_size_;
 
-  size_t byte_size = buffer.byte_size_;
-  const DeviceType& buffer_device = buffer.device_type();
-  const DeviceType& current_device = this->device_type();
-  CHECK(buffer_device != DeviceType::kDeviceUnknown &&
-        current_device != DeviceType::kDeviceUnknown)
-      << "The device type must be known.";
-
-  if (buffer_device == DeviceType::kDeviceCPU &&
-      current_device == DeviceType::kDeviceCPU) {
-    return CopyMemory(ptr_, buffer.ptr(), byte_size, cudaMemcpyHostToHost);
-  } else if (buffer_device == DeviceType::kDeviceCUDA &&
-             current_device == DeviceType::kDeviceCPU) {
-    return CopyMemory(ptr_, buffer.ptr(), byte_size, cudaMemcpyDeviceToHost);
-  } else if (buffer_device == DeviceType::kDeviceCPU &&
-             current_device == DeviceType::kDeviceCUDA) {
-    return CopyMemory(ptr_, buffer.ptr(), byte_size, cudaMemcpyHostToDevice);
-  } else {
-    return CopyMemory(ptr_, buffer.ptr(), byte_size, cudaMemcpyDeviceToDevice);
-  }
+  CopyMemory(ptr_, buffer.ptr(), buffer.byte_size_,
+             GetMemcpyKind(this->device_type(), buffer.device_type()));
 }
 
 size_t Buffer::byte_size() const { return byte_size_; }
