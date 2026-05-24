@@ -2,9 +2,11 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
+#include <cstdint>
 #include <filesystem>
 #include <iostream>
 
+#include "model/llama_hf_forward.h"
 #include "model/llama_hf_model_loader.h"
 
 DEFINE_string(model_dir, "", "HuggingFace model directory.");
@@ -45,6 +47,18 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
+  const int32_t first_token = (*model_or)->config.bos_token_id >= 0
+                                  ? (*model_or)->config.bos_token_id
+                                  : 0;
+  model::LlamaHfRuntime runtime(**model_or);
+  auto forward_or = runtime.ForwardToken(first_token, 0);
+  if (!forward_or.ok()) {
+    std::cerr << "Error: " << forward_or.status().message() << "\n";
+    return 1;
+  }
+
+  LOG(INFO) << "forward logits size: " << forward_or->logits.size();
+  LOG(INFO) << "forward next token: " << forward_or->next_token;
   LOG(INFO) << "Model directory loading finished: " << FLAGS_model_dir;
   return 0;
 }

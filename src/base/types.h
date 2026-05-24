@@ -13,14 +13,8 @@ enum class DeviceType : uint8_t {
   kDeviceCUDA = 2,
 };
 
-enum class TokenizerType {
-  kEncodeUnknown = -1,
-  kEncodeSpe = 0,  // https://github.com/google/sentencepiece
-  kEncodeBpe = 1,  // https://zhuanlan.zhihu.com/p/424631681
-};
-
 struct CudaConfig {
-  cudaStream_t stream;
+  cudaStream_t stream = nullptr;
 
   ~CudaConfig() {
     if (stream != nullptr) {
@@ -54,10 +48,5 @@ inline std::size_t DataTypeSize(DataType type) {
     return 0;
   }
 }
-
-enum class ModelType : uint8_t {
-  kModelTypeUnknown = 0,
-  kModelTypeLLama2 = 1,
-};
 
 }  // namespace base
