@@ -15,7 +15,6 @@ void emb_kernel_normal(const tensor::Tensor& input,
   CHECK(weight.device_type() == output.device_type());
   CHECK(input.device_type() == base::DeviceType::kDeviceCPU);
 
-  const auto allocator = base::GetDeviceAllocator(base::DeviceType::kDeviceCPU);
   for (int32_t i = 0; i < input_num; ++i) {
     int32_t token = input.at<int32_t>(i);
     if (token > vocab_size) {
@@ -26,8 +25,8 @@ void emb_kernel_normal(const tensor::Tensor& input,
       float* src_ptr =
           const_cast<float*>(weight.data<float>() + (token * weight_dim));
       if (weight.device_type() == base::DeviceType::kDeviceCPU) {
-        allocator->memcpy(dest_ptr, src_ptr, weight_dim * sizeof(float),
-                          cudaMemcpyHostToHost, nullptr);
+        base::CopyMemory(dest_ptr, src_ptr, weight_dim * sizeof(float),
+                         cudaMemcpyHostToHost);
       } else {
         LOG(FATAL)
             << "Unknown device type of weight tensor in the embedding layer.";

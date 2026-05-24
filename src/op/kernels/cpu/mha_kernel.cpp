@@ -31,12 +31,6 @@ void mha_kernel(int32_t pos, int32_t head_num, int32_t layer_index,
   int32_t layer_offset = layer_index * seq_len * kv_dim;
   float scale = 1.f / std::sqrt(static_cast<float>(head_size));
 
-  std::shared_ptr<base::DeviceAllocator> allocator;
-  if (device_type == base::DeviceType::kDeviceCPU) {
-    allocator = base::GetDeviceAllocator(base::DeviceType::kDeviceCPU);
-  } else {
-    allocator = base::GetDeviceAllocator(base::DeviceType::kDeviceCUDA);
-  }
   for (int32_t h = 0; h < head_num; ++h) {
     float* score_head_addr =
         const_cast<float*>(score_tensor.data<float>() + h * seq_len);
@@ -68,8 +62,8 @@ void mha_kernel(int32_t pos, int32_t head_num, int32_t layer_index,
 
     float* output_head_ptr =
         const_cast<float*>(mha_out.data<float>()) + h * head_size;
-    allocator->memset_zero(output_head_ptr, sizeof(float) * head_size,
-                           config ? config->stream : nullptr);
+    base::MemsetZero(device_type, output_head_ptr, sizeof(float) * head_size,
+                     config ? config->stream : nullptr);
     tensor::Tensor output_tensor =
         MakeExternalTensor(base::DataType::kDataTypeFp32, {head_size},
                            output_head_ptr, device_type);

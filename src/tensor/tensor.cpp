@@ -84,9 +84,8 @@ void Tensor::to_cpu() {
     size_t byte_size = this->byte_size();
     auto cpu_buffer = std::make_shared<base::Buffer>(
         byte_size, base::DeviceType::kDeviceCPU);
-    base::GetDeviceAllocator(base::DeviceType::kDeviceCPU)
-        ->memcpy(cpu_buffer->ptr(), buffer_->ptr(), byte_size,
-                 cudaMemcpyDeviceToHost, nullptr);
+    base::CopyMemory(cpu_buffer->ptr(), buffer_->ptr(), byte_size,
+                     cudaMemcpyDeviceToHost);
     this->buffer_ = cpu_buffer;
   } else {
     LOG(INFO) << "The device type of the tensor is already cpu.";
@@ -102,9 +101,8 @@ void Tensor::to_cuda(cudaStream_t stream) {
     size_t byte_size = this->byte_size();
     auto cu_buffer = std::make_shared<base::Buffer>(
         byte_size, base::DeviceType::kDeviceCUDA);
-    base::GetDeviceAllocator(base::DeviceType::kDeviceCUDA)
-        ->memcpy(cu_buffer->ptr(), buffer_->ptr(), byte_size,
-                 cudaMemcpyHostToDevice, stream);
+    base::CopyMemory(cu_buffer->ptr(), buffer_->ptr(), byte_size,
+                     cudaMemcpyHostToDevice, stream);
     this->buffer_ = cu_buffer;
   } else {
     LOG(INFO) << "The device type of the tensor is already cuda.";

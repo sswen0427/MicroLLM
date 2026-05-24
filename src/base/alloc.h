@@ -16,17 +16,11 @@ class DeviceAllocator {
 
   virtual ~DeviceAllocator() = default;
 
-  [[nodiscard]] virtual DeviceType device_type() const { return device_type_; }
+  [[nodiscard]] DeviceType device_type() const { return device_type_; }
 
   [[nodiscard]] virtual void *allocate(std::size_t size) const = 0;
 
   virtual void release(void *ptr) const = 0;
-
-  virtual void memcpy(void *dst, const void *src, std::size_t size,
-                      cudaMemcpyKind kind, cudaStream_t stream) const;
-
-  virtual void memset_zero(void *ptr, std::size_t byte_size,
-                           cudaStream_t stream) const;
 
  private:
   DeviceType device_type_ = DeviceType::kDeviceUnknown;
@@ -51,5 +45,11 @@ class CUDADeviceAllocator : public DeviceAllocator {
 };
 
 std::shared_ptr<DeviceAllocator> GetDeviceAllocator(DeviceType device_type);
+
+void CopyMemory(void *dst, const void *src, std::size_t size,
+                cudaMemcpyKind kind, cudaStream_t stream = nullptr);
+
+void MemsetZero(DeviceType device_type, void *ptr, std::size_t byte_size,
+                cudaStream_t stream = nullptr);
 
 }  // namespace base

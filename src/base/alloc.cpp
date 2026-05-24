@@ -25,8 +25,8 @@ std::shared_ptr<DeviceAllocator> GetDeviceAllocator(DeviceType device_type) {
   return nullptr;
 }
 
-void DeviceAllocator::memcpy(void *dst, const void *src, std::size_t size,
-                             cudaMemcpyKind kind, cudaStream_t stream) const {
+void CopyMemory(void *dst, const void *src, std::size_t size,
+                cudaMemcpyKind kind, cudaStream_t stream) {
   CHECK_NE(src, nullptr) << "src is nullptr";
   CHECK_NE(dst, nullptr) << "dst is nullptr";
   CHECK_NE(size, 0) << "size is 0";
@@ -59,12 +59,12 @@ void DeviceAllocator::memcpy(void *dst, const void *src, std::size_t size,
   }
 }
 
-void DeviceAllocator::memset_zero(void *ptr, std::size_t byte_size,
-                                  cudaStream_t stream) const {
+void MemsetZero(DeviceType device_type, void *ptr, std::size_t byte_size,
+                cudaStream_t stream) {
   CHECK_NE(ptr, nullptr) << "ptr is nullptr";
   CHECK_NE(byte_size, 0) << "byte_size is 0";
-  CHECK(device_type_ != base::DeviceType::kDeviceUnknown);
-  if (device_type_ == base::DeviceType::kDeviceCPU) {
+  CHECK(device_type != base::DeviceType::kDeviceUnknown);
+  if (device_type == base::DeviceType::kDeviceCPU) {
     std::memset(ptr, 0, byte_size);
   } else {
     if (stream) {
