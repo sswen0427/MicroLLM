@@ -25,8 +25,7 @@ absl::StatusOr<base::DataType> ToDataType(safetensors::dtype dtype) {
     case safetensors::kFLOAT32:
       return base::DataType::kDataTypeFp32;
     case safetensors::kFLOAT16:
-      return absl::UnimplementedError(
-          "FLOAT16 safetensors are not supported by Tensor yet.");
+      return base::DataType::kDataTypeFp16;
     default:
       return absl::UnimplementedError(absl::StrCat(
           "Unsupported safetensors dtype: ", safetensors::get_dtype_str(dtype)));

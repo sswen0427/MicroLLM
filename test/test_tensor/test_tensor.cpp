@@ -55,6 +55,20 @@ TEST(TensorTest, CloneExternalCPUTensorOwnsCopiedMemory) {
   }
 }
 
+TEST(TensorTest, SupportsHalfPrecisionStorageTypes) {
+  tensor::Tensor fp16 = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp16, {4}, base::DeviceType::kDeviceCPU);
+  tensor::Tensor bf16 = tensor::Tensor::allocate(
+      base::DataType::kDataTypeBf16, {4}, base::DeviceType::kDeviceCPU);
+
+  EXPECT_EQ(base::DataTypeSize(base::DataType::kDataTypeFp16), 2);
+  EXPECT_EQ(base::DataTypeSize(base::DataType::kDataTypeBf16), 2);
+  EXPECT_EQ(fp16.byte_size(), 8);
+  EXPECT_EQ(bf16.byte_size(), 8);
+  EXPECT_EQ(fp16.data_type(), base::DataType::kDataTypeFp16);
+  EXPECT_EQ(bf16.data_type(), base::DataType::kDataTypeBf16);
+}
+
 TEST(TensorTest, RejectsInvalidShape) {
   EXPECT_DEATH((void)tensor::Tensor::allocate(base::DataType::kDataTypeInt32,
                                               {}, base::DeviceType::kDeviceCPU),
