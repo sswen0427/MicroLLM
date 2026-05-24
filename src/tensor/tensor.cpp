@@ -41,9 +41,9 @@ Tensor Tensor::allocate(base::DataType data_type,
   Tensor tensor;
   tensor.dims_ = dims;
   tensor.data_type_ = data_type;
-  tensor.size_ = ComputeElementCount(dims);
+  tensor.element_count_ = ComputeElementCount(dims);
   tensor.buffer_ = std::make_shared<base::Buffer>(
-      ComputeByteSize(tensor.size_, data_type), device_type);
+      ComputeByteSize(tensor.element_count_, data_type), device_type);
   return tensor;
 }
 
@@ -57,9 +57,9 @@ Tensor Tensor::from_external(base::DataType data_type,
   Tensor tensor;
   tensor.dims_ = dims;
   tensor.data_type_ = data_type;
-  tensor.size_ = ComputeElementCount(dims);
+  tensor.element_count_ = ComputeElementCount(dims);
   tensor.buffer_ = std::make_shared<base::Buffer>(
-      ComputeByteSize(tensor.size_, data_type), data, device_type);
+      ComputeByteSize(tensor.element_count_, data_type), data, device_type);
   return tensor;
 }
 
@@ -110,7 +110,7 @@ void Tensor::to_cuda(cudaStream_t stream) {
 }
 
 bool Tensor::is_empty() const {
-  return size_ == 0 || buffer_ == nullptr || buffer_->ptr() == nullptr;
+  return element_count_ == 0 || buffer_ == nullptr || buffer_->ptr() == nullptr;
 }
 
 bool Tensor::is_external() const {
@@ -121,13 +121,13 @@ bool Tensor::owns_memory() const {
   return buffer_ != nullptr && !buffer_->is_external();
 }
 
-size_t Tensor::size() const { return this->size_; }
+size_t Tensor::size() const { return this->element_count_; }
 
 size_t Tensor::byte_size() const {
   if (is_empty()) {
     return 0;
   }
-  return ComputeByteSize(size_, data_type_);
+  return ComputeByteSize(element_count_, data_type_);
 }
 
 int32_t Tensor::dims_size() const { return static_cast<int32_t>(dims_.size()); }
@@ -146,9 +146,9 @@ base::DeviceType Tensor::device_type() const {
 
 void Tensor::reshape(const std::vector<int32_t>& dims) {
   std::size_t new_size = ComputeElementCount(dims);
-  CHECK(new_size == size_)
+  CHECK(new_size == element_count_)
       << "Fatal: Reshape cannot change total element count! "
-      << "Current size: " << this->size_ << ", Requested size: " << new_size;
+      << "Current size: " << this->element_count_ << ", Requested size: " << new_size;
   this->dims_ = dims;
 }
 
@@ -158,7 +158,7 @@ Tensor Tensor::clone() const {
   Tensor new_tensor;
   new_tensor.dims_ = this->dims_;
   new_tensor.data_type_ = this->data_type_;
-  new_tensor.size_ = this->size_;
+  new_tensor.element_count_ = this->element_count_;
 
   new_tensor.buffer_ =
       std::make_shared<base::Buffer>(this->byte_size(), buffer_->device_type());

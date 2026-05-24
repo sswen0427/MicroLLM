@@ -464,33 +464,21 @@ void Qwen2Model::create_param_layers() {
 }
 
 void Qwen2Model::init_mem() {
-  std::shared_ptr<base::DeviceAllocator> alloc;
-  if (device_type_ == base::DeviceType::kDeviceCPU) {
-    alloc = base::GetDeviceAllocator(base::DeviceType::kDeviceCPU);
-  } else {
-    alloc = base::GetDeviceAllocator(base::DeviceType::kDeviceCUDA);
-  }
-
   if (device_type_ == base::DeviceType::kDeviceCUDA) {
     CHECK_NE(cuda_config_, nullptr);
     qwen_layers_->to_cuda(cuda_config_);
   }
 
-  std::shared_ptr<base::DeviceAllocator> alloc_cpu =
-      base::GetDeviceAllocator(base::DeviceType::kDeviceCPU);
-  std::shared_ptr<base::DeviceAllocator> alloc_cu =
-      base::GetDeviceAllocator(base::DeviceType::kDeviceCUDA);
-
-  tensor::Tensor input_tokens(base::DataType::kDataTypeInt32, 1, true,
-                              alloc_cpu);
-  tensor::Tensor input_embeddings(base::DataType::kDataTypeFp32, 1,
-                                  config_->dim_, true, alloc);
-  tensor::Tensor sin_cache(base::DataType::kDataTypeFp32,
-                           config_->head_size_ * config_->seq_len_, true,
-                           alloc);
-  tensor::Tensor cos_cache(base::DataType::kDataTypeFp32,
-                           config_->head_size_ * config_->seq_len_, true,
-                           alloc);
+  tensor::Tensor input_tokens = tensor::Tensor::allocate(
+      base::DataType::kDataTypeInt32, {1}, base::DeviceType::kDeviceCPU);
+  tensor::Tensor input_embeddings = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {1, config_->dim_}, device_type_);
+  tensor::Tensor sin_cache = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32,
+      {config_->head_size_ * config_->seq_len_}, device_type_);
+  tensor::Tensor cos_cache = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32,
+      {config_->head_size_ * config_->seq_len_}, device_type_);
 
   CHECK(insert_buffer(ModelBufferType::kSinCache, sin_cache));
   CHECK(insert_buffer(ModelBufferType::kCosCache, cos_cache));
@@ -498,51 +486,58 @@ void Qwen2Model::init_mem() {
   CHECK(insert_buffer(ModelBufferType::kInputTokens, input_tokens));
   CHECK(insert_buffer(ModelBufferType::kInputEmbeddings, input_embeddings));
 
-  tensor::Tensor rms_output(base::DataType::kDataTypeFp32, config_->dim_, true,
-                            alloc);
+  tensor::Tensor rms_output = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {config_->dim_}, device_type_);
   CHECK(insert_buffer(ModelBufferType::kOutputRMSNorm, rms_output));
   CHECK(insert_buffer(ModelBufferType::kOutputMHA, rms_output));
   CHECK(insert_buffer(ModelBufferType::kW2Output, rms_output));
   CHECK(insert_buffer(ModelBufferType::kFFNRMSNorm, rms_output));
 
-  tensor::Tensor w1_output(base::DataType::kDataTypeFp32, config_->hidden_dim_,
-                           true, alloc);
-  tensor::Tensor w3_output(base::DataType::kDataTypeFp32, config_->hidden_dim_,
-                           true, alloc);
+  tensor::Tensor w1_output = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {config_->hidden_dim_}, device_type_);
+  tensor::Tensor w3_output = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {config_->hidden_dim_}, device_type_);
 
   CHECK(insert_buffer(ModelBufferType::kW1Output, w1_output));
   CHECK(insert_buffer(ModelBufferType::kW3Output, w3_output));
 
   // kv cache
-  tensor::Tensor key_cache(base::DataType::kDataTypeFp32, config_->layer_num_,
-                           config_->seq_len_, config_->kv_dim_, true, alloc);
-  tensor::Tensor value_cache(base::DataType::kDataTypeFp32, config_->layer_num_,
-                             config_->seq_len_, config_->kv_dim_, true, alloc);
+  tensor::Tensor key_cache = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32,
+      {config_->layer_num_, config_->seq_len_, config_->kv_dim_},
+      device_type_);
+  tensor::Tensor value_cache = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32,
+      {config_->layer_num_, config_->seq_len_, config_->kv_dim_},
+      device_type_);
 
   CHECK(insert_buffer(ModelBufferType::kKeyCache, key_cache));
   CHECK(insert_buffer(ModelBufferType::kValueCache, value_cache));
 
   // Wq query output
-  tensor::Tensor query(base::DataType::kDataTypeFp32, config_->dim_, true,
-                       alloc);
+  tensor::Tensor query = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {config_->dim_}, device_type_);
   CHECK(insert_buffer(ModelBufferType::kQuery, query));
 
   // Pos tensor
-  tensor::Tensor pos_tensor(base::DataType::kDataTypeInt32, 1, true, alloc_cpu);
+  tensor::Tensor pos_tensor = tensor::Tensor::allocate(
+      base::DataType::kDataTypeInt32, {1}, base::DeviceType::kDeviceCPU);
   CHECK(insert_buffer(ModelBufferType::kInputPos, pos_tensor));
 
   // Attention output
-  tensor::Tensor attn(base::DataType::kDataTypeFp32, config_->head_num_,
-                      config_->seq_len_, true, alloc);
+  tensor::Tensor attn = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {config_->head_num_, config_->seq_len_},
+      device_type_);
   CHECK(insert_buffer(ModelBufferType::kScoreStorage, attn));
   CHECK(insert_buffer(ModelBufferType::kAttnOutput, query));
 
   // final forward output
-  tensor::Tensor forward_output(base::DataType::kDataTypeFp32,
-                                config_->vocab_size_, true, alloc);
+  tensor::Tensor forward_output = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {config_->vocab_size_}, device_type_);
   if (device_type_ == base::DeviceType::kDeviceCUDA) {
-    tensor::Tensor forward_output_cpu(base::DataType::kDataTypeFp32,
-                                      config_->vocab_size_, true, alloc_cpu);
+    tensor::Tensor forward_output_cpu = tensor::Tensor::allocate(
+        base::DataType::kDataTypeFp32, {config_->vocab_size_},
+        base::DeviceType::kDeviceCPU);
     CHECK(
         insert_buffer(ModelBufferType::kForwardOutputCPU, forward_output_cpu));
   }

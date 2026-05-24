@@ -75,7 +75,7 @@ class Tensor {
   /**
    * @brief The total number of elements in the tensor (cached for performance).
    */
-  std::size_t size_ = 0;
+  std::size_t element_count_ = 0;
 
   /**
    * @brief The data type of each element (e.g., FP32, INT8).
