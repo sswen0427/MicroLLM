@@ -39,9 +39,9 @@ int main(int argc, char* argv[]) {
   google::InstallFailureSignalHandler();
   LOG(INFO) << "Writing logs to model directory: " << FLAGS_log_dir;
 
-  const absl::Status status = model::LoadLlamaHfModel(FLAGS_model_dir);
-  if (!status.ok()) {
-    std::cerr << "Error: " << status.message() << "\n";
+  auto model_or = model::LoadLlamaHfModel(FLAGS_model_dir);
+  if (!model_or.ok()) {
+    std::cerr << "Error: " << model_or.status().message() << "\n";
     return 1;
   }
 

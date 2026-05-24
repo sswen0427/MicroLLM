@@ -1,27 +1,22 @@
 #include "model/llama_hf_model_loader.h"
 
+#include <absl/status/status.h>
 #include <absl/status/statusor.h>
 #include <absl/strings/str_cat.h>
-#include <absl/strings/str_join.h>
 #include <glog/logging.h>
 
 #include <algorithm>
 #include <filesystem>
+#include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
-#include "base/types.h"
-#include "model/hf_config.h"
 #include "model/llama_safetensors_loader.h"
 #include "model/llama_tensor_names.h"
-#include "tensor/tensor.h"
 
 namespace model {
 namespace {
-
-struct TensorToLoad {
-  std::string name;
-};
 
 absl::StatusOr<std::string> FindSingleSafetensorsFile(
     const std::string& model_dir) {
@@ -86,61 +81,126 @@ absl::Status ValidateSupportedLlamaConfig(const HfLlamaConfig& config) {
   return absl::OkStatus();
 }
 
-std::string DataTypeName(base::DataType data_type) {
-  switch (data_type) {
-    case base::DataType::kDataTypeFp32:
-      return "fp32";
-    case base::DataType::kDataTypeFp16:
-      return "fp16";
-    case base::DataType::kDataTypeBf16:
-      return "bf16";
-    case base::DataType::kDataTypeInt8:
-      return "int8";
-    case base::DataType::kDataTypeInt32:
-      return "int32";
-    default:
-      return "unknown";
-  }
-}
-
-std::vector<int32_t> TensorShape(const tensor::Tensor& tensor) {
-  std::vector<int32_t> shape;
-  shape.reserve(tensor.dims_size());
-  for (int32_t i = 0; i < tensor.dims_size(); ++i) {
-    shape.push_back(tensor.get_dim(i));
-  }
-  return shape;
-}
-
-std::vector<TensorToLoad> BuildInitialLlamaTensorList() {
-  return {
-      {LlamaTensorName(LlamaTensorKind::kTokenEmbedding)},
-      {LlamaTensorName(LlamaTensorKind::kFinalNorm)},
-      {LlamaTensorName(LlamaTensorKind::kLmHead)},
-      {LlamaLayerTensorName(0, LlamaTensorKind::kInputLayerNorm)},
-      {LlamaLayerTensorName(0, LlamaTensorKind::kPostAttentionLayerNorm)},
-      {LlamaLayerTensorName(0, LlamaTensorKind::kQProj)},
-      {LlamaLayerTensorName(0, LlamaTensorKind::kKProj)},
-      {LlamaLayerTensorName(0, LlamaTensorKind::kVProj)},
-      {LlamaLayerTensorName(0, LlamaTensorKind::kOProj)},
-      {LlamaLayerTensorName(0, LlamaTensorKind::kGateProj)},
-      {LlamaLayerTensorName(0, LlamaTensorKind::kUpProj)},
-      {LlamaLayerTensorName(0, LlamaTensorKind::kDownProj)},
-  };
-}
-
-absl::Status LoadAndLogTensor(const LlamaSafetensorsLoader& loader,
-                              const std::string& tensor_name) {
+absl::StatusOr<tensor::Tensor> LoadRequiredTensor(
+    const LlamaSafetensorsLoader& loader, const std::string& tensor_name) {
   auto tensor_or = loader.LoadTensor(tensor_name);
   if (!tensor_or.ok()) {
     return tensor_or.status();
   }
-  const tensor::Tensor& tensor = *tensor_or;
-  LOG(INFO) << "loaded tensor: name=" << tensor_name
-            << ", dtype=" << DataTypeName(tensor.data_type())
-            << ", shape=" << absl::StrJoin(TensorShape(tensor), "x")
-            << ", bytes=" << tensor.byte_size();
-  return absl::OkStatus();
+  return std::move(*tensor_or);
+}
+
+absl::StatusOr<LlamaHfLayerWeights> LoadLayerWeights(
+    const LlamaSafetensorsLoader& loader, int32_t layer) {
+  LlamaHfLayerWeights weights;
+
+  auto input_layernorm = LoadRequiredTensor(
+      loader, LlamaLayerTensorName(layer, LlamaTensorKind::kInputLayerNorm));
+  if (!input_layernorm.ok()) {
+    return input_layernorm.status();
+  }
+  weights.input_layernorm = std::move(*input_layernorm);
+
+  auto post_attention_layernorm = LoadRequiredTensor(
+      loader,
+      LlamaLayerTensorName(layer, LlamaTensorKind::kPostAttentionLayerNorm));
+  if (!post_attention_layernorm.ok()) {
+    return post_attention_layernorm.status();
+  }
+  weights.post_attention_layernorm = std::move(*post_attention_layernorm);
+
+  auto q_proj =
+      LoadRequiredTensor(loader,
+                         LlamaLayerTensorName(layer, LlamaTensorKind::kQProj));
+  if (!q_proj.ok()) {
+    return q_proj.status();
+  }
+  weights.q_proj = std::move(*q_proj);
+
+  auto k_proj =
+      LoadRequiredTensor(loader,
+                         LlamaLayerTensorName(layer, LlamaTensorKind::kKProj));
+  if (!k_proj.ok()) {
+    return k_proj.status();
+  }
+  weights.k_proj = std::move(*k_proj);
+
+  auto v_proj =
+      LoadRequiredTensor(loader,
+                         LlamaLayerTensorName(layer, LlamaTensorKind::kVProj));
+  if (!v_proj.ok()) {
+    return v_proj.status();
+  }
+  weights.v_proj = std::move(*v_proj);
+
+  auto o_proj =
+      LoadRequiredTensor(loader,
+                         LlamaLayerTensorName(layer, LlamaTensorKind::kOProj));
+  if (!o_proj.ok()) {
+    return o_proj.status();
+  }
+  weights.o_proj = std::move(*o_proj);
+
+  auto gate_proj = LoadRequiredTensor(
+      loader, LlamaLayerTensorName(layer, LlamaTensorKind::kGateProj));
+  if (!gate_proj.ok()) {
+    return gate_proj.status();
+  }
+  weights.gate_proj = std::move(*gate_proj);
+
+  auto up_proj =
+      LoadRequiredTensor(loader,
+                         LlamaLayerTensorName(layer, LlamaTensorKind::kUpProj));
+  if (!up_proj.ok()) {
+    return up_proj.status();
+  }
+  weights.up_proj = std::move(*up_proj);
+
+  auto down_proj = LoadRequiredTensor(
+      loader, LlamaLayerTensorName(layer, LlamaTensorKind::kDownProj));
+  if (!down_proj.ok()) {
+    return down_proj.status();
+  }
+  weights.down_proj = std::move(*down_proj);
+
+  return weights;
+}
+
+absl::StatusOr<LlamaHfModelWeights> LoadWeights(
+    const LlamaSafetensorsLoader& loader, const HfLlamaConfig& config) {
+  LlamaHfModelWeights weights;
+
+  auto token_embedding = LoadRequiredTensor(
+      loader, LlamaTensorName(LlamaTensorKind::kTokenEmbedding));
+  if (!token_embedding.ok()) {
+    return token_embedding.status();
+  }
+  weights.token_embedding = std::move(*token_embedding);
+
+  auto final_norm =
+      LoadRequiredTensor(loader, LlamaTensorName(LlamaTensorKind::kFinalNorm));
+  if (!final_norm.ok()) {
+    return final_norm.status();
+  }
+  weights.final_norm = std::move(*final_norm);
+
+  auto lm_head =
+      LoadRequiredTensor(loader, LlamaTensorName(LlamaTensorKind::kLmHead));
+  if (!lm_head.ok()) {
+    return lm_head.status();
+  }
+  weights.lm_head = std::move(*lm_head);
+
+  weights.layers.reserve(config.num_hidden_layers);
+  for (int32_t layer = 0; layer < config.num_hidden_layers; ++layer) {
+    auto layer_weights = LoadLayerWeights(loader, layer);
+    if (!layer_weights.ok()) {
+      return layer_weights.status();
+    }
+    weights.layers.push_back(std::move(*layer_weights));
+  }
+
+  return weights;
 }
 
 void LogLlamaConfig(const HfLlamaConfig& config) {
@@ -171,7 +231,8 @@ void LogLlamaConfig(const HfLlamaConfig& config) {
 
 }  // namespace
 
-absl::Status LoadLlamaHfModel(const std::string& model_dir) {
+absl::StatusOr<std::unique_ptr<LlamaHfModel>> LoadLlamaHfModel(
+    const std::string& model_dir) {
   auto config_or = LoadHfLlamaConfig(model_dir);
   if (!config_or.ok()) {
     return config_or.status();
@@ -196,15 +257,18 @@ absl::Status LoadLlamaHfModel(const std::string& model_dir) {
   const auto& loader = **loader_or;
   LOG(INFO) << "tensor_count: " << loader.TensorCount();
 
-  for (const TensorToLoad& tensor : BuildInitialLlamaTensorList()) {
-    const absl::Status status = LoadAndLogTensor(loader, tensor.name);
-    if (!status.ok()) {
-      return status;
-    }
+  auto weights_or = LoadWeights(loader, config);
+  if (!weights_or.ok()) {
+    return weights_or.status();
   }
 
-  LOG(INFO) << "initial LLaMA safetensors weights loaded";
-  return absl::OkStatus();
+  auto model = std::make_unique<LlamaHfModel>();
+  model->config = config;
+  model->weights = std::move(*weights_or);
+
+  LOG(INFO) << "LLaMA safetensors weights loaded: layers="
+            << model->weights.layers.size();
+  return std::move(model);
 }
 
 }  // namespace model
