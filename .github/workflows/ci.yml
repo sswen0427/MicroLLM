@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: [self-hosted, linux, x64, cuda]
+    timeout-minutes: 60
+
+    env:
+      CUDA_HOME: /usr/local/cuda-12.8
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up paths
+        run: |
+          echo "/usr/local/cuda-12.8/bin" >> "$GITHUB_PATH"
+          echo "/usr/local/cmake/bin" >> "$GITHUB_PATH"
+          echo "LD_LIBRARY_PATH=/usr/local/cuda-12.8/lib64:${LD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
+
+      - name: Show toolchain
+        run: |
+          cmake --version
+          c++ --version
+          nvcc --version
+          nvidia-smi
+
+      - name: Prepare third-party dependencies
+        run: |
+          if [ ! -d third_party/abseil-cpp ]; then
+            bash build_deps.sh
+          fi
+
+      - name: Configure
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS="-DCUDA_DEBUG" \
+            -DCMAKE_CUDA_FLAGS="-DCUDA_DEBUG"
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
