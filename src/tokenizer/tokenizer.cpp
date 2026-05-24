@@ -21,9 +21,9 @@ SentencePieceTokenizer::Load(const std::string& model_path,
       new SentencePieceTokenizer(options));
   const auto status = tokenizer->processor_->Load(model_path);
   if (!status.ok()) {
-    return absl::InvalidArgumentError(absl::StrCat(
-        "Failed to load SentencePiece model: ", model_path,
-        ", error: ", status.ToString()));
+    return absl::InvalidArgumentError(
+        absl::StrCat("Failed to load SentencePiece model: ", model_path,
+                     ", error: ", status.ToString()));
   }
   return tokenizer;
 }

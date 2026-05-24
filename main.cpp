@@ -66,8 +66,8 @@ int main(int argc, char* argv[]) {
   }
 
   auto tokenizer_or = tokenizer::SentencePieceTokenizer::Load(
-      tokenizer_path.string(), tokenizer::TokenizerOptions{.add_bos = true,
-                                                           .add_eos = false});
+      tokenizer_path.string(),
+      tokenizer::TokenizerOptions{.add_bos = true, .add_eos = false});
   if (!tokenizer_or.ok()) {
     std::cerr << "Error: " << tokenizer_or.status().message() << "\n";
     return 1;

@@ -17,8 +17,8 @@ TEST(SentencePieceTokenizerTest, EncodesAndDecodesText) {
   }
 
   auto tokenizer_or = tokenizer::SentencePieceTokenizer::Load(
-      path.string(), tokenizer::TokenizerOptions{.add_bos = true,
-                                                 .add_eos = true});
+      path.string(),
+      tokenizer::TokenizerOptions{.add_bos = true, .add_eos = true});
   ASSERT_TRUE(tokenizer_or.ok()) << tokenizer_or.status();
   const auto& tokenizer = **tokenizer_or;
   EXPECT_EQ(tokenizer.VocabSize(), 32000);
