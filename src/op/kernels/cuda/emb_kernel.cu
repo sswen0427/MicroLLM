@@ -35,9 +35,9 @@ void emb_kernel_cu(const tensor::Tensor& input, const tensor::Tensor& weight,
 
   constexpr int32_t max_seq_len = 512;
   constexpr int32_t thread_num = 128;
-  auto* in_ptr = input_cu.ptr<int32_t>();
-  auto* wei_ptr = const_cast<float*>(weight.ptr<float>());
-  auto* out_ptr = const_cast<float*>(output.ptr<float>());
+  auto* in_ptr = input_cu.data<int32_t>();
+  auto* wei_ptr = const_cast<float*>(weight.data<float>());
+  auto* out_ptr = const_cast<float*>(output.data<float>());
   if (stream) {
     auto stream_ = static_cast<cudaStream_t>(stream);
     emb_kernel_cu_fp32<<<max_seq_len, thread_num, 0, stream_>>>(

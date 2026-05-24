@@ -40,13 +40,13 @@ void swiglu_kernel_cu(const tensor::Tensor& input1,
   const size_t shmem = threads * sizeof(float) * 2;
   if (!stream) {
     swiglu_kernel_cu_fp32<<<blocks, threads, shmem>>>(
-        size, input1.ptr<float>(), input2.ptr<float>(),
-        const_cast<float*>(output.ptr<float>()));
+        size, input1.data<float>(), input2.data<float>(),
+        const_cast<float*>(output.data<float>()));
   } else {
     cudaStream_t stream_ = static_cast<cudaStream_t>(stream);
     swiglu_kernel_cu_fp32<<<blocks, threads, shmem, stream_>>>(
-        size, input1.ptr<float>(), input2.ptr<float>(),
-        const_cast<float*>(output.ptr<float>()));
+        size, input1.data<float>(), input2.data<float>(),
+        const_cast<float*>(output.data<float>()));
   }
 }
 }  // namespace kernel

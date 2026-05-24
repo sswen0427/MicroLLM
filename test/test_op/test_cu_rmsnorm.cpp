@@ -8,17 +8,14 @@
 #include "op/kernels/kernels_interface.h"
 
 TEST(RMSNormTest, NoStream) {
-  auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
-  auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
-
   int32_t size = 32 * 15;
 
   tensor::Tensor in_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
   tensor::Tensor wei_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
   tensor::Tensor out_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
 
   std::random_device rd;
   std::mt19937 mt(rd());
@@ -46,17 +43,16 @@ TEST(RMSNormTest, NoStream) {
 }
 
 TEST(RMSNormTest, Stream1) {
-  auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
-  auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
-
   int dim_size = 4;
   int size = 1024;
-  tensor::Tensor in_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {dim_size, size}, alloc_cpu);
+  tensor::Tensor in_cpu =
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim_size, size},
+                               base::DeviceType::kDeviceCPU);
   tensor::Tensor wei_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
-  tensor::Tensor out_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {dim_size, size}, alloc_cpu);
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
+  tensor::Tensor out_cpu =
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {dim_size, size},
+                               base::DeviceType::kDeviceCPU);
 
   for (int i = 0; i < dim_size; ++i) {
     for (int j = 0; j < size; ++j) {
@@ -83,11 +79,11 @@ TEST(RMSNormTest, Stream1) {
   in_cu.to_cpu();
 
   tensor::Tensor in_cpu_golden = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
   tensor::Tensor wei_cpu_golden = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
-  tensor::Tensor out_golden =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {size}, alloc_cu);
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
+  tensor::Tensor out_golden = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCUDA);
   cudaDeviceSynchronize();
   auto err = cudaGetLastError();
   ASSERT_EQ(err, cudaSuccess);
@@ -119,17 +115,14 @@ TEST(RMSNormTest, Stream1) {
 }
 
 TEST(RMSNormTest, Stream2) {
-  auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
-  auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
-
   int32_t size = 32;
 
   tensor::Tensor in_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
   tensor::Tensor wei_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
   tensor::Tensor out_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
 
   std::random_device rd;
   std::mt19937 mt(rd());
@@ -161,17 +154,14 @@ TEST(RMSNormTest, Stream2) {
 }
 
 TEST(RMSNormTest, Stream3) {
-  auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
-  auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
-
   int32_t size = 32 * 151 * 15;
 
   tensor::Tensor in_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
   tensor::Tensor wei_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
   tensor::Tensor out_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
 
   std::random_device rd;
   std::mt19937 mt(rd());

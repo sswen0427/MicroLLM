@@ -142,8 +142,8 @@ base::Status LLama2Model::init(base::DeviceType device_type) {
   if (device_type_ == base::DeviceType::kDeviceCPU) {
     kernel::sin_cos_cache_calc_cpu(
         config_->head_size_, config_->seq_len_,
-        get_buffer(ModelBufferType::kSinCache).ptr<float>(),
-        get_buffer(ModelBufferType::kCosCache).ptr<float>());
+        get_buffer(ModelBufferType::kSinCache).data<float>(),
+        get_buffer(ModelBufferType::kCosCache).data<float>());
   } else {
     CHECK_NE(cuda_config_, nullptr);
     kernel::sin_cos_cache_calc_cu(config_->head_size_, config_->seq_len_,
@@ -468,33 +468,21 @@ void LLama2Model::create_param_layers() {
 }
 
 void LLama2Model::init_mem() {
-  std::shared_ptr<base::DeviceAllocator> alloc;
-  if (device_type_ == base::DeviceType::kDeviceCPU) {
-    alloc = base::CPUDeviceAllocatorFactory::get_instance();
-  } else {
-    alloc = base::CUDADeviceAllocatorFactory::get_instance();
-  }
-
   if (device_type_ == base::DeviceType::kDeviceCUDA) {
     CHECK_NE(cuda_config_, nullptr);
     llama_layers_->to_cuda(cuda_config_);
   }
 
-  std::shared_ptr<base::DeviceAllocator> alloc_cpu =
-      base::CPUDeviceAllocatorFactory::get_instance();
-  std::shared_ptr<base::DeviceAllocator> alloc_cu =
-      base::CUDADeviceAllocatorFactory::get_instance();
-
-  tensor::Tensor input_tokens =
-      tensor::Tensor::allocate(base::DataType::kDataTypeInt32, {1}, alloc_cpu);
+  tensor::Tensor input_tokens = tensor::Tensor::allocate(
+      base::DataType::kDataTypeInt32, {1}, base::DeviceType::kDeviceCPU);
   tensor::Tensor input_embeddings = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {1, config_->dim_}, alloc);
+      base::DataType::kDataTypeFp32, {1, config_->dim_}, device_type_);
   tensor::Tensor sin_cache = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {config_->head_size_ * config_->seq_len_},
-      alloc);
+      device_type_);
   tensor::Tensor cos_cache = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {config_->head_size_ * config_->seq_len_},
-      alloc);
+      device_type_);
 
   CHECK(insert_buffer(ModelBufferType::kSinCache, sin_cache));
   CHECK(insert_buffer(ModelBufferType::kCosCache, cos_cache));
@@ -503,16 +491,16 @@ void LLama2Model::init_mem() {
   CHECK(insert_buffer(ModelBufferType::kInputEmbeddings, input_embeddings));
 
   tensor::Tensor rms_output = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {config_->dim_}, alloc);
+      base::DataType::kDataTypeFp32, {config_->dim_}, device_type_);
   CHECK(insert_buffer(ModelBufferType::kOutputRMSNorm, rms_output));
   CHECK(insert_buffer(ModelBufferType::kOutputMHA, rms_output));
   CHECK(insert_buffer(ModelBufferType::kW2Output, rms_output));
   CHECK(insert_buffer(ModelBufferType::kFFNRMSNorm, rms_output));
 
   tensor::Tensor w1_output = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {config_->hidden_dim_}, alloc);
+      base::DataType::kDataTypeFp32, {config_->hidden_dim_}, device_type_);
   tensor::Tensor w3_output = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {config_->hidden_dim_}, alloc);
+      base::DataType::kDataTypeFp32, {config_->hidden_dim_}, device_type_);
 
   CHECK(insert_buffer(ModelBufferType::kW1Output, w1_output));
   CHECK(insert_buffer(ModelBufferType::kW3Output, w3_output));
@@ -520,37 +508,38 @@ void LLama2Model::init_mem() {
   // kv cache
   tensor::Tensor key_cache = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32,
-      {config_->layer_num_, config_->seq_len_, config_->kv_dim_}, alloc);
+      {config_->layer_num_, config_->seq_len_, config_->kv_dim_}, device_type_);
   tensor::Tensor value_cache = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32,
-      {config_->layer_num_, config_->seq_len_, config_->kv_dim_}, alloc);
+      {config_->layer_num_, config_->seq_len_, config_->kv_dim_}, device_type_);
 
   CHECK(insert_buffer(ModelBufferType::kKeyCache, key_cache));
   CHECK(insert_buffer(ModelBufferType::kValueCache, value_cache));
 
   // Wq query output
-  tensor::Tensor query = tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
-                                                  {config_->dim_}, alloc);
+  tensor::Tensor query = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {config_->dim_}, device_type_);
   CHECK(insert_buffer(ModelBufferType::kQuery, query));
 
   // Pos tensor
-  tensor::Tensor pos_tensor =
-      tensor::Tensor::allocate(base::DataType::kDataTypeInt32, {1}, alloc_cpu);
+  tensor::Tensor pos_tensor = tensor::Tensor::allocate(
+      base::DataType::kDataTypeInt32, {1}, base::DeviceType::kDeviceCPU);
   CHECK(insert_buffer(ModelBufferType::kInputPos, pos_tensor));
 
   // Attention output
-  tensor::Tensor attn =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
-                               {config_->head_num_, config_->seq_len_}, alloc);
+  tensor::Tensor attn = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {config_->head_num_, config_->seq_len_},
+      device_type_);
   CHECK(insert_buffer(ModelBufferType::kScoreStorage, attn));
   CHECK(insert_buffer(ModelBufferType::kAttnOutput, query));
 
   // final forward output
   tensor::Tensor forward_output = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {config_->vocab_size_}, alloc);
+      base::DataType::kDataTypeFp32, {config_->vocab_size_}, device_type_);
   if (device_type_ == base::DeviceType::kDeviceCUDA) {
     tensor::Tensor forward_output_cpu = tensor::Tensor::allocate(
-        base::DataType::kDataTypeFp32, {config_->vocab_size_}, alloc_cpu);
+        base::DataType::kDataTypeFp32, {config_->vocab_size_},
+        base::DeviceType::kDeviceCPU);
     CHECK(
         insert_buffer(ModelBufferType::kForwardOutputCPU, forward_output_cpu));
   }
@@ -654,10 +643,9 @@ op::EmbeddingOutput LLama2Model::embedding(
   for (int32_t i = 0; i < tokens.size(); ++i) {
     input_tokens.at<int32_t>(i) = tokens.at(i);
   }
-  auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
-
   auto input_token_num = tensor::Tensor::allocate(
-      base::DataType::kDataTypeInt32, {(int32_t)tokens.size()}, alloc_cpu);
+      base::DataType::kDataTypeInt32, {(int32_t)tokens.size()},
+      base::DeviceType::kDeviceCPU);
   LOG_IF(FATAL, !llama_layers_->embedding_layer_)
       << "The embedding layer in the llama2 model is null pointer.";
   std::vector<tensor::Tensor> outputs;
@@ -848,7 +836,7 @@ void LLama2Model::cls_logits(const tensor::Tensor& input) const {
 int32_t LLama2Model::post_processing(const tensor::Tensor& pos,
                                      bool is_prompt) const {
   tensor::Tensor forward_output = get_buffer(ModelBufferType::kForwardOutput);
-  const float* forward_logits = forward_output.ptr<float>();
+  const float* forward_logits = forward_output.data<float>();
 
   int32_t next = 0;
   if (is_prompt) {

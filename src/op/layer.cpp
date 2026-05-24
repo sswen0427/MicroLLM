@@ -2,10 +2,27 @@
 
 #include <glog/logging.h>
 
-#include <numeric>
+#include <vector>
 
 #include "base/base.h"
 #include "tensor/tensor.h"
+
+namespace {
+
+tensor::Tensor MakeExternalTensor(base::DataType data_type,
+                                  const std::vector<int32_t>& dims,
+                                  const void* ptr,
+                                  base::DeviceType device_type) {
+  CHECK(device_type != base::DeviceType::kDeviceUnknown);
+  if (device_type == base::DeviceType::kDeviceCUDA) {
+    return tensor::Tensor::from_external_cuda(data_type, dims,
+                                              const_cast<void*>(ptr));
+  }
+  return tensor::Tensor::from_external_cpu(data_type, dims,
+                                           const_cast<void*>(ptr));
+}
+
+}  // namespace
 
 // BaseLayer
 namespace op {
@@ -215,34 +232,23 @@ base::Status LayerParam::set_weight(int32_t idx,
   CHECK_LT(idx, weights_.size());
   CHECK_NE(weight_ptr, nullptr);
 
-  size_t size = std::accumulate(dims.begin(), dims.end(), sizeof(float),
-                                std::multiplies<>());
-  std::shared_ptr<base::Buffer> buffer = std::make_shared<base::Buffer>(
-      size, nullptr, const_cast<void*>(weight_ptr));
-  if (device_type != base::DeviceType::kDeviceUnknown) {
-    buffer->set_device_type(device_type);
-  }
-
   if (!is_quant_layer_) {
-    tensor::Tensor weight = tensor::Tensor::from_external(
-        base::DataType::kDataTypeFp32, dims, buffer.get()->ptr());
-    weight.set_device_type(device_type);
+    tensor::Tensor weight = MakeExternalTensor(base::DataType::kDataTypeFp32,
+                                               dims, weight_ptr, device_type);
     weights_.at(idx) = weight;
   } else {
     // is quant layer
-    tensor::Tensor weight = tensor::Tensor::from_external(
-        base::DataType::kDataTypeInt8, dims, buffer.get());
-    weight.set_device_type(device_type);
+    tensor::Tensor weight = MakeExternalTensor(base::DataType::kDataTypeInt8,
+                                               dims, weight_ptr, device_type);
     weights_.at(idx) = weight;
 
     const int32_t weight_size = static_cast<int32_t>(weight.size());
     CHECK(weight_size % group_size_ == 0);
 
     int32_t scale_nums = weight_size / group_size_;
-    scales_ = tensor::Tensor::from_external(base::DataType::kDataTypeFp32,
-                                            {scale_nums},
-                                            (int8_t*)weight_ptr + weight_size);
-    scales_.set_device_type(device_type);
+    scales_ = MakeExternalTensor(
+        base::DataType::kDataTypeFp32, {scale_nums},
+        reinterpret_cast<const int8_t*>(weight_ptr) + weight_size, device_type);
   }
 
   return base::error::Success();

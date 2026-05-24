@@ -155,12 +155,12 @@ void sin_cos_cache_calc_cu(int head_size, int max_seq_len,
   int threads = head_size;
   if (stream) {
     sin_cos_calc<<<1, threads, 0, stream>>>(
-        head_size, max_seq_len, const_cast<float*>(sin_cache.ptr<float>()),
-        const_cast<float*>(cos_cache.ptr<float>()));
+        head_size, max_seq_len, const_cast<float*>(sin_cache.data<float>()),
+        const_cast<float*>(cos_cache.data<float>()));
   } else {
     sin_cos_calc<<<1, threads>>>(head_size, max_seq_len,
-                                 const_cast<float*>(sin_cache.ptr<float>()),
-                                 const_cast<float*>(cos_cache.ptr<float>()));
+                                 const_cast<float*>(sin_cache.data<float>()),
+                                 const_cast<float*>(cos_cache.data<float>()));
   }
 }
 
@@ -170,18 +170,20 @@ void rope_kernel_cu(int32_t dim, int32_t kv_dim, int32_t head_size,
                     const tensor::Tensor& input_pos,
                     const tensor::Tensor& sin_cache,
                     const tensor::Tensor& cos_cache, void* stream) {
-  const int32_t pos = *input_pos.ptr<int32_t>(0);
+  const int32_t pos = *input_pos.data<int32_t>();
   int threads = 128;
   int blocks = (dim + threads - 1) / threads;
   if (stream) {
     cudaStream_t stream_ = static_cast<cudaStream_t>(stream);
     rope_kernel_cu_fp32<<<blocks, threads, 0, stream_>>>(
-        pos, dim, kv_dim, head_size, input_q.ptr<float>(), input_k.ptr<float>(),
-        sin_cache.ptr<float>(), cos_cache.ptr<float>());
+        pos, dim, kv_dim, head_size, input_q.data<float>(),
+        input_k.data<float>(), sin_cache.data<float>(),
+        cos_cache.data<float>());
   } else {
     rope_kernel_cu_fp32<<<blocks, threads>>>(
-        pos, dim, kv_dim, head_size, input_q.ptr<float>(), input_k.ptr<float>(),
-        sin_cache.ptr<float>(), cos_cache.ptr<float>());
+        pos, dim, kv_dim, head_size, input_q.data<float>(),
+        input_k.data<float>(), sin_cache.data<float>(),
+        cos_cache.data<float>());
   }
 }
 }  // namespace kernel

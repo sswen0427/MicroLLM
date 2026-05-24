@@ -2,17 +2,17 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
+#include <cstring>
+
 #include "base/buffer.h"
 #include "op/kernels/kernels_interface.h"
 TEST(ScaleTest, Nostream) {
-  auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
   int32_t size = 32 * 151;
 
-  tensor::Tensor t1 = tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
-                                               {size}, alloc_cpu);
+  tensor::Tensor t1 = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
   std::vector<float> vec(size, 2.f);
-  cudaMemcpy(t1.get_buffer()->ptr(), vec.data(), size * sizeof(float),
-             cudaMemcpyHostToHost);
+  std::memcpy(t1.data<float>(), vec.data(), size * sizeof(float));
 
   kernel::get_scale_kernel(base::DeviceType::kDeviceCPU)(0.5f, t1, nullptr);
   cudaDeviceSynchronize();

@@ -25,9 +25,9 @@ void rmsnorm_kernel_cpu(const tensor::Tensor& input,
         weight.device_type() == base::DeviceType::kDeviceCPU &&
         output.device_type() == base::DeviceType::kDeviceCPU);
 
-  const float* in_ptr = input.ptr<float>();
-  const float* wei_ptr = weight.ptr<float>();
-  const float* out_ptr = output.ptr<float>();
+  const float* in_ptr = input.data<float>();
+  const float* wei_ptr = weight.data<float>();
+  const float* out_ptr = output.data<float>();
   const int32_t dim = static_cast<int32_t>(input.size());
 
   arma::fvec in_tensor(const_cast<float*>(in_ptr), dim, false, true);

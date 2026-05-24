@@ -1,7 +1,26 @@
 #include "op/matmul.h"
 
+#include <vector>
+
 #include "kernels/cpu/matmul_kernel.h"
 #include "kernels/kernels_interface.h"
+
+namespace {
+
+tensor::Tensor MakeExternalTensor(base::DataType data_type,
+                                  const std::vector<int32_t>& dims,
+                                  const void* ptr,
+                                  base::DeviceType device_type) {
+  CHECK(device_type != base::DeviceType::kDeviceUnknown);
+  if (device_type == base::DeviceType::kDeviceCUDA) {
+    return tensor::Tensor::from_external_cuda(data_type, dims,
+                                              const_cast<void*>(ptr));
+  }
+  return tensor::Tensor::from_external_cpu(data_type, dims,
+                                           const_cast<void*>(ptr));
+}
+
+}  // namespace
 
 namespace op {
 MatmulLayer::MatmulLayer(base::DeviceType device_type, int32_t dim0,
@@ -97,34 +116,24 @@ base::Status MatmulLayer::set_bias(int32_t idx, int32_t dim,
   CHECK_LT(idx, bias_.size());
   CHECK_NE(bias_ptr, nullptr);
 
-  size_t size = dim * sizeof(float);
-  std::shared_ptr<base::Buffer> buffer = std::make_shared<base::Buffer>(
-      size, nullptr, const_cast<void*>(bias_ptr));
-  if (device_type != base::DeviceType::kDeviceUnknown) {
-    buffer->set_device_type(device_type);
-  }
-
   if (!is_quant_layer_) {
-    tensor::Tensor bias = tensor::Tensor::from_external(
-        base::DataType::kDataTypeFp32, {dim}, buffer.get());
-    bias.set_device_type(device_type);
+    tensor::Tensor bias = MakeExternalTensor(base::DataType::kDataTypeFp32,
+                                             {dim}, bias_ptr, device_type);
     // LOG(INFO) << "bias:" << bias.index<float>(0);
     bias_.at(idx) = bias;
   } else {
     // is quant layer
-    tensor::Tensor bias = tensor::Tensor::from_external(
-        base::DataType::kDataTypeInt8, {dim}, buffer.get());
-    bias.set_device_type(device_type);
+    tensor::Tensor bias = MakeExternalTensor(base::DataType::kDataTypeInt8,
+                                             {dim}, bias_ptr, device_type);
     bias_.at(idx) = bias;
 
     const int32_t bias_size = static_cast<int32_t>(bias.size());
     CHECK(bias_size % group_size_ == 0);
 
     int32_t scale_nums = bias_size / group_size_;
-    scales_ = tensor::Tensor::from_external(
+    scales_ = MakeExternalTensor(
         base::DataType::kDataTypeFp32, {scale_nums},
-        reinterpret_cast<float*>((int8_t*)bias_ptr + bias_size));
-    scales_.set_device_type(device_type);
+        reinterpret_cast<const int8_t*>(bias_ptr) + bias_size, device_type);
   }
 
   return base::error::Success();

@@ -236,16 +236,24 @@ std::pair<tensor::Tensor, tensor::Tensor> Model::slice_kv_cache(
   int32_t cache_offset = layer_offset + token_pos * config_->kv_dim_;
 
   float* key_cache_ptr = const_cast<float*>(
-      get_buffer(ModelBufferType::kKeyCache).ptr<float>(cache_offset));
+      get_buffer(ModelBufferType::kKeyCache).data<float>() + (cache_offset));
   float* val_cache_ptr = const_cast<float*>(
-      get_buffer(ModelBufferType::kValueCache).ptr<float>(cache_offset));
+      get_buffer(ModelBufferType::kValueCache).data<float>() + (cache_offset));
 
-  tensor::Tensor key = tensor::Tensor::from_external(
-      base::DataType::kDataTypeFp32, {config_->kv_dim_}, key_cache_ptr);
-  tensor::Tensor val = tensor::Tensor::from_external(
-      base::DataType::kDataTypeFp32, {config_->kv_dim_}, val_cache_ptr);
-  key.set_device_type(device_type_);
-  val.set_device_type(device_type_);
+  tensor::Tensor key = device_type_ == base::DeviceType::kDeviceCUDA
+                           ? tensor::Tensor::from_external_cuda(
+                                 base::DataType::kDataTypeFp32,
+                                 {config_->kv_dim_}, key_cache_ptr)
+                           : tensor::Tensor::from_external_cpu(
+                                 base::DataType::kDataTypeFp32,
+                                 {config_->kv_dim_}, key_cache_ptr);
+  tensor::Tensor val = device_type_ == base::DeviceType::kDeviceCUDA
+                           ? tensor::Tensor::from_external_cuda(
+                                 base::DataType::kDataTypeFp32,
+                                 {config_->kv_dim_}, val_cache_ptr)
+                           : tensor::Tensor::from_external_cpu(
+                                 base::DataType::kDataTypeFp32,
+                                 {config_->kv_dim_}, val_cache_ptr);
   return {key, val};
 }
 
@@ -260,22 +268,19 @@ tensor::Tensor Model::fill_input(const tensor::Tensor& pos_tensor,
     index = pos;
   }
 #if defined(QWEN3_SUPPORT)
-  std::shared_ptr<base::Buffer> input_emb_buffer =
-      std::make_shared<base::Buffer>(
-          config_->hidden_dim_ * sizeof(float), nullptr,
-          input_embeddings.ptr<float>(index * config_->hidden_dim_), true);
-  tensor::Tensor input(base::DataType::kDataTypeFp32, config_->hidden_dim_);
-
+  const int32_t embedding_dim = config_->hidden_dim_;
 #else
-  std::shared_ptr<base::Buffer> input_emb_buffer =
-      std::make_shared<base::Buffer>(
-          config_->dim_ * sizeof(float), nullptr,
-          input_embeddings.ptr<float>(index * config_->dim_));
-  tensor::Tensor input = tensor::Tensor::from_external(
-      base::DataType::kDataTypeFp32, {config_->dim_}, input_emb_buffer->ptr());
+  const int32_t embedding_dim = config_->dim_;
 #endif
-  input.set_device_type(device_type_);
-  return input;
+  float* input_embedding =
+      input_embeddings.data<float>() + index * embedding_dim;
+  return device_type_ == base::DeviceType::kDeviceCUDA
+             ? tensor::Tensor::from_external_cuda(base::DataType::kDataTypeFp32,
+                                                  {embedding_dim},
+                                                  input_embedding)
+             : tensor::Tensor::from_external_cpu(base::DataType::kDataTypeFp32,
+                                                 {embedding_dim},
+                                                 input_embedding);
 }
 
 }  // namespace model

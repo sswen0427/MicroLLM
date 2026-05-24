@@ -127,9 +127,9 @@ void rmsnorm_kernel_cu(const tensor::Tensor& input,
   const float eps = 1e-5f;
 #endif
   const int32_t size = static_cast<int32_t>(input.size());
-  float* in_ptr = const_cast<float*>(input.ptr<float>());
-  float* wei_ptr = const_cast<float*>(weight.ptr<float>());
-  float* out_ptr = const_cast<float*>(output.ptr<float>());
+  float* in_ptr = const_cast<float*>(input.data<float>());
+  float* wei_ptr = const_cast<float*>(weight.data<float>());
+  float* out_ptr = const_cast<float*>(output.data<float>());
   constexpr int threads_num = 128;
   if (stream) {
     cudaStream_t stream_ = static_cast<cudaStream_t>(stream);
@@ -158,9 +158,9 @@ void rmsnorm_kernel_cu_dim(const tensor::Tensor& input,
   const int32_t size = input.get_dim(input.dims_size() - 1);
   const int32_t dim_size = total_size / size;
 
-  float* in_ptr = const_cast<float*>(input.ptr<float>());
-  float* wei_ptr = const_cast<float*>(weight.ptr<float>());
-  float* out_ptr = const_cast<float*>(output.ptr<float>());
+  float* in_ptr = const_cast<float*>(input.data<float>());
+  float* wei_ptr = const_cast<float*>(weight.data<float>());
+  float* out_ptr = const_cast<float*>(output.data<float>());
   constexpr int threads_num = 128;
   if (stream) {
     cudaStream_t stream_ = static_cast<cudaStream_t>(stream);

@@ -74,7 +74,7 @@ __global__ void argmax_kernel_fp32(const float* input_ptr, size_t size,
 
 size_t argmax_kernel_cu(const float* input_ptr, size_t size, void* stream) {
   std::shared_ptr<base::DeviceAllocator> alloc_cu =
-      base::CUDADeviceAllocatorFactory::get_instance();
+      base::GetDeviceAllocator(base::DeviceType::kDeviceCUDA);
   size_t* index = static_cast<size_t*>(alloc_cu->allocate(sizeof(size_t)));
   size_t output_index = 0;
   if (!stream) {

@@ -7,13 +7,10 @@
 #include "op/kernels/kernels_interface.h"
 
 TEST(CudaMatmulTest, RunCPU) {
-  auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
-  auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
-
-  tensor::Tensor input =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {3}, alloc_cpu);
+  tensor::Tensor input = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {3}, base::DeviceType::kDeviceCPU);
   tensor::Tensor weight = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {3, 3}, alloc_cpu);
+      base::DataType::kDataTypeFp32, {3, 3}, base::DeviceType::kDeviceCPU);
 
   input.at<float>(0) = float(1);
   input.at<float>(1) = float(1);
@@ -23,8 +20,8 @@ TEST(CudaMatmulTest, RunCPU) {
     weight.at<float>(i - 1) = float(i);
   }
 
-  tensor::Tensor out =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {3}, alloc_cpu);
+  tensor::Tensor out = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {3}, base::DeviceType::kDeviceCPU);
 
   kernel::get_matmul_kernel(base::DeviceType::kDeviceCPU)(input, weight, out,
                                                           1.f, nullptr);
@@ -35,13 +32,10 @@ TEST(CudaMatmulTest, RunCPU) {
 }
 
 TEST(CudaMatmulTest, RunCUDA) {
-  auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
-  auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
-
-  tensor::Tensor input =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {4}, alloc_cpu);
+  tensor::Tensor input = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {4}, base::DeviceType::kDeviceCPU);
   tensor::Tensor weight = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {4, 4}, alloc_cpu);
+      base::DataType::kDataTypeFp32, {4, 4}, base::DeviceType::kDeviceCPU);
 
   input.at<float>(0) = float(1);
   input.at<float>(1) = float(1);
@@ -55,8 +49,8 @@ TEST(CudaMatmulTest, RunCUDA) {
   input.to_cuda();
   weight.to_cuda();
 
-  tensor::Tensor out_cu =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {4}, alloc_cu);
+  tensor::Tensor out_cu = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {4}, base::DeviceType::kDeviceCUDA);
 
   kernel::get_matmul_kernel(base::DeviceType::kDeviceCUDA)(
       input, weight, out_cu, 1.f, nullptr);
@@ -71,13 +65,10 @@ TEST(CudaMatmulTest, RunCUDA) {
 }
 
 TEST(CudaMatmulTest, Stream) {
-  auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
-  auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
-
-  tensor::Tensor input =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {4}, alloc_cpu);
+  tensor::Tensor input = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {4}, base::DeviceType::kDeviceCPU);
   tensor::Tensor weight = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {4, 4}, alloc_cpu);
+      base::DataType::kDataTypeFp32, {4, 4}, base::DeviceType::kDeviceCPU);
 
   for (int i = 0; i < 4; ++i) {
     input.at<float>(i) = float(i);
@@ -92,10 +83,10 @@ TEST(CudaMatmulTest, Stream) {
   input.to_cuda(nullptr);
   weight.to_cuda(nullptr);
 
-  tensor::Tensor out_cu =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {4}, alloc_cu);
-  tensor::Tensor out_cpu =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {4}, alloc_cpu);
+  tensor::Tensor out_cu = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {4}, base::DeviceType::kDeviceCUDA);
+  tensor::Tensor out_cpu = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {4}, base::DeviceType::kDeviceCPU);
 
   auto* config = new base::CudaConfig;
   cudaStream_t stream;

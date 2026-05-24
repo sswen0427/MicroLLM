@@ -8,17 +8,14 @@
 #include "op/kernels/kernels_interface.h"
 
 TEST(SwiGLUTest, NoStream) {
-  auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
-  auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
-
   int32_t size = 32 * 151;
 
   tensor::Tensor in_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
   tensor::Tensor wei_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
   tensor::Tensor out_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
 
   std::random_device rd;
   std::mt19937 mt(rd());
@@ -48,17 +45,14 @@ TEST(SwiGLUTest, NoStream) {
 }
 
 TEST(SwiGLUTest, Stream) {
-  auto alloc_cu = base::CUDADeviceAllocatorFactory::get_instance();
-  auto alloc_cpu = base::CPUDeviceAllocatorFactory::get_instance();
-
   int32_t size = 32 * 151;
 
   tensor::Tensor in_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
   tensor::Tensor wei_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
   tensor::Tensor out_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {size}, alloc_cpu);
+      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
 
   std::random_device rd;
   std::mt19937 mt(rd());
