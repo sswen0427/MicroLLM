@@ -373,11 +373,9 @@ LlamaHfRuntime::LlamaHfRuntime(const LlamaHfModel& model) : model_(model) {
   }
 }
 
-absl::Status LlamaHfRuntime::Validate() const { return ValidateModel(model_); }
-
 absl::StatusOr<LlamaForwardResult> LlamaHfRuntime::ForwardToken(
     int32_t token_id, int32_t position) {
-  const absl::Status model_status = Validate();
+  const absl::Status model_status = ValidateModel(model_);
   if (!model_status.ok()) {
     return model_status;
   }
