@@ -15,8 +15,6 @@
 
 #include "model/hf_config.h"
 #include "model/llama_tensor_names.h"
-#include "model/safetensors_tensor_view.h"
-#include "tensor/tensor_view.h"
 
 namespace model {
 namespace {
@@ -47,37 +45,30 @@ absl::StatusOr<safetensors::safetensors_t> LoadSafetensorsFile(
   return safetensors;
 }
 
-std::string DataTypeName(base::DataType data_type) {
-  switch (data_type) {
-    case base::DataType::kDataTypeFp32:
-      return "fp32";
-    case base::DataType::kDataTypeInt8:
-      return "int8";
-    case base::DataType::kDataTypeInt32:
-      return "int32";
-    case base::DataType::kDataTypeBf16:
-      return "bf16";
-    default:
-      return "unknown";
-  }
-}
-
-void LogTensorView(const std::string& label, const std::string& tensor_name,
-                   const tensor::TensorView& view) {
-  LOG(INFO) << label << ": name=" << tensor_name
-            << ", dtype=" << DataTypeName(view.data_type)
-            << ", shape=" << absl::StrJoin(view.shape, "x")
-            << ", bytes=" << view.byte_size;
-}
-
-absl::Status LogSafetensorsTensorView(
+absl::Status LogSafetensorsTensorMetadata(
     const safetensors::safetensors_t& safetensors, const std::string& label,
     const std::string& tensor_name) {
-  auto view_or = GetSafetensorsTensorView(safetensors, tensor_name);
-  if (!view_or.ok()) {
-    return view_or.status();
+  safetensors::tensor_t tensor;
+  if (!safetensors.tensors.at(tensor_name, &tensor)) {
+    return absl::NotFoundError(
+        absl::StrCat("Tensor not found in safetensors: ", tensor_name));
   }
-  LogTensorView(label, tensor_name, *view_or);
+  if (tensor.data_offsets.size() != 2) {
+    return absl::InvalidArgumentError(
+        absl::StrCat("Invalid data offsets for tensor: ", tensor_name));
+  }
+  const size_t begin = tensor.data_offsets[0];
+  const size_t end = tensor.data_offsets[1];
+  if (begin > end) {
+    return absl::InvalidArgumentError(
+        absl::StrCat("Invalid data offsets for tensor ", tensor_name, ": [",
+                     begin, ", ", end, "]"));
+  }
+
+  LOG(INFO) << label << ": name=" << tensor_name
+            << ", dtype=" << safetensors::get_dtype_str(tensor.dtype)
+            << ", shape=" << absl::StrJoin(tensor.shape, "x")
+            << ", bytes=" << end - begin;
   return absl::OkStatus();
 }
 
@@ -184,31 +175,31 @@ absl::Status InspectLlamaSafetensorsFile(const HfLlamaConfig& config,
   LOG(INFO) << "safetensors: " << safetensors_path;
   LOG(INFO) << "tensor_count: " << safetensors.tensors.size();
 
-  const absl::Status token_embedding_status = LogSafetensorsTensorView(
+  const absl::Status token_embedding_status = LogSafetensorsTensorMetadata(
       safetensors, "token_embedding_tensor",
       LlamaTensorName(LlamaTensorKind::kTokenEmbedding));
   if (!token_embedding_status.ok()) {
     return token_embedding_status;
   }
-  const absl::Status layer_q_status = LogSafetensorsTensorView(
+  const absl::Status layer_q_status = LogSafetensorsTensorMetadata(
       safetensors, "layer_0_q_proj_tensor",
       LlamaLayerTensorName(0, LlamaTensorKind::kQProj));
   if (!layer_q_status.ok()) {
     return layer_q_status;
   }
-  const absl::Status layer_gate_status = LogSafetensorsTensorView(
+  const absl::Status layer_gate_status = LogSafetensorsTensorMetadata(
       safetensors, "layer_0_gate_proj_tensor",
       LlamaLayerTensorName(0, LlamaTensorKind::kGateProj));
   if (!layer_gate_status.ok()) {
     return layer_gate_status;
   }
-  const absl::Status final_norm_status =
-      LogSafetensorsTensorView(safetensors, "final_norm_tensor",
-                               LlamaTensorName(LlamaTensorKind::kFinalNorm));
+  const absl::Status final_norm_status = LogSafetensorsTensorMetadata(
+      safetensors, "final_norm_tensor",
+      LlamaTensorName(LlamaTensorKind::kFinalNorm));
   if (!final_norm_status.ok()) {
     return final_norm_status;
   }
-  const absl::Status lm_head_status = LogSafetensorsTensorView(
+  const absl::Status lm_head_status = LogSafetensorsTensorMetadata(
       safetensors, "lm_head_tensor", LlamaTensorName(LlamaTensorKind::kLmHead));
   if (!lm_head_status.ok()) {
     return lm_head_status;
