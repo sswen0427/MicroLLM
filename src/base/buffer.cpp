@@ -13,9 +13,10 @@ Buffer::Buffer(const std::size_t byte_size, DeviceType device_type)
   ptr_ = allocator_->allocate(byte_size_);
 }
 
-Buffer::Buffer(const std::size_t byte_size, void* data,
-               DeviceType device_type)
-    : byte_size_(byte_size), ptr_(data), use_external_(true),
+Buffer::Buffer(const std::size_t byte_size, void* data, DeviceType device_type)
+    : byte_size_(byte_size),
+      ptr_(data),
+      use_external_(true),
       device_type_(device_type) {
   CHECK_GT(byte_size_, 0);
   CHECK(ptr_ != nullptr) << "External buffer pointer must be non-null.";

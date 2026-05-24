@@ -82,8 +82,8 @@ void Tensor::to_cpu() {
 
   if (device_type == base::DeviceType::kDeviceCUDA) {
     size_t byte_size = this->byte_size();
-    auto cpu_buffer = std::make_shared<base::Buffer>(
-        byte_size, base::DeviceType::kDeviceCPU);
+    auto cpu_buffer =
+        std::make_shared<base::Buffer>(byte_size, base::DeviceType::kDeviceCPU);
     base::CopyMemory(cpu_buffer->ptr(), buffer_->ptr(), byte_size,
                      cudaMemcpyDeviceToHost);
     this->buffer_ = cpu_buffer;

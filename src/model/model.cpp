@@ -275,12 +275,12 @@ tensor::Tensor Model::fill_input(const tensor::Tensor& pos_tensor,
   float* input_embedding =
       input_embeddings.data<float>() + index * embedding_dim;
   return device_type_ == base::DeviceType::kDeviceCUDA
-             ? tensor::Tensor::from_external_cuda(
-                   base::DataType::kDataTypeFp32, {embedding_dim},
-                   input_embedding)
-             : tensor::Tensor::from_external_cpu(
-                   base::DataType::kDataTypeFp32, {embedding_dim},
-                   input_embedding);
+             ? tensor::Tensor::from_external_cuda(base::DataType::kDataTypeFp32,
+                                                  {embedding_dim},
+                                                  input_embedding)
+             : tensor::Tensor::from_external_cpu(base::DataType::kDataTypeFp32,
+                                                 {embedding_dim},
+                                                 input_embedding);
 }
 
 }  // namespace model
