@@ -4,12 +4,9 @@
 
 #include <cstdint>
 #include <memory>
+#include <sentencepiece_processor.h>
 #include <string>
 #include <vector>
-
-namespace sentencepiece {
-class SentencePieceProcessor;
-}
 
 namespace tokenizer {
 

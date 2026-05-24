@@ -2,7 +2,6 @@
 
 #include <absl/status/status.h>
 #include <absl/strings/str_cat.h>
-#include <sentencepiece_processor.h>
 
 #include <utility>
 
