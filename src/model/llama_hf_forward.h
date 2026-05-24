@@ -28,8 +28,6 @@ class LlamaHfRuntime {
     std::vector<float> value;
   };
 
-  absl::Status Validate() const;
-
   const LlamaHfModel& model_;
   int32_t head_size_ = 0;
   int32_t kv_dim_ = 0;
