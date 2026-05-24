@@ -104,7 +104,7 @@ absl::Status Model::read_model_file() {
 
   if (raw_model_data_->data == MAP_FAILED || raw_model_data_->data == nullptr) {
     return absl::InvalidArgumentError("Failed to map the weight file " +
-                                  model_path_ + " into memory.");
+                                      model_path_ + " into memory.");
   }
   if (!is_quant_model_) {
     raw_model_data_->weight_data =

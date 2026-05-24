@@ -41,8 +41,7 @@ absl::Status RmsNormLayer::check() const {
     if (dim_head_size == dim_) {
       return absl::OkStatus();
     } else {
-      return absl::InvalidArgumentError(
-          "The tensor has a wrong dim in dim -1");
+      return absl::InvalidArgumentError("The tensor has a wrong dim in dim -1");
     }
   } else {
     auto status =

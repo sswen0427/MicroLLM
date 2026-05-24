@@ -163,8 +163,7 @@ absl::Status LLama2Model::forward(const tensor::Tensor& input,
     return absl::InvalidArgumentError("The input tensor is empty.");
   }
   if (device_type_ == base::DeviceType::kDeviceCPU && is_quant_model_) {
-    return absl::InternalError(
-        "Unsupported int8 quant in the cpu device");
+    return absl::InternalError("Unsupported int8 quant in the cpu device");
   }
 
   for (int32_t layer_idx = 0; layer_idx < config_->layer_num_; ++layer_idx) {
@@ -488,7 +487,8 @@ void LLama2Model::init_mem() {
   CHECK(insert_buffer(ModelBufferType::kCosCache, cos_cache).ok());
 
   CHECK(insert_buffer(ModelBufferType::kInputTokens, input_tokens).ok());
-  CHECK(insert_buffer(ModelBufferType::kInputEmbeddings, input_embeddings).ok());
+  CHECK(
+      insert_buffer(ModelBufferType::kInputEmbeddings, input_embeddings).ok());
 
   tensor::Tensor rms_output = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {config_->dim_}, device_type_);
@@ -540,9 +540,8 @@ void LLama2Model::init_mem() {
     tensor::Tensor forward_output_cpu = tensor::Tensor::allocate(
         base::DataType::kDataTypeFp32, {config_->vocab_size_},
         base::DeviceType::kDeviceCPU);
-    CHECK(
-        insert_buffer(ModelBufferType::kForwardOutputCPU, forward_output_cpu)
-            .ok());
+    CHECK(insert_buffer(ModelBufferType::kForwardOutputCPU, forward_output_cpu)
+              .ok());
   }
 
   CHECK(insert_buffer(ModelBufferType::kForwardOutput, forward_output).ok());

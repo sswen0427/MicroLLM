@@ -84,8 +84,7 @@ size_t Layer::input_size() const { return inputs_.size(); }
 
 size_t Layer::output_size() const { return outputs_.size(); }
 absl::Status Layer::check() const {
-  return absl::UnimplementedError(
-      "The check function is not implement yet");
+  return absl::UnimplementedError("The check function is not implement yet");
 }
 tensor::Tensor& Layer::get_input(int32_t idx) {
   CHECK_GE(idx, 0);

@@ -10,8 +10,8 @@ namespace runtime {
 GenerationResult Generate(const model::Model &model, const std::string &prompt,
                           const GenerationConfig &config) {
   if (config.max_steps <= 0) {
-    return {absl::InvalidArgumentError("max_steps must be greater than 0."),
-            "", 0};
+    return {absl::InvalidArgumentError("max_steps must be greater than 0."), "",
+            0};
   }
 
   auto tokens = model.encode(prompt);
