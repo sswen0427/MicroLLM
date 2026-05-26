@@ -1,0 +1,249 @@
+{
+  "model_dir": "my_tinyllama/AI-ModelScope/TinyLlama-1.1B-Chat-v1.0",
+  "prompt": "I am a",
+  "prompt_token_ids": [
+    1,
+    306,
+    626,
+    263
+  ],
+  "max_new_tokens": 8,
+  "top_k": 5,
+  "generated_token_ids": [
+    13524,
+    310,
+    278,
+    1510,
+    29889,
+    306,
+    505,
+    1063
+  ],
+  "generated_text": "fan of the show. I have been",
+  "steps": [
+    {
+      "step": 0,
+      "position": 3,
+      "input_token_id": 263,
+      "next_token_id": 13524,
+      "top_logits": [
+        {
+          "token_id": 13524,
+          "logit": 8.0625
+        },
+        {
+          "token_id": 2217,
+          "logit": 8.0
+        },
+        {
+          "token_id": 716,
+          "logit": 7.71875
+        },
+        {
+          "token_id": 4802,
+          "logit": 7.65625
+        },
+        {
+          "token_id": 4509,
+          "logit": 7.65625
+        }
+      ]
+    },
+    {
+      "step": 1,
+      "position": 4,
+      "input_token_id": 13524,
+      "next_token_id": 310,
+      "top_logits": [
+        {
+          "token_id": 310,
+          "logit": 14.9375
+        },
+        {
+          "token_id": 29889,
+          "logit": 12.75
+        },
+        {
+          "token_id": 29991,
+          "logit": 12.0
+        },
+        {
+          "token_id": 29892,
+          "logit": 11.5
+        },
+        {
+          "token_id": 322,
+          "logit": 10.9375
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "position": 5,
+      "input_token_id": 310,
+      "next_token_id": 278,
+      "top_logits": [
+        {
+          "token_id": 278,
+          "logit": 9.1875
+        },
+        {
+          "token_id": 596,
+          "logit": 9.0625
+        },
+        {
+          "token_id": 1716,
+          "logit": 8.5625
+        },
+        {
+          "token_id": 445,
+          "logit": 8.0625
+        },
+        {
+          "token_id": 599,
+          "logit": 7.90625
+        }
+      ]
+    },
+    {
+      "step": 3,
+      "position": 6,
+      "input_token_id": 278,
+      "next_token_id": 1510,
+      "top_logits": [
+        {
+          "token_id": 1510,
+          "logit": 7.65625
+        },
+        {
+          "token_id": 3143,
+          "logit": 7.15625
+        },
+        {
+          "token_id": 4148,
+          "logit": 7.125
+        },
+        {
+          "token_id": 716,
+          "logit": 7.0
+        },
+        {
+          "token_id": 22037,
+          "logit": 6.9375
+        }
+      ]
+    },
+    {
+      "step": 4,
+      "position": 7,
+      "input_token_id": 1510,
+      "next_token_id": 29889,
+      "top_logits": [
+        {
+          "token_id": 29889,
+          "logit": 11.3125
+        },
+        {
+          "token_id": 322,
+          "logit": 11.0625
+        },
+        {
+          "token_id": 29892,
+          "logit": 10.8125
+        },
+        {
+          "token_id": 29991,
+          "logit": 9.875
+        },
+        {
+          "token_id": 29973,
+          "logit": 9.5
+        }
+      ]
+    },
+    {
+      "step": 5,
+      "position": 8,
+      "input_token_id": 29889,
+      "next_token_id": 306,
+      "top_logits": [
+        {
+          "token_id": 306,
+          "logit": 12.9375
+        },
+        {
+          "token_id": 1815,
+          "logit": 12.0
+        },
+        {
+          "token_id": 2,
+          "logit": 11.5
+        },
+        {
+          "token_id": 739,
+          "logit": 11.5
+        },
+        {
+          "token_id": 13,
+          "logit": 11.3125
+        }
+      ]
+    },
+    {
+      "step": 6,
+      "position": 9,
+      "input_token_id": 306,
+      "next_token_id": 505,
+      "top_logits": [
+        {
+          "token_id": 505,
+          "logit": 13.25
+        },
+        {
+          "token_id": 5360,
+          "logit": 12.9375
+        },
+        {
+          "token_id": 626,
+          "logit": 12.75
+        },
+        {
+          "token_id": 1348,
+          "logit": 12.375
+        },
+        {
+          "token_id": 29915,
+          "logit": 12.3125
+        }
+      ]
+    },
+    {
+      "step": 7,
+      "position": 10,
+      "input_token_id": 505,
+      "next_token_id": 1063,
+      "top_logits": [
+        {
+          "token_id": 1063,
+          "logit": 13.0
+        },
+        {
+          "token_id": 20654,
+          "logit": 12.5625
+        },
+        {
+          "token_id": 3595,
+          "logit": 12.0
+        },
+        {
+          "token_id": 2337,
+          "logit": 11.4375
+        },
+        {
+          "token_id": 263,
+          "logit": 11.3125
+        }
+      ]
+    }
+  ]
+}
