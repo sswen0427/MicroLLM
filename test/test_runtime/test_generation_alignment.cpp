@@ -19,17 +19,6 @@ namespace {
 // HuggingFace and MicroLLM floating-point implementations.
 constexpr float kTop1LogitAbsTolerance = 7e-2f;
 
-std::vector<int32_t> SortedTopTokenIds(
-    const runtime::GenerationStep& step) {
-  std::vector<int32_t> token_ids;
-  token_ids.reserve(step.top_logits.size());
-  for (const auto& [token_id, logit] : step.top_logits) {
-    token_ids.push_back(token_id);
-  }
-  std::sort(token_ids.begin(), token_ids.end());
-  return token_ids;
-}
-
 }  // namespace
 
 TEST(GenerationAlignmentTest, TinyLlamaGreedyGenerationMatchesHfReference) {
@@ -164,7 +153,20 @@ TEST(GenerationAlignmentTest, TinyLlamaGreedyGenerationMatchesHfReference) {
                 expected_step.top_logits.front().second,
                 kTop1LogitAbsTolerance)
         << "Mismatch at generation step " << i;
-    EXPECT_EQ(SortedTopTokenIds(actual_step), SortedTopTokenIds(expected_step))
+
+    std::vector<int32_t> actual_top_token_ids;
+    std::vector<int32_t> expected_top_token_ids;
+    actual_top_token_ids.reserve(actual_step.top_logits.size());
+    expected_top_token_ids.reserve(expected_step.top_logits.size());
+    for (const auto& [token_id, logit] : actual_step.top_logits) {
+      actual_top_token_ids.push_back(token_id);
+    }
+    for (const auto& [token_id, logit] : expected_step.top_logits) {
+      expected_top_token_ids.push_back(token_id);
+    }
+    std::sort(actual_top_token_ids.begin(), actual_top_token_ids.end());
+    std::sort(expected_top_token_ids.begin(), expected_top_token_ids.end());
+    EXPECT_EQ(actual_top_token_ids, expected_top_token_ids)
         << "Mismatch at generation step " << i;
   }
 }
