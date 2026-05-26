@@ -4,14 +4,44 @@
 #include <absl/strings/str_cat.h>
 #include <glog/logging.h>
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <numeric>
 #include <string>
+#include <utility>
 #include <vector>
 
+#include "base/types.h"
 #include "model/llama_hf_forward.h"
+#include "tensor/tensor.h"
 
 namespace runtime {
+namespace {
+
+std::vector<std::pair<int32_t, float>> TopLogits(const tensor::Tensor& logits,
+                                                 int32_t top_k) {
+  CHECK(logits.data_type() == base::DataType::kDataTypeFp32);
+  CHECK(logits.device_type() == base::DeviceType::kDeviceCPU);
+  const int32_t size = static_cast<int32_t>(logits.size());
+  const int32_t k = std::min(top_k, size);
+  std::vector<int32_t> indices(size);
+  std::iota(indices.begin(), indices.end(), 0);
+  const float* data = logits.data<float>();
+  std::partial_sort(indices.begin(), indices.begin() + k, indices.end(),
+                    [data](int32_t lhs, int32_t rhs) {
+                      return data[lhs] > data[rhs];
+                    });
+
+  std::vector<std::pair<int32_t, float>> top_logits;
+  top_logits.reserve(k);
+  for (int32_t i = 0; i < k; ++i) {
+    top_logits.emplace_back(indices[i], data[indices[i]]);
+  }
+  return top_logits;
+}
+
+}  // namespace
 
 absl::StatusOr<GenerationResult> GenerateText(
     const model::LlamaHfModel& model, const tokenizer::Tokenizer& tokenizer,
@@ -21,6 +51,9 @@ absl::StatusOr<GenerationResult> GenerateText(
   }
   if (config.max_new_tokens <= 0) {
     return absl::InvalidArgumentError("max_new_tokens must be greater than 0.");
+  }
+  if (config.trace_top_k <= 0) {
+    return absl::InvalidArgumentError("trace_top_k must be greater than 0.");
   }
 
   const std::vector<int32_t> prompt_tokens = tokenizer.Encode(prompt);
@@ -36,21 +69,37 @@ absl::StatusOr<GenerationResult> GenerateText(
   }
 
   model::LlamaHfRuntime runtime(model);
+  GenerationResult result;
+  result.prompt_tokens = prompt_tokens;
+  result.tokens.reserve(config.max_new_tokens);
+  result.steps.reserve(config.max_new_tokens);
+
   int32_t next_token = -1;
+  model::LlamaForwardResult last_forward;
   for (int32_t pos = 0; pos < static_cast<int32_t>(prompt_tokens.size());
        ++pos) {
     auto forward_or = runtime.ForwardToken(prompt_tokens[pos], pos);
     if (!forward_or.ok()) {
       return forward_or.status();
     }
-    next_token = forward_or->next_token;
+    last_forward = std::move(*forward_or);
+    next_token = last_forward.next_token;
   }
 
-  GenerationResult result;
-  result.tokens.reserve(config.max_new_tokens);
   int32_t pos = static_cast<int32_t>(prompt_tokens.size());
   for (int32_t step = 0; step < config.max_new_tokens; ++step, ++pos) {
-    if (next_token < 0 || tokenizer.IsEndToken(next_token)) {
+    if (next_token < 0) {
+      break;
+    }
+    result.steps.push_back(GenerationStep{
+        .step = step,
+        .position = pos - 1,
+        .input_token_id =
+            step == 0 ? prompt_tokens.back() : result.tokens.back(),
+        .next_token_id = next_token,
+        .top_logits = TopLogits(last_forward.logits, config.trace_top_k),
+    });
+    if (tokenizer.IsEndToken(next_token)) {
       break;
     }
     result.tokens.push_back(next_token);
@@ -59,7 +108,8 @@ absl::StatusOr<GenerationResult> GenerateText(
     if (!forward_or.ok()) {
       return forward_or.status();
     }
-    next_token = forward_or->next_token;
+    last_forward = std::move(*forward_or);
+    next_token = last_forward.next_token;
   }
 
   result.text = tokenizer.Decode(result.tokens);
