@@ -15,19 +15,6 @@ namespace {
 
 constexpr float kLogitAbsTolerance = 1e-4f;
 
-struct ExpectedTopLogit {
-  int32_t token_id = 0;
-  float logit = 0.0f;
-};
-
-struct ExpectedGenerationStep {
-  int32_t step = 0;
-  int32_t position = 0;
-  int32_t input_token_id = 0;
-  int32_t next_token_id = 0;
-  std::vector<ExpectedTopLogit> top_logits;
-};
-
 }  // namespace
 
 TEST(GenerationAlignmentTest, TinyLlamaGreedyGenerationMatchesHfReference) {
@@ -61,7 +48,7 @@ TEST(GenerationAlignmentTest, TinyLlamaGreedyGenerationMatchesHfReference) {
   const std::vector<int32_t> expected_prompt_tokens = {1, 306, 626, 263};
   const std::vector<int32_t> expected_generated_tokens = {
       13524, 310, 278, 1510, 29889, 306, 505, 1063};
-  const std::vector<ExpectedGenerationStep> expected_steps = {
+  const std::vector<runtime::GenerationStep> expected_steps = {
       {.step = 0,
        .position = 3,
        .input_token_id = 263,
@@ -143,7 +130,7 @@ TEST(GenerationAlignmentTest, TinyLlamaGreedyGenerationMatchesHfReference) {
 
   for (size_t i = 0; i < expected_steps.size(); ++i) {
     const runtime::GenerationStep& actual_step = result_or->steps[i];
-    const ExpectedGenerationStep& expected_step = expected_steps[i];
+    const runtime::GenerationStep& expected_step = expected_steps[i];
     EXPECT_EQ(actual_step.step, expected_step.step)
         << "Mismatch at generation step " << i;
     EXPECT_EQ(actual_step.position, expected_step.position)
@@ -157,10 +144,10 @@ TEST(GenerationAlignmentTest, TinyLlamaGreedyGenerationMatchesHfReference) {
 
     for (size_t j = 0; j < expected_step.top_logits.size(); ++j) {
       EXPECT_EQ(actual_step.top_logits[j].first,
-                expected_step.top_logits[j].token_id)
+                expected_step.top_logits[j].first)
           << "Mismatch at generation step " << i << ", top logit " << j;
       EXPECT_NEAR(actual_step.top_logits[j].second,
-                  expected_step.top_logits[j].logit, kLogitAbsTolerance)
+                  expected_step.top_logits[j].second, kLogitAbsTolerance)
           << "Mismatch at generation step " << i << ", top logit " << j;
     }
   }
