@@ -14,6 +14,7 @@ namespace runtime {
 
 struct GenerationConfig {
   int32_t max_new_tokens = 32;
+  bool trace_steps = false;
   int32_t trace_top_k = 5;
 };
 

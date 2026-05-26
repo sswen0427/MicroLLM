@@ -44,6 +44,7 @@ TEST(GenerationAlignmentTest, TinyLlamaGreedyGenerationMatchesHfReference) {
 
   runtime::GenerationConfig config;
   config.max_new_tokens = 8;
+  config.trace_steps = true;
   config.trace_top_k = 5;
 
   auto result_or =

@@ -52,7 +52,7 @@ absl::StatusOr<GenerationResult> GenerateText(
   if (config.max_new_tokens <= 0) {
     return absl::InvalidArgumentError("max_new_tokens must be greater than 0.");
   }
-  if (config.trace_top_k <= 0) {
+  if (config.trace_steps && config.trace_top_k <= 0) {
     return absl::InvalidArgumentError("trace_top_k must be greater than 0.");
   }
 
@@ -72,7 +72,9 @@ absl::StatusOr<GenerationResult> GenerateText(
   GenerationResult result;
   result.prompt_tokens = prompt_tokens;
   result.tokens.reserve(config.max_new_tokens);
-  result.steps.reserve(config.max_new_tokens);
+  if (config.trace_steps) {
+    result.steps.reserve(config.max_new_tokens);
+  }
 
   int32_t next_token = -1;
   model::LlamaForwardResult last_forward;
@@ -91,14 +93,16 @@ absl::StatusOr<GenerationResult> GenerateText(
     if (next_token < 0) {
       break;
     }
-    result.steps.push_back(GenerationStep{
-        .step = step,
-        .position = pos - 1,
-        .input_token_id =
-            step == 0 ? prompt_tokens.back() : result.tokens.back(),
-        .next_token_id = next_token,
-        .top_logits = TopLogits(last_forward.logits, config.trace_top_k),
-    });
+    if (config.trace_steps) {
+      result.steps.push_back(GenerationStep{
+          .step = step,
+          .position = pos - 1,
+          .input_token_id =
+              step == 0 ? prompt_tokens.back() : result.tokens.back(),
+          .next_token_id = next_token,
+          .top_logits = TopLogits(last_forward.logits, config.trace_top_k),
+      });
+    }
     if (tokenizer.IsEndToken(next_token)) {
       break;
     }
