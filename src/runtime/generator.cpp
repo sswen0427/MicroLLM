@@ -28,10 +28,9 @@ std::vector<std::pair<int32_t, float>> TopLogits(const tensor::Tensor& logits,
   std::vector<int32_t> indices(size);
   std::iota(indices.begin(), indices.end(), 0);
   const float* data = logits.data<float>();
-  std::partial_sort(indices.begin(), indices.begin() + k, indices.end(),
-                    [data](int32_t lhs, int32_t rhs) {
-                      return data[lhs] > data[rhs];
-                    });
+  std::partial_sort(
+      indices.begin(), indices.begin() + k, indices.end(),
+      [data](int32_t lhs, int32_t rhs) { return data[lhs] > data[rhs]; });
 
   std::vector<std::pair<int32_t, float>> top_logits;
   top_logits.reserve(k);
