@@ -50,14 +50,16 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--dtype",
-        choices=("float32", "float16", "bfloat16"),
-        default="float32",
+        choices=("auto", "float32", "float16", "bfloat16"),
+        default="auto",
         help="Torch dtype used for the reference model.",
     )
     return parser.parse_args()
 
 
-def torch_dtype(name: str) -> torch.dtype:
+def torch_dtype(name: str) -> torch.dtype | str:
+    if name == "auto":
+        return "auto"
     if name == "float16":
         return torch.float16
     if name == "bfloat16":
@@ -140,10 +142,11 @@ def main() -> None:
         print(content)
 
 # python3 hf_reference_generate.py \
-#   --model_dir my_tinyllama \
+#   --model_dir my_tinyllama/AI-ModelScope/TinyLlama-1.1B-Chat-v1.0  \
 #   --prompt "I am a" \
 #   --max_new_tokens 8 \
 #   --top_k 5 \
+#   --dtype auto \
 #   --output tinyllama_trace.json
 if __name__ == "__main__":
     main()
