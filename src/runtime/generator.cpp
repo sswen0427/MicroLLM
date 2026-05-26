@@ -89,7 +89,7 @@ absl::StatusOr<GenerationResult> GenerateText(
 
   int32_t pos = static_cast<int32_t>(prompt_tokens.size());
   for (int32_t step = 0; step < config.max_new_tokens; ++step, ++pos) {
-    if (next_token < 0) {
+    if (next_token < 0 || tokenizer.IsEndToken(next_token)) {
       break;
     }
     if (config.trace_steps) {
@@ -101,9 +101,6 @@ absl::StatusOr<GenerationResult> GenerateText(
           .next_token_id = next_token,
           .top_logits = TopLogits(last_forward.logits, config.trace_top_k),
       });
-    }
-    if (tokenizer.IsEndToken(next_token)) {
-      break;
     }
     result.tokens.push_back(next_token);
 

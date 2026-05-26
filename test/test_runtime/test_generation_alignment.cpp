@@ -150,22 +150,17 @@ TEST(GenerationAlignmentTest, TinyLlamaGreedyGenerationMatchesHfReference) {
               expected_step.top_logits.front().first)
         << "Mismatch at generation step " << i;
     EXPECT_NEAR(actual_step.top_logits.front().second,
-                expected_step.top_logits.front().second,
-                kTop1LogitAbsTolerance)
+                expected_step.top_logits.front().second, kTop1LogitAbsTolerance)
         << "Mismatch at generation step " << i;
 
-    std::vector<int32_t> actual_top_token_ids;
-    std::vector<int32_t> expected_top_token_ids;
-    actual_top_token_ids.reserve(actual_step.top_logits.size());
-    expected_top_token_ids.reserve(expected_step.top_logits.size());
+    std::set<int32_t> actual_top_token_ids;
+    std::set<int32_t> expected_top_token_ids;
     for (const auto& [token_id, logit] : actual_step.top_logits) {
-      actual_top_token_ids.push_back(token_id);
+      actual_top_token_ids.insert(token_id);
     }
     for (const auto& [token_id, logit] : expected_step.top_logits) {
-      expected_top_token_ids.push_back(token_id);
+      expected_top_token_ids.insert(token_id);
     }
-    std::sort(actual_top_token_ids.begin(), actual_top_token_ids.end());
-    std::sort(expected_top_token_ids.begin(), expected_top_token_ids.end());
     EXPECT_EQ(actual_top_token_ids, expected_top_token_ids)
         << "Mismatch at generation step " << i;
   }
