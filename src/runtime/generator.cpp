@@ -5,6 +5,7 @@
 #include <glog/logging.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <numeric>
@@ -18,6 +19,12 @@
 
 namespace runtime {
 namespace {
+
+using Clock = std::chrono::steady_clock;
+
+double ElapsedMs(Clock::time_point start, Clock::time_point end) {
+  return std::chrono::duration<double, std::milli>(end - start).count();
+}
 
 std::vector<std::pair<int32_t, float>> TopLogits(const tensor::Tensor& logits,
                                                  int32_t top_k) {
@@ -71,12 +78,14 @@ absl::StatusOr<GenerationResult> GenerateText(
   GenerationResult result;
   result.prompt_tokens = prompt_tokens;
   result.tokens.reserve(config.max_new_tokens);
+  result.profile.prompt_tokens = prompt_tokens.size();
   if (config.trace_steps) {
     result.steps.reserve(config.max_new_tokens);
   }
 
   int32_t next_token = -1;
   model::LlamaForwardResult last_forward;
+  const Clock::time_point prefill_start = Clock::now();
   for (int32_t pos = 0; pos < static_cast<int32_t>(prompt_tokens.size());
        ++pos) {
     auto forward_or = runtime.ForwardToken(prompt_tokens[pos], pos);
@@ -86,8 +95,10 @@ absl::StatusOr<GenerationResult> GenerateText(
     last_forward = std::move(*forward_or);
     next_token = last_forward.next_token;
   }
+  const Clock::time_point prefill_end = Clock::now();
 
   int32_t pos = static_cast<int32_t>(prompt_tokens.size());
+  const Clock::time_point decode_start = Clock::now();
   for (int32_t step = 0; step < config.max_new_tokens; ++step, ++pos) {
     if (next_token < 0 || tokenizer.IsEndToken(next_token)) {
       break;
@@ -111,8 +122,14 @@ absl::StatusOr<GenerationResult> GenerateText(
     last_forward = std::move(*forward_or);
     next_token = last_forward.next_token;
   }
+  const Clock::time_point decode_end = Clock::now();
 
   result.text = tokenizer.Decode(result.tokens);
+  result.profile.generated_tokens = result.tokens.size();
+  result.profile.prefill_ms = ElapsedMs(prefill_start, prefill_end);
+  result.profile.decode_ms = ElapsedMs(decode_start, decode_end);
+  result.profile.total_ms =
+      result.profile.prefill_ms + result.profile.decode_ms;
   LOG(INFO) << "Generated tokens: " << result.tokens.size();
   return result;
 }

@@ -2,6 +2,7 @@
 
 #include <absl/status/statusor.h>
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <utility>
@@ -26,11 +27,20 @@ struct GenerationStep {
   std::vector<std::pair<int32_t, float>> top_logits;
 };
 
+struct GenerationProfile {
+  size_t prompt_tokens = 0;
+  size_t generated_tokens = 0;
+  double prefill_ms = 0.0;
+  double decode_ms = 0.0;
+  double total_ms = 0.0;
+};
+
 struct GenerationResult {
   std::string text;
   std::vector<int32_t> prompt_tokens;
   std::vector<int32_t> tokens;
   std::vector<GenerationStep> steps;
+  GenerationProfile profile;
 };
 
 absl::StatusOr<GenerationResult> GenerateText(
