@@ -3,7 +3,6 @@
 
 #include <chrono>
 #include <filesystem>
-#include <iomanip>
 #include <iostream>
 
 #include "model/llama_hf_model_loader.h"
@@ -22,9 +21,9 @@ double ElapsedMs(Clock::time_point start, Clock::time_point end) {
   return std::chrono::duration<double, std::milli>(end - start).count();
 }
 
-void PrintProfile(double model_load_ms, double tokenizer_load_ms,
-                  double generation_ms,
-                  const runtime::GenerationProfile& profile) {
+void LogProfile(double model_load_ms, double tokenizer_load_ms,
+                double generation_ms,
+                const runtime::GenerationProfile& profile) {
   const double decode_ms_per_token =
       profile.generated_tokens == 0
           ? 0.0
@@ -35,17 +34,15 @@ void PrintProfile(double model_load_ms, double tokenizer_load_ms,
           : static_cast<double>(profile.generated_tokens) * 1000.0 /
                 profile.decode_ms;
 
-  std::cerr << std::fixed << std::setprecision(3)
-            << "Profile:\n"
-            << "  model_load_ms: " << model_load_ms << "\n"
-            << "  tokenizer_load_ms: " << tokenizer_load_ms << "\n"
-            << "  generation_ms: " << generation_ms << "\n"
-            << "  prompt_tokens: " << profile.prompt_tokens << "\n"
-            << "  generated_tokens: " << profile.generated_tokens << "\n"
-            << "  prefill_ms: " << profile.prefill_ms << "\n"
-            << "  decode_ms: " << profile.decode_ms << "\n"
-            << "  decode_ms_per_token: " << decode_ms_per_token << "\n"
-            << "  decode_tokens_per_second: " << tokens_per_second << "\n";
+  LOG(INFO) << "Profile: model_load_ms=" << model_load_ms
+            << ", tokenizer_load_ms=" << tokenizer_load_ms
+            << ", generation_ms=" << generation_ms
+            << ", prompt_tokens=" << profile.prompt_tokens
+            << ", generated_tokens=" << profile.generated_tokens
+            << ", prefill_ms=" << profile.prefill_ms
+            << ", decode_ms=" << profile.decode_ms
+            << ", decode_ms_per_token=" << decode_ms_per_token
+            << ", decode_tokens_per_second=" << tokens_per_second;
 }
 
 }  // namespace
@@ -126,10 +123,9 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  PrintProfile(ElapsedMs(model_load_start, model_load_end),
-               ElapsedMs(tokenizer_load_start, tokenizer_load_end),
-               ElapsedMs(generation_start, generation_end),
-               result_or->profile);
+  LogProfile(ElapsedMs(model_load_start, model_load_end),
+             ElapsedMs(tokenizer_load_start, tokenizer_load_end),
+             ElapsedMs(generation_start, generation_end), result_or->profile);
   std::cout << result_or->text << "\n";
   return 0;
 }
