@@ -29,8 +29,7 @@ void LogProfile(const runtime::GenerationProfile& profile) {
             << ", attention_residual_ms="
             << profile.forward.attention_residual_ms
             << ", ffn_norm_ms=" << profile.forward.ffn_norm_ms
-            << ", ffn_up_gate_proj_ms="
-            << profile.forward.ffn_up_gate_proj_ms
+            << ", ffn_up_gate_proj_ms=" << profile.forward.ffn_up_gate_proj_ms
             << ", swiglu_ms=" << profile.forward.swiglu_ms
             << ", ffn_down_proj_ms=" << profile.forward.ffn_down_proj_ms
             << ", ffn_residual_ms=" << profile.forward.ffn_residual_ms
