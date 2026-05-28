@@ -356,7 +356,8 @@ void LlamaForwardProfile::Log() const {
   LOG(INFO) << "      rope_s=" << rope_ms / 1000.0;
   LOG(INFO) << "      kv_cache_s=" << kv_cache_ms / 1000.0;
   LOG(INFO) << "      attention_s=" << attention_ms / 1000.0;
-  LOG(INFO) << "      attention_output_proj_s=" << attention_output_proj_ms / 1000.0;
+  LOG(INFO) << "      attention_output_proj_s="
+            << attention_output_proj_ms / 1000.0;
   LOG(INFO) << "      attention_residual_s=" << attention_residual_ms / 1000.0;
   LOG(INFO) << "    FFN:";
   LOG(INFO) << "      ffn_norm_s=" << ffn_norm_ms / 1000.0;
