@@ -71,6 +71,7 @@ absl::StatusOr<GenerationResult> GenerateText(
   GenerationResult result;
   result.prompt_tokens = prompt_tokens;
   result.tokens.reserve(config.max_new_tokens);
+  result.profile.prompt_tokens = prompt_tokens.size();
   if (config.trace_steps) {
     result.steps.reserve(config.max_new_tokens);
   }
@@ -113,8 +114,17 @@ absl::StatusOr<GenerationResult> GenerateText(
   }
 
   result.text = tokenizer.Decode(result.tokens);
+  result.profile.generated_tokens = result.tokens.size();
+  result.profile.forward = runtime.profile();
   LOG(INFO) << "Generated tokens: " << result.tokens.size();
   return result;
+}
+
+void GenerationProfile::Log() const {
+  LOG(INFO) << "=== Generation Profile ===";
+  LOG(INFO) << "prompt_tokens=" << prompt_tokens;
+  LOG(INFO) << "generated_tokens=" << generated_tokens;
+  forward.Log();
 }
 
 }  // namespace runtime

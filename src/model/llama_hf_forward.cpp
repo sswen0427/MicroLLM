@@ -11,6 +11,7 @@
 #include <safetensors.hh>
 #include <vector>
 
+#include "base/profile.h"
 #include "base/types.h"
 
 namespace model {
@@ -232,9 +233,13 @@ absl::StatusOr<LlamaForwardResult> LlamaHfRuntime::ForwardToken(
 
   LOG(INFO) << "start LLaMA HF one-token forward: token_id=" << token_id
             << ", position=" << position;
+  profile_.forward_calls += 1;
 
   std::vector<float> hidden_state;
-  CopyMatrixRow(model_.weights.token_embedding, token_id, hidden_state);
+  {
+    base::ScopedProfile profile(profile_.embedding_ms);
+    CopyMatrixRow(model_.weights.token_embedding, token_id, hidden_state);
+  }
 
   std::vector<float> norm;
   std::vector<float> query;
@@ -250,49 +255,120 @@ absl::StatusOr<LlamaForwardResult> LlamaHfRuntime::ForwardToken(
   for (int32_t layer = 0; layer < config.num_hidden_layers; ++layer) {
     const LlamaHfLayerWeights& weights = model_.weights.layers[layer];
 
-    RmsNorm(hidden_state, weights.input_layernorm, config.rms_norm_eps, norm);
-    MatVec(weights.q_proj, norm, query);
-    MatVec(weights.k_proj, norm, key);
-    MatVec(weights.v_proj, norm, value);
+    {
+      base::ScopedProfile profile(profile_.attention_norm_ms);
+      RmsNorm(hidden_state, weights.input_layernorm, config.rms_norm_eps, norm);
+    }
+    {
+      base::ScopedProfile profile(profile_.qkv_proj_ms);
+      MatVec(weights.q_proj, norm, query);
+      MatVec(weights.k_proj, norm, key);
+      MatVec(weights.v_proj, norm, value);
+    }
 
-    ApplyRopeToHeads(query, config.num_attention_heads, head_size_, position,
-                     config.rope_theta);
-    ApplyRopeToHeads(key, config.num_key_value_heads, head_size_, position,
-                     config.rope_theta);
+    {
+      base::ScopedProfile profile(profile_.rope_ms);
+      ApplyRopeToHeads(query, config.num_attention_heads, head_size_, position,
+                       config.rope_theta);
+      ApplyRopeToHeads(key, config.num_key_value_heads, head_size_, position,
+                       config.rope_theta);
+    }
 
-    StoreKvCache(key, value, position, config.max_position_embeddings, kv_dim_,
-                 layer_caches_[layer].key, layer_caches_[layer].value);
-    AttentionWithCache(query, layer_caches_[layer].key,
-                       layer_caches_[layer].value, position,
-                       config.num_attention_heads, head_size_, kv_dim_, kv_mul_,
-                       attention_output);
-    MatVec(weights.o_proj, attention_output, projected_attention);
-    AddInPlace(hidden_state, projected_attention);
+    {
+      base::ScopedProfile profile(profile_.kv_cache_ms);
+      StoreKvCache(key, value, position, config.max_position_embeddings,
+                   kv_dim_, layer_caches_[layer].key,
+                   layer_caches_[layer].value);
+    }
+    {
+      base::ScopedProfile profile(profile_.attention_ms);
+      AttentionWithCache(query, layer_caches_[layer].key,
+                         layer_caches_[layer].value, position,
+                         config.num_attention_heads, head_size_, kv_dim_,
+                         kv_mul_, attention_output);
+    }
+    {
+      base::ScopedProfile profile(profile_.attention_output_proj_ms);
+      MatVec(weights.o_proj, attention_output, projected_attention);
+    }
+    {
+      base::ScopedProfile profile(profile_.attention_residual_ms);
+      AddInPlace(hidden_state, projected_attention);
+    }
 
-    RmsNorm(hidden_state, weights.post_attention_layernorm, config.rms_norm_eps,
-            norm);
-    MatVec(weights.gate_proj, norm, gate);
-    MatVec(weights.up_proj, norm, up);
-    SwiGlu(gate, up, activated);
-    MatVec(weights.down_proj, activated, projected_ffn);
-    AddInPlace(hidden_state, projected_ffn);
+    {
+      base::ScopedProfile profile(profile_.ffn_norm_ms);
+      RmsNorm(hidden_state, weights.post_attention_layernorm,
+              config.rms_norm_eps, norm);
+    }
+    {
+      base::ScopedProfile profile(profile_.ffn_up_gate_proj_ms);
+      MatVec(weights.gate_proj, norm, gate);
+      MatVec(weights.up_proj, norm, up);
+    }
+    {
+      base::ScopedProfile profile(profile_.swiglu_ms);
+      SwiGlu(gate, up, activated);
+    }
+    {
+      base::ScopedProfile profile(profile_.ffn_down_proj_ms);
+      MatVec(weights.down_proj, activated, projected_ffn);
+    }
+    {
+      base::ScopedProfile profile(profile_.ffn_residual_ms);
+      AddInPlace(hidden_state, projected_ffn);
+    }
   }
 
-  RmsNorm(hidden_state, model_.weights.final_norm, config.rms_norm_eps, norm);
+  {
+    base::ScopedProfile profile(profile_.final_norm_ms);
+    RmsNorm(hidden_state, model_.weights.final_norm, config.rms_norm_eps, norm);
+  }
 
   LlamaForwardResult result;
   result.logits = tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
                                            {config.vocab_size},
                                            base::DeviceType::kDeviceCPU);
   std::vector<float> logits;
-  MatVec(model_.weights.lm_head, norm, logits);
+  {
+    base::ScopedProfile profile(profile_.lm_head_ms);
+    MatVec(model_.weights.lm_head, norm, logits);
+  }
   CHECK_EQ(static_cast<int32_t>(logits.size()), config.vocab_size);
   std::copy(logits.begin(), logits.end(), result.logits.data<float>());
-  result.next_token = ArgMaxToken(result.logits);
+  {
+    base::ScopedProfile profile(profile_.argmax_ms);
+    result.next_token = ArgMaxToken(result.logits);
+  }
 
   LOG(INFO) << "finish LLaMA HF one-token forward: next_token="
             << result.next_token;
   return result;
+}
+
+void LlamaForwardProfile::Log() const {
+  LOG(INFO) << "  Forward Stats:";
+  LOG(INFO) << "    forward_calls=" << forward_calls;
+  LOG(INFO) << "    Embedding & Attention:";
+  LOG(INFO) << "      embedding_s=" << embedding_ms / 1000.0;
+  LOG(INFO) << "      attention_norm_s=" << attention_norm_ms / 1000.0;
+  LOG(INFO) << "      qkv_proj_s=" << qkv_proj_ms / 1000.0;
+  LOG(INFO) << "      rope_s=" << rope_ms / 1000.0;
+  LOG(INFO) << "      kv_cache_s=" << kv_cache_ms / 1000.0;
+  LOG(INFO) << "      attention_s=" << attention_ms / 1000.0;
+  LOG(INFO) << "      attention_output_proj_s="
+            << attention_output_proj_ms / 1000.0;
+  LOG(INFO) << "      attention_residual_s=" << attention_residual_ms / 1000.0;
+  LOG(INFO) << "    FFN:";
+  LOG(INFO) << "      ffn_norm_s=" << ffn_norm_ms / 1000.0;
+  LOG(INFO) << "      ffn_up_gate_proj_s=" << ffn_up_gate_proj_ms / 1000.0;
+  LOG(INFO) << "      swiglu_s=" << swiglu_ms / 1000.0;
+  LOG(INFO) << "      ffn_down_proj_s=" << ffn_down_proj_ms / 1000.0;
+  LOG(INFO) << "      ffn_residual_s=" << ffn_residual_ms / 1000.0;
+  LOG(INFO) << "    Final:";
+  LOG(INFO) << "      final_norm_s=" << final_norm_ms / 1000.0;
+  LOG(INFO) << "      lm_head_s=" << lm_head_ms / 1000.0;
+  LOG(INFO) << "      argmax_s=" << argmax_ms / 1000.0;
 }
 
 }  // namespace model

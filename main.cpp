@@ -82,6 +82,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
+  result_or->profile.Log();
   std::cout << result_or->text << "\n";
   return 0;
 }
