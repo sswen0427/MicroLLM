@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "model/llama_hf_forward.h"
 #include "model/llama_hf_model_loader.h"
 #include "tokenizer/tokenizer.h"
 
@@ -33,6 +34,7 @@ struct GenerationProfile {
   double prefill_ms = 0.0;
   double decode_ms = 0.0;
   double total_ms = 0.0;
+  model::LlamaForwardProfile forward;
 };
 
 struct GenerationResult {

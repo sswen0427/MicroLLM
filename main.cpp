@@ -41,8 +41,29 @@ void LogProfile(double model_load_ms, double tokenizer_load_ms,
             << ", generated_tokens=" << profile.generated_tokens
             << ", prefill_ms=" << profile.prefill_ms
             << ", decode_ms=" << profile.decode_ms
+            << ", runtime_total_ms=" << profile.total_ms
             << ", decode_ms_per_token=" << decode_ms_per_token
-            << ", decode_tokens_per_second=" << tokens_per_second;
+            << ", decode_tokens_per_second=" << tokens_per_second
+            << ", forward_calls=" << profile.forward.forward_calls
+            << ", embedding_ms=" << profile.forward.embedding_ms
+            << ", attention_norm_ms=" << profile.forward.attention_norm_ms
+            << ", qkv_proj_ms=" << profile.forward.qkv_proj_ms
+            << ", rope_ms=" << profile.forward.rope_ms
+            << ", kv_cache_ms=" << profile.forward.kv_cache_ms
+            << ", attention_ms=" << profile.forward.attention_ms
+            << ", attention_output_proj_ms="
+            << profile.forward.attention_output_proj_ms
+            << ", attention_residual_ms="
+            << profile.forward.attention_residual_ms
+            << ", ffn_norm_ms=" << profile.forward.ffn_norm_ms
+            << ", ffn_up_gate_proj_ms="
+            << profile.forward.ffn_up_gate_proj_ms
+            << ", swiglu_ms=" << profile.forward.swiglu_ms
+            << ", ffn_down_proj_ms=" << profile.forward.ffn_down_proj_ms
+            << ", ffn_residual_ms=" << profile.forward.ffn_residual_ms
+            << ", final_norm_ms=" << profile.forward.final_norm_ms
+            << ", lm_head_ms=" << profile.forward.lm_head_ms
+            << ", argmax_ms=" << profile.forward.argmax_ms;
 }
 
 }  // namespace

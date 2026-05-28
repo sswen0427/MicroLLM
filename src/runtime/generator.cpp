@@ -130,6 +130,7 @@ absl::StatusOr<GenerationResult> GenerateText(
   result.profile.decode_ms = ElapsedMs(decode_start, decode_end);
   result.profile.total_ms =
       result.profile.prefill_ms + result.profile.decode_ms;
+  result.profile.forward = runtime.profile();
   LOG(INFO) << "Generated tokens: " << result.tokens.size();
   return result;
 }
