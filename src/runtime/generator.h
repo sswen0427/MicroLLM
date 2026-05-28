@@ -32,6 +32,8 @@ struct GenerationProfile {
   size_t prompt_tokens = 0;
   size_t generated_tokens = 0;
   model::LlamaForwardProfile forward;
+
+  void Log() const;
 };
 
 struct GenerationResult {

@@ -120,4 +120,11 @@ absl::StatusOr<GenerationResult> GenerateText(
   return result;
 }
 
+void GenerationProfile::Log() const {
+  LOG(INFO) << "=== Generation Profile ===";
+  LOG(INFO) << "prompt_tokens=" << prompt_tokens;
+  LOG(INFO) << "generated_tokens=" << generated_tokens;
+  forward.Log();
+}
+
 }  // namespace runtime

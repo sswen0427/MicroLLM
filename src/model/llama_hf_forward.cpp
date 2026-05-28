@@ -346,4 +346,28 @@ absl::StatusOr<LlamaForwardResult> LlamaHfRuntime::ForwardToken(
   return result;
 }
 
+void LlamaForwardProfile::Log() const {
+  LOG(INFO) << "  Forward Stats:";
+  LOG(INFO) << "    forward_calls=" << forward_calls;
+  LOG(INFO) << "    Embedding & Attention:";
+  LOG(INFO) << "      embedding_ms=" << embedding_ms;
+  LOG(INFO) << "      attention_norm_ms=" << attention_norm_ms;
+  LOG(INFO) << "      qkv_proj_ms=" << qkv_proj_ms;
+  LOG(INFO) << "      rope_ms=" << rope_ms;
+  LOG(INFO) << "      kv_cache_ms=" << kv_cache_ms;
+  LOG(INFO) << "      attention_ms=" << attention_ms;
+  LOG(INFO) << "      attention_output_proj_ms=" << attention_output_proj_ms;
+  LOG(INFO) << "      attention_residual_ms=" << attention_residual_ms;
+  LOG(INFO) << "    FFN:";
+  LOG(INFO) << "      ffn_norm_ms=" << ffn_norm_ms;
+  LOG(INFO) << "      ffn_up_gate_proj_ms=" << ffn_up_gate_proj_ms;
+  LOG(INFO) << "      swiglu_ms=" << swiglu_ms;
+  LOG(INFO) << "      ffn_down_proj_ms=" << ffn_down_proj_ms;
+  LOG(INFO) << "      ffn_residual_ms=" << ffn_residual_ms;
+  LOG(INFO) << "    Final:";
+  LOG(INFO) << "      final_norm_ms=" << final_norm_ms;
+  LOG(INFO) << "      lm_head_ms=" << lm_head_ms;
+  LOG(INFO) << "      argmax_ms=" << argmax_ms;
+}
+
 }  // namespace model

@@ -33,6 +33,8 @@ struct LlamaForwardProfile {
   double final_norm_ms = 0.0;
   double lm_head_ms = 0.0;
   double argmax_ms = 0.0;
+
+  void Log() const;
 };
 
 class LlamaHfRuntime {

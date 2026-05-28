@@ -12,34 +12,6 @@ DEFINE_string(model_dir, "", "HuggingFace model directory.");
 DEFINE_string(prompt, "", "Prompt text to generate from.");
 DEFINE_int32(max_new_tokens, 32, "Maximum number of tokens to generate.");
 
-namespace {
-
-void LogProfile(const runtime::GenerationProfile& profile) {
-  LOG(INFO) << "Profile: prompt_tokens=" << profile.prompt_tokens
-            << ", generated_tokens=" << profile.generated_tokens
-            << ", forward_calls=" << profile.forward.forward_calls
-            << ", embedding_ms=" << profile.forward.embedding_ms
-            << ", attention_norm_ms=" << profile.forward.attention_norm_ms
-            << ", qkv_proj_ms=" << profile.forward.qkv_proj_ms
-            << ", rope_ms=" << profile.forward.rope_ms
-            << ", kv_cache_ms=" << profile.forward.kv_cache_ms
-            << ", attention_ms=" << profile.forward.attention_ms
-            << ", attention_output_proj_ms="
-            << profile.forward.attention_output_proj_ms
-            << ", attention_residual_ms="
-            << profile.forward.attention_residual_ms
-            << ", ffn_norm_ms=" << profile.forward.ffn_norm_ms
-            << ", ffn_up_gate_proj_ms=" << profile.forward.ffn_up_gate_proj_ms
-            << ", swiglu_ms=" << profile.forward.swiglu_ms
-            << ", ffn_down_proj_ms=" << profile.forward.ffn_down_proj_ms
-            << ", ffn_residual_ms=" << profile.forward.ffn_residual_ms
-            << ", final_norm_ms=" << profile.forward.final_norm_ms
-            << ", lm_head_ms=" << profile.forward.lm_head_ms
-            << ", argmax_ms=" << profile.forward.argmax_ms;
-}
-
-}  // namespace
-
 int main(int argc, char* argv[]) {
   gflags::SetUsageMessage(
       "MicroLLM inference runtime.\n\n"
@@ -110,7 +82,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  LogProfile(result_or->profile);
+  result_or->profile.Log();
   std::cout << result_or->text << "\n";
   return 0;
 }
