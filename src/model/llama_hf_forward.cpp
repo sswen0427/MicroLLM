@@ -5,37 +5,17 @@
 #include <glog/logging.h>
 
 #include <algorithm>
-#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <safetensors.hh>
 #include <vector>
 
+#include "base/profile.h"
 #include "base/types.h"
 
 namespace model {
 namespace {
-
-using Clock = std::chrono::steady_clock;
-
-double ElapsedMs(Clock::time_point start, Clock::time_point end) {
-  return std::chrono::duration<double, std::milli>(end - start).count();
-}
-
-class ScopedProfile {
- public:
-  explicit ScopedProfile(double& elapsed_ms)
-      : elapsed_ms_(elapsed_ms), start_(Clock::now()) {}
-
-  ~ScopedProfile() {
-    elapsed_ms_ += ElapsedMs(start_, Clock::now());
-  }
-
- private:
-  double& elapsed_ms_;
-  Clock::time_point start_;
-};
 
 float TensorElementAsFloat(const tensor::Tensor& tensor, size_t offset) {
   switch (tensor.data_type()) {
@@ -257,7 +237,7 @@ absl::StatusOr<LlamaForwardResult> LlamaHfRuntime::ForwardToken(
 
   std::vector<float> hidden_state;
   {
-    ScopedProfile profile(profile_.embedding_ms);
+    base::ScopedProfile profile(profile_.embedding_ms);
     CopyMatrixRow(model_.weights.token_embedding, token_id, hidden_state);
   }
 
@@ -276,18 +256,18 @@ absl::StatusOr<LlamaForwardResult> LlamaHfRuntime::ForwardToken(
     const LlamaHfLayerWeights& weights = model_.weights.layers[layer];
 
     {
-      ScopedProfile profile(profile_.attention_norm_ms);
+      base::ScopedProfile profile(profile_.attention_norm_ms);
       RmsNorm(hidden_state, weights.input_layernorm, config.rms_norm_eps, norm);
     }
     {
-      ScopedProfile profile(profile_.qkv_proj_ms);
+      base::ScopedProfile profile(profile_.qkv_proj_ms);
       MatVec(weights.q_proj, norm, query);
       MatVec(weights.k_proj, norm, key);
       MatVec(weights.v_proj, norm, value);
     }
 
     {
-      ScopedProfile profile(profile_.rope_ms);
+      base::ScopedProfile profile(profile_.rope_ms);
       ApplyRopeToHeads(query, config.num_attention_heads, head_size_, position,
                        config.rope_theta);
       ApplyRopeToHeads(key, config.num_key_value_heads, head_size_, position,
@@ -295,53 +275,53 @@ absl::StatusOr<LlamaForwardResult> LlamaHfRuntime::ForwardToken(
     }
 
     {
-      ScopedProfile profile(profile_.kv_cache_ms);
+      base::ScopedProfile profile(profile_.kv_cache_ms);
       StoreKvCache(key, value, position, config.max_position_embeddings,
                    kv_dim_, layer_caches_[layer].key,
                    layer_caches_[layer].value);
     }
     {
-      ScopedProfile profile(profile_.attention_ms);
+      base::ScopedProfile profile(profile_.attention_ms);
       AttentionWithCache(query, layer_caches_[layer].key,
                          layer_caches_[layer].value, position,
                          config.num_attention_heads, head_size_, kv_dim_,
                          kv_mul_, attention_output);
     }
     {
-      ScopedProfile profile(profile_.attention_output_proj_ms);
+      base::ScopedProfile profile(profile_.attention_output_proj_ms);
       MatVec(weights.o_proj, attention_output, projected_attention);
     }
     {
-      ScopedProfile profile(profile_.attention_residual_ms);
+      base::ScopedProfile profile(profile_.attention_residual_ms);
       AddInPlace(hidden_state, projected_attention);
     }
 
     {
-      ScopedProfile profile(profile_.ffn_norm_ms);
+      base::ScopedProfile profile(profile_.ffn_norm_ms);
       RmsNorm(hidden_state, weights.post_attention_layernorm,
               config.rms_norm_eps, norm);
     }
     {
-      ScopedProfile profile(profile_.ffn_up_gate_proj_ms);
+      base::ScopedProfile profile(profile_.ffn_up_gate_proj_ms);
       MatVec(weights.gate_proj, norm, gate);
       MatVec(weights.up_proj, norm, up);
     }
     {
-      ScopedProfile profile(profile_.swiglu_ms);
+      base::ScopedProfile profile(profile_.swiglu_ms);
       SwiGlu(gate, up, activated);
     }
     {
-      ScopedProfile profile(profile_.ffn_down_proj_ms);
+      base::ScopedProfile profile(profile_.ffn_down_proj_ms);
       MatVec(weights.down_proj, activated, projected_ffn);
     }
     {
-      ScopedProfile profile(profile_.ffn_residual_ms);
+      base::ScopedProfile profile(profile_.ffn_residual_ms);
       AddInPlace(hidden_state, projected_ffn);
     }
   }
 
   {
-    ScopedProfile profile(profile_.final_norm_ms);
+    base::ScopedProfile profile(profile_.final_norm_ms);
     RmsNorm(hidden_state, model_.weights.final_norm, config.rms_norm_eps, norm);
   }
 
@@ -351,13 +331,13 @@ absl::StatusOr<LlamaForwardResult> LlamaHfRuntime::ForwardToken(
                                            base::DeviceType::kDeviceCPU);
   std::vector<float> logits;
   {
-    ScopedProfile profile(profile_.lm_head_ms);
+    base::ScopedProfile profile(profile_.lm_head_ms);
     MatVec(model_.weights.lm_head, norm, logits);
   }
   CHECK_EQ(static_cast<int32_t>(logits.size()), config.vocab_size);
   std::copy(logits.begin(), logits.end(), result.logits.data<float>());
   {
-    ScopedProfile profile(profile_.argmax_ms);
+    base::ScopedProfile profile(profile_.argmax_ms);
     result.next_token = ArgMaxToken(result.logits);
   }
 
