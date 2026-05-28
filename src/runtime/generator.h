@@ -31,9 +31,6 @@ struct GenerationStep {
 struct GenerationProfile {
   size_t prompt_tokens = 0;
   size_t generated_tokens = 0;
-  double prefill_ms = 0.0;
-  double decode_ms = 0.0;
-  double total_ms = 0.0;
   model::LlamaForwardProfile forward;
 };
 

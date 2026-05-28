@@ -1,7 +1,6 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
-#include <chrono>
 #include <filesystem>
 #include <iostream>
 
@@ -15,35 +14,9 @@ DEFINE_int32(max_new_tokens, 32, "Maximum number of tokens to generate.");
 
 namespace {
 
-using Clock = std::chrono::steady_clock;
-
-double ElapsedMs(Clock::time_point start, Clock::time_point end) {
-  return std::chrono::duration<double, std::milli>(end - start).count();
-}
-
-void LogProfile(double model_load_ms, double tokenizer_load_ms,
-                double generation_ms,
-                const runtime::GenerationProfile& profile) {
-  const double decode_ms_per_token =
-      profile.generated_tokens == 0
-          ? 0.0
-          : profile.decode_ms / static_cast<double>(profile.generated_tokens);
-  const double tokens_per_second =
-      profile.decode_ms <= 0.0
-          ? 0.0
-          : static_cast<double>(profile.generated_tokens) * 1000.0 /
-                profile.decode_ms;
-
-  LOG(INFO) << "Profile: model_load_ms=" << model_load_ms
-            << ", tokenizer_load_ms=" << tokenizer_load_ms
-            << ", generation_ms=" << generation_ms
-            << ", prompt_tokens=" << profile.prompt_tokens
+void LogProfile(const runtime::GenerationProfile& profile) {
+  LOG(INFO) << "Profile: prompt_tokens=" << profile.prompt_tokens
             << ", generated_tokens=" << profile.generated_tokens
-            << ", prefill_ms=" << profile.prefill_ms
-            << ", decode_ms=" << profile.decode_ms
-            << ", runtime_total_ms=" << profile.total_ms
-            << ", decode_ms_per_token=" << decode_ms_per_token
-            << ", decode_tokens_per_second=" << tokens_per_second
             << ", forward_calls=" << profile.forward.forward_calls
             << ", embedding_ms=" << profile.forward.embedding_ms
             << ", attention_norm_ms=" << profile.forward.attention_norm_ms
@@ -107,9 +80,7 @@ int main(int argc, char* argv[]) {
   google::InstallFailureSignalHandler();
   LOG(INFO) << "Writing logs to model directory: " << FLAGS_log_dir;
 
-  const Clock::time_point model_load_start = Clock::now();
   auto model_or = model::LoadLlamaHfModel(FLAGS_model_dir);
-  const Clock::time_point model_load_end = Clock::now();
   if (!model_or.ok()) {
     std::cerr << "Error: " << model_or.status().message() << "\n";
     return 1;
@@ -123,11 +94,9 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  const Clock::time_point tokenizer_load_start = Clock::now();
   auto tokenizer_or = tokenizer::SentencePieceTokenizer::Load(
       tokenizer_path.string(),
       tokenizer::TokenizerOptions{.add_bos = true, .add_eos = false});
-  const Clock::time_point tokenizer_load_end = Clock::now();
   if (!tokenizer_or.ok()) {
     std::cerr << "Error: " << tokenizer_or.status().message() << "\n";
     return 1;
@@ -135,18 +104,14 @@ int main(int argc, char* argv[]) {
 
   runtime::GenerationConfig generation_config;
   generation_config.max_new_tokens = FLAGS_max_new_tokens;
-  const Clock::time_point generation_start = Clock::now();
   auto result_or = runtime::GenerateText(**model_or, **tokenizer_or,
                                          FLAGS_prompt, generation_config);
-  const Clock::time_point generation_end = Clock::now();
   if (!result_or.ok()) {
     std::cerr << "Error: " << result_or.status().message() << "\n";
     return 1;
   }
 
-  LogProfile(ElapsedMs(model_load_start, model_load_end),
-             ElapsedMs(tokenizer_load_start, tokenizer_load_end),
-             ElapsedMs(generation_start, generation_end), result_or->profile);
+  LogProfile(result_or->profile);
   std::cout << result_or->text << "\n";
   return 0;
 }
