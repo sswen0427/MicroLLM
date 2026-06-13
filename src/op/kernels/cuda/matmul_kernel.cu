@@ -71,42 +71,6 @@ __global__ void matmul_kernel_cu_fp32(const float* input, const float* weight,
   }
 }
 
-template <int THREAD_PER_BLOCK, int ROW_PER_BLOCK>
-__global__ void matmul_kernel_cu_fp32int8(const float* input,
-                                          const int8_t* weight,
-                                          const float* scales,
-                                          const int32_t group_size,
-                                          float* output, int M, int K) {
-  __shared__ float sdata[THREAD_PER_BLOCK];
-  unsigned int tid = threadIdx.x;
-
-  int start_row = blockIdx.x * ROW_PER_BLOCK;
-  int end_row = start_row + ROW_PER_BLOCK;
-  if (start_row >= K) {
-    return;
-  }
-  for (int p = start_row; p < end_row; ++p) {
-    sdata[tid] = 0;
-    for (int i = tid; i < M; i += THREAD_PER_BLOCK) {
-      const int weight_idx = p * M + i;
-      const int group_idx = weight_idx / group_size;
-      sdata[tid] +=
-          input[i] * scales[group_idx] * static_cast<float>(weight[weight_idx]);
-    }
-    __syncthreads();
-
-    using BlockReduce = cub::BlockReduce<float, THREAD_PER_BLOCK>;
-    __shared__ typename BlockReduce::TempStorage temp;
-    float part_sum = BlockReduce(temp).Sum(sdata[tid]);
-    __syncthreads();
-
-    if (tid == 0) {
-      output[p] = part_sum;
-    }
-    __syncthreads();
-  }
-}
-
 void matmul_kernel_cu(const tensor::Tensor& input, const tensor::Tensor& weight,
                       const tensor::Tensor& output, const float scale,
                       const base::CudaConfig* config) {
@@ -129,33 +93,6 @@ void matmul_kernel_cu(const tensor::Tensor& input, const tensor::Tensor& weight,
     matmul_kernel_cu_fp32<128, 1>
         <<<K, 128>>>(input.data<float>(), weight.data<float>(),
                      const_cast<float*>(output.data<float>()), M, K);
-  }
-}
-
-void matmul_kernel_cu_qint8(const tensor::Tensor& input,
-                            const tensor::Tensor& weight,
-                            const tensor::Tensor& output, int32_t group_size,
-                            const tensor::Tensor& scale,
-                            const base::CudaConfig* config) {
-  CHECK(config != nullptr);
-  CHECK(input.is_empty() == false && input.dims_size() <= 2);
-  CHECK(input.device_type() == base::DeviceType::kDeviceCUDA);
-
-  CHECK(weight.is_empty() == false && weight.dims_size() == 2);
-  CHECK(weight.device_type() == base::DeviceType::kDeviceCUDA);
-  const int32_t K = weight.get_dim(0);  // row
-  const int32_t M = weight.get_dim(1);  // col
-  int packet_size = 4;
-  CHECK_EQ(M % packet_size, 0);
-  CHECK_EQ(M, input.get_dim(0));
-  if (config->stream) {
-    matmul_kernel_cu_fp32int8<128, 1><<<K, 128, 0, config->stream>>>(
-        input.data<float>(), weight.data<int8_t>(), scale.data<float>(),
-        group_size, const_cast<float*>(output.data<float>()), M, K);
-  } else {
-    matmul_kernel_cu_fp32int8<128, 1><<<K, 128>>>(
-        input.data<float>(), weight.data<int8_t>(), scale.data<float>(),
-        group_size, const_cast<float*>(output.data<float>()), M, K);
   }
 }
 }  // namespace kernel
