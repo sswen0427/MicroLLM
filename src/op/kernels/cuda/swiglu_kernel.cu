@@ -1,25 +1,18 @@
+#include "base/cuda_check.h"
 #include "swiglu_kernel.cuh"
 #include "tensor/tensor.h"
+
 namespace kernel {
 __global__ void swiglu_kernel_cu_fp32(int size, const float* in1,
                                       const float* in2, float* out) {
-  int tid = threadIdx.x;
   int idx = threadIdx.x + blockDim.x * blockIdx.x;
   if (idx >= size) {
     return;
   }
-  extern __shared__ float shared_mem[];
-  float* smem1 = shared_mem;
-  float* smem2 = shared_mem + blockDim.x;
 
-  smem1[tid] = in1[idx];
-  smem2[tid] = in2[idx];
-  __syncthreads();
-
-  float value = 1.0f / (1.0f + exp(-smem1[tid]));
-  smem1[tid] = smem1[tid] * value;
-
-  out[idx] = smem1[tid] * smem2[tid];
+  const float gate = in1[idx];
+  const float silu = gate / (1.0f + expf(-gate));
+  out[idx] = silu * in2[idx];
 }
 
 void swiglu_kernel_cu(const tensor::Tensor& input1,
@@ -37,16 +30,16 @@ void swiglu_kernel_cu(const tensor::Tensor& input1,
   int size = static_cast<int32_t>(input1.size());
   int threads = 128;
   int blocks = (size + threads - 1) / threads;
-  const size_t shmem = threads * sizeof(float) * 2;
   if (!stream) {
-    swiglu_kernel_cu_fp32<<<blocks, threads, shmem>>>(
+    swiglu_kernel_cu_fp32<<<blocks, threads>>>(
         size, input1.data<float>(), input2.data<float>(),
         const_cast<float*>(output.data<float>()));
   } else {
     cudaStream_t stream_ = static_cast<cudaStream_t>(stream);
-    swiglu_kernel_cu_fp32<<<blocks, threads, shmem, stream_>>>(
+    swiglu_kernel_cu_fp32<<<blocks, threads, 0, stream_>>>(
         size, input1.data<float>(), input2.data<float>(),
         const_cast<float*>(output.data<float>()));
   }
+  CHECK_CUDA(cudaGetLastError());
 }
 }  // namespace kernel

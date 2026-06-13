@@ -1,5 +1,6 @@
 #include <cub/block/block_reduce.cuh>
 
+#include "base/cuda_check.h"
 #include "base/types.h"
 #include "matmul_kernel.cuh"
 #include "tensor/tensor.h"
@@ -94,5 +95,6 @@ void matmul_kernel_cu(const tensor::Tensor& input, const tensor::Tensor& weight,
         <<<K, 128>>>(input.data<float>(), weight.data<float>(),
                      const_cast<float*>(output.data<float>()), M, K);
   }
+  CHECK_CUDA(cudaGetLastError());
 }
 }  // namespace kernel

@@ -2,6 +2,7 @@
 
 #include <cub/block/block_reduce.cuh>
 
+#include "base/cuda_check.h"
 #include "rmsnorm_kernel.cuh"
 namespace kernel {
 template <int32_t BLOCK_DIM>
@@ -82,5 +83,6 @@ void rmsnorm_kernel_cu(const tensor::Tensor& input,
     row_rmsnorm_f32<128>
         <<<1, threads_num>>>(in_ptr, wei_ptr, out_ptr, size, eps);
   }
+  CHECK_CUDA(cudaGetLastError());
 }
 }  // namespace kernel
