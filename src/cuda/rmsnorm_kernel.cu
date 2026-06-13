@@ -85,4 +85,4 @@ void rmsnorm_kernel_cu(const tensor::Tensor &input,
   }
   CHECK_CUDA(cudaGetLastError());
 }
-}  // namespace kernel
+} // namespace kernel

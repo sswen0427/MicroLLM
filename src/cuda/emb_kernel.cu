@@ -51,4 +51,4 @@ void emb_kernel_cu(const tensor::Tensor &input, const tensor::Tensor &weight,
   }
   CHECK_CUDA(cudaGetLastError());
 }
-}  // namespace kernel
+} // namespace kernel

@@ -42,4 +42,4 @@ void swiglu_kernel_cu(const tensor::Tensor &input1,
   }
   CHECK_CUDA(cudaGetLastError());
 }
-}  // namespace kernel
+} // namespace kernel

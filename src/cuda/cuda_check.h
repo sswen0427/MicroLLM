@@ -10,9 +10,9 @@ inline void CheckCuda(cudaError_t error, const char *expression) {
       << expression << " failed: " << cudaGetErrorString(error);
 }
 
-}  // namespace cuda_util
+} // namespace cuda_util
 
-#define CHECK_CUDA(expression)                         \
-  do {                                                 \
-    ::cuda_util::CheckCuda((expression), #expression); \
+#define CHECK_CUDA(expression)                                                 \
+  do {                                                                         \
+    ::cuda_util::CheckCuda((expression), #expression);                         \
   } while (false)
