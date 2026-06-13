@@ -64,7 +64,7 @@ absl::StatusOr<GenerationResult> GenerateText(
         model.config.max_position_embeddings));
   }
 
-  model::LlamaHfRuntime runtime(model);
+  model::LlamaHfRuntime runtime(model, config.device_type);
   GenerationResult result;
   result.prompt_tokens = prompt_tokens;
   result.tokens.reserve(config.max_new_tokens);
