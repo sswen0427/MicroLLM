@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include "cuda/add_kernel.cuh"
 #include "cuda/emb_kernel.cuh"
 #include "cuda/matmul_kernel.cuh"
 #include "cuda/rmsnorm_kernel.cuh"
@@ -34,6 +35,15 @@ tensor::Tensor CopyVectorToCudaTensor(const std::vector<float> &values) {
   return tensor;
 }
 
+tensor::Tensor EnsureCudaTensor(const tensor::Tensor &tensor) {
+  if (tensor.device_type() == base::DeviceType::kDeviceCUDA) {
+    return tensor;
+  }
+  tensor::Tensor cuda_tensor = tensor.clone();
+  cuda_tensor.to_cuda();
+  return cuda_tensor;
+}
+
 std::vector<float> CopyTensorToVector(tensor::Tensor tensor) {
   tensor.to_cpu();
   std::vector<float> values(tensor.size());
@@ -42,7 +52,7 @@ std::vector<float> CopyTensorToVector(tensor::Tensor tensor) {
   return values;
 }
 
-}  // namespace
+} // namespace
 
 base::DeviceType CudaLlamaBackend::device_type() const {
   return base::DeviceType::kDeviceCUDA;
@@ -59,6 +69,19 @@ void CudaLlamaBackend::Embedding(const tensor::Tensor &weight, int32_t token_id,
   kernel::emb_kernel_cu(input, Fp32CudaWeight(weight), output_tensor,
                         weight.get_dim(0), nullptr);
   output = CopyTensorToVector(std::move(output_tensor));
+}
+
+tensor::Tensor CudaLlamaBackend::EmbeddingTensor(const tensor::Tensor &weight,
+                                                 int32_t token_id) const {
+  tensor::Tensor input = tensor::Tensor::allocate(
+      base::DataType::kDataTypeInt32, {1}, base::DeviceType::kDeviceCPU);
+  input.data<int32_t>()[0] = token_id;
+  tensor::Tensor output_tensor = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {weight.get_dim(1)},
+      base::DeviceType::kDeviceCUDA);
+  kernel::emb_kernel_cu(input, Fp32CudaWeight(weight), output_tensor,
+                        weight.get_dim(0), nullptr);
+  return output_tensor;
 }
 
 void CudaLlamaBackend::RmsNorm(const std::vector<float> &input,
@@ -78,6 +101,25 @@ void CudaLlamaBackend::RmsNorm(const std::vector<float> &input,
   output = CopyTensorToVector(std::move(output_tensor));
 }
 
+tensor::Tensor CudaLlamaBackend::RmsNormTensor(const tensor::Tensor &input,
+                                               const tensor::Tensor &weight,
+                                               double eps) const {
+  if (std::abs(eps - 1e-5) > 1e-12) {
+    std::vector<float> output;
+    cpu_.RmsNorm(CopyTensorToVector(input), weight, eps, output);
+    return CopyVectorToCudaTensor(output);
+  }
+
+  tensor::Tensor input_tensor = EnsureCudaTensor(input);
+  tensor::Tensor output_tensor =
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
+                               {static_cast<int32_t>(input_tensor.size())},
+                               base::DeviceType::kDeviceCUDA);
+  kernel::rmsnorm_kernel_cu(input_tensor, Fp32CudaWeight(weight), output_tensor,
+                            nullptr);
+  return output_tensor;
+}
+
 void CudaLlamaBackend::MatVec(const tensor::Tensor &weight,
                               const std::vector<float> &input,
                               std::vector<float> &output) const {
@@ -88,6 +130,18 @@ void CudaLlamaBackend::MatVec(const tensor::Tensor &weight,
   kernel::matmul_kernel_cu(input_tensor, Fp32CudaWeight(weight), output_tensor,
                            1.0f, nullptr);
   output = CopyTensorToVector(std::move(output_tensor));
+}
+
+tensor::Tensor
+CudaLlamaBackend::MatVecTensor(const tensor::Tensor &weight,
+                               const tensor::Tensor &input) const {
+  tensor::Tensor input_tensor = EnsureCudaTensor(input);
+  tensor::Tensor output_tensor = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {weight.get_dim(0)},
+      base::DeviceType::kDeviceCUDA);
+  kernel::matmul_kernel_cu(input_tensor, Fp32CudaWeight(weight), output_tensor,
+                           1.0f, nullptr);
+  return output_tensor;
 }
 
 void CudaLlamaBackend::ApplyRopeToHeads(std::vector<float> &values,
@@ -130,17 +184,43 @@ void CudaLlamaBackend::SwiGlu(const std::vector<float> &gate,
   output = CopyTensorToVector(std::move(output_tensor));
 }
 
+tensor::Tensor CudaLlamaBackend::SwiGluTensor(const tensor::Tensor &gate,
+                                              const tensor::Tensor &up) const {
+  tensor::Tensor gate_tensor = EnsureCudaTensor(gate);
+  tensor::Tensor up_tensor = EnsureCudaTensor(up);
+  tensor::Tensor output_tensor = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {static_cast<int32_t>(gate.size())},
+      base::DeviceType::kDeviceCUDA);
+  kernel::swiglu_kernel_cu(gate_tensor, up_tensor, output_tensor, nullptr);
+  return output_tensor;
+}
+
 void CudaLlamaBackend::AddInPlace(std::vector<float> &left,
                                   const std::vector<float> &right) const {
   cpu_.AddInPlace(left, right);
+}
+
+void CudaLlamaBackend::AddInPlaceTensor(tensor::Tensor &left,
+                                        const tensor::Tensor &right) const {
+  if (left.device_type() == base::DeviceType::kDeviceCUDA ||
+      right.device_type() == base::DeviceType::kDeviceCUDA) {
+    tensor::Tensor right_tensor = EnsureCudaTensor(right);
+    if (left.device_type() == base::DeviceType::kDeviceCPU) {
+      left.to_cuda();
+    }
+    kernel::add_inplace_kernel_cu(left, right_tensor, nullptr);
+    return;
+  }
+
+  cpu_.AddInPlaceTensor(left, right);
 }
 
 int32_t CudaLlamaBackend::ArgMaxToken(const tensor::Tensor &logits) const {
   return cpu_.ArgMaxToken(logits);
 }
 
-const tensor::Tensor &CudaLlamaBackend::Fp32CudaWeight(
-    const tensor::Tensor &weight) const {
+const tensor::Tensor &
+CudaLlamaBackend::Fp32CudaWeight(const tensor::Tensor &weight) const {
   const auto cached = fp32_cuda_weights_.find(&weight);
   if (cached != fp32_cuda_weights_.end()) {
     return cached->second;
@@ -167,4 +247,4 @@ const tensor::Tensor &CudaLlamaBackend::Fp32CudaWeight(
   return insert_result.first->second;
 }
 
-}  // namespace model
+} // namespace model
