@@ -1,5 +1,7 @@
 #include "model/llama_cpu_backend.h"
 
+#include <absl/status/status.h>
+#include <absl/strings/str_cat.h>
 #include <glog/logging.h>
 
 #include <algorithm>
@@ -8,6 +10,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "base/profile.h"
 #include "model/llama_backend_util.h"
 
 namespace model {
@@ -33,6 +36,131 @@ tensor::Tensor CopyVectorToCpuTensor(const std::vector<float> &values) {
 
 base::DeviceType CpuLlamaBackend::device_type() const {
   return base::DeviceType::kDeviceCPU;
+}
+
+absl::StatusOr<LlamaForwardResult>
+CpuLlamaBackend::ForwardToken(const LlamaHfModel &model,
+                              LlamaForwardState &state, int32_t token_id,
+                              int32_t position) const {
+  const HfLlamaConfig &config = model.config;
+  if (token_id < 0 || token_id >= config.vocab_size) {
+    return absl::InvalidArgumentError(
+        absl::StrCat("token_id is out of range: ", token_id,
+                     ", vocab_size=", config.vocab_size));
+  }
+  if (position < 0 || position >= config.max_position_embeddings) {
+    return absl::InvalidArgumentError(absl::StrCat(
+        "position is out of range: ", position,
+        ", max_position_embeddings=", config.max_position_embeddings));
+  }
+
+  LOG(INFO) << "start LLaMA CPU one-token forward: token_id=" << token_id
+            << ", position=" << position;
+  state.profile.forward_calls += 1;
+
+  std::vector<float> hidden_state;
+  {
+    base::ScopedProfile profile(state.profile.embedding_ms);
+    Embedding(model.weights.token_embedding, token_id, hidden_state);
+  }
+
+  std::vector<float> norm;
+  std::vector<float> query;
+  std::vector<float> key;
+  std::vector<float> value;
+  std::vector<float> attention_output;
+  std::vector<float> projected_attention;
+  std::vector<float> gate;
+  std::vector<float> up;
+  std::vector<float> activated;
+  std::vector<float> projected_ffn;
+
+  for (int32_t layer = 0; layer < config.num_hidden_layers; ++layer) {
+    const LlamaHfLayerWeights &weights = model.weights.layers[layer];
+
+    {
+      base::ScopedProfile profile(state.profile.attention_norm_ms);
+      RmsNorm(hidden_state, weights.input_layernorm, config.rms_norm_eps, norm);
+    }
+    {
+      base::ScopedProfile profile(state.profile.qkv_proj_ms);
+      MatVec(weights.q_proj, norm, query);
+      MatVec(weights.k_proj, norm, key);
+      MatVec(weights.v_proj, norm, value);
+    }
+    {
+      base::ScopedProfile profile(state.profile.rope_ms);
+      ApplyRopeToHeads(query, config.num_attention_heads, state.head_size,
+                       position, config.rope_theta);
+      ApplyRopeToHeads(key, config.num_key_value_heads, state.head_size,
+                       position, config.rope_theta);
+    }
+    {
+      base::ScopedProfile profile(state.profile.kv_cache_ms);
+      StoreKvCache(key, value, position, config.max_position_embeddings,
+                   state.kv_dim, state.layer_caches[layer].key,
+                   state.layer_caches[layer].value);
+    }
+    {
+      base::ScopedProfile profile(state.profile.attention_ms);
+      AttentionWithCache(query, state.layer_caches[layer].key,
+                         state.layer_caches[layer].value, position,
+                         config.num_attention_heads, state.head_size,
+                         state.kv_dim, state.kv_mul, attention_output);
+    }
+    {
+      base::ScopedProfile profile(state.profile.attention_output_proj_ms);
+      MatVec(weights.o_proj, attention_output, projected_attention);
+    }
+    {
+      base::ScopedProfile profile(state.profile.attention_residual_ms);
+      AddInPlace(hidden_state, projected_attention);
+    }
+    {
+      base::ScopedProfile profile(state.profile.ffn_norm_ms);
+      RmsNorm(hidden_state, weights.post_attention_layernorm,
+              config.rms_norm_eps, norm);
+    }
+    {
+      base::ScopedProfile profile(state.profile.ffn_up_gate_proj_ms);
+      MatVec(weights.gate_proj, norm, gate);
+      MatVec(weights.up_proj, norm, up);
+    }
+    {
+      base::ScopedProfile profile(state.profile.swiglu_ms);
+      SwiGlu(gate, up, activated);
+    }
+    {
+      base::ScopedProfile profile(state.profile.ffn_down_proj_ms);
+      MatVec(weights.down_proj, activated, projected_ffn);
+    }
+    {
+      base::ScopedProfile profile(state.profile.ffn_residual_ms);
+      AddInPlace(hidden_state, projected_ffn);
+    }
+  }
+
+  {
+    base::ScopedProfile profile(state.profile.final_norm_ms);
+    RmsNorm(hidden_state, model.weights.final_norm, config.rms_norm_eps, norm);
+  }
+
+  LlamaForwardResult result;
+  std::vector<float> logits;
+  {
+    base::ScopedProfile profile(state.profile.lm_head_ms);
+    MatVec(model.weights.lm_head, norm, logits);
+  }
+  result.logits = CopyVectorToCpuTensor(logits);
+  CHECK_EQ(static_cast<int32_t>(result.logits.size()), config.vocab_size);
+  {
+    base::ScopedProfile profile(state.profile.argmax_ms);
+    result.next_token = ArgMaxToken(result.logits);
+  }
+
+  LOG(INFO) << "finish LLaMA CPU one-token forward: next_token="
+            << result.next_token;
+  return result;
 }
 
 void CpuLlamaBackend::Embedding(const tensor::Tensor &weight, int32_t token_id,
