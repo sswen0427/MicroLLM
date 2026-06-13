@@ -6,14 +6,11 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <cstdint>
 #include <numeric>
-#include <string>
 #include <utility>
 #include <vector>
 
 #include "base/types.h"
-#include "model/llama_hf_forward.h"
 #include "tensor/tensor.h"
 
 namespace runtime {

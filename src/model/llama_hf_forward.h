@@ -3,8 +3,11 @@
 #include <absl/status/statusor.h>
 
 #include <cstdint>
+#include <memory>
 #include <vector>
 
+#include "base/types.h"
+#include "model/llama_backend.h"
 #include "model/llama_hf_model_loader.h"
 #include "tensor/tensor.h"
 
@@ -39,7 +42,9 @@ struct LlamaForwardProfile {
 
 class LlamaHfRuntime {
  public:
-  explicit LlamaHfRuntime(const LlamaHfModel& model);
+  explicit LlamaHfRuntime(
+      const LlamaHfModel& model,
+      base::DeviceType device_type = base::DeviceType::kDeviceCPU);
 
   absl::StatusOr<LlamaForwardResult> ForwardToken(int32_t token_id,
                                                   int32_t position);
@@ -58,6 +63,7 @@ class LlamaHfRuntime {
   int32_t kv_mul_ = 0;
   std::vector<LayerCache> layer_caches_;
   LlamaForwardProfile profile_;
+  std::unique_ptr<LlamaBackend> backend_;
 };
 
 }  // namespace model
