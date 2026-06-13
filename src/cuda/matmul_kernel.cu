@@ -1,6 +1,6 @@
 #include <cub/block/block_reduce.cuh>
 
-#include "base/cuda_check.h"
+#include "cuda/cuda_check.h"
 #include "matmul_kernel.cuh"
 #include "tensor/tensor.h"
 

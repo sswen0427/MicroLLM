@@ -1,4 +1,4 @@
-#include "base/cuda_check.h"
+#include "cuda/cuda_check.h"
 #include "swiglu_kernel.cuh"
 #include "tensor/tensor.h"
 
