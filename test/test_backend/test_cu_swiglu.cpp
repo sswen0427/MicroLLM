@@ -17,7 +17,7 @@ void SwiGluGolden(const tensor::Tensor &gate, const tensor::Tensor &up,
   }
 }
 
-} // namespace
+}  // namespace
 
 TEST(SwiGLUTest, NoStream) {
   int32_t size = 32 * 151;
