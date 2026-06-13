@@ -79,8 +79,8 @@ void matmul_kernel_cu(const tensor::Tensor &input, const tensor::Tensor &weight,
 
   CHECK(weight.is_empty() == false && weight.dims_size() == 2);
   CHECK(weight.device_type() == base::DeviceType::kDeviceCUDA);
-  const int32_t K = weight.get_dim(0); // row
-  const int32_t M = weight.get_dim(1); // col
+  const int32_t K = weight.get_dim(0);  // row
+  const int32_t M = weight.get_dim(1);  // col
   int packet_size = 4;
   CHECK_EQ(M % packet_size, 0);
 
@@ -97,4 +97,4 @@ void matmul_kernel_cu(const tensor::Tensor &input, const tensor::Tensor &weight,
   }
   CHECK_CUDA(cudaGetLastError());
 }
-} // namespace kernel
+}  // namespace kernel

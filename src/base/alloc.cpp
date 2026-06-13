@@ -116,4 +116,4 @@ void MemsetZero(DeviceType device_type, void *ptr, std::size_t byte_size,
   }
 }
 
-} // namespace base
+}  // namespace base
