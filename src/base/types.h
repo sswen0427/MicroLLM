@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cuda_runtime_api.h>
 #include <glog/logging.h>
 
 #include <cstddef>
@@ -13,23 +12,13 @@ enum class DeviceType : uint8_t {
   kDeviceCUDA = 2,
 };
 
-struct CudaConfig {
-  cudaStream_t stream = nullptr;
-
-  ~CudaConfig() {
-    if (stream != nullptr) {
-      cudaStreamDestroy(stream);
-    }
-  }
-};
-
 enum class DataType : uint8_t {
   kDataTypeUnknown = 0,
-  kDataTypeFp32 = 1,   // 32-bit floating-point
-  kDataTypeInt8 = 2,   // 8-bit integer
-  kDataTypeInt32 = 3,  //
-  kDataTypeBf16 = 4,   // 16-bit bfloat
-  kDataTypeFp16 = 5,   // 16-bit floating-point
+  kDataTypeFp32 = 1,  // 32-bit floating-point
+  kDataTypeInt8 = 2,  // 8-bit integer
+  kDataTypeInt32 = 3, //
+  kDataTypeBf16 = 4,  // 16-bit bfloat
+  kDataTypeFp16 = 5,  // 16-bit floating-point
 };
 
 inline std::size_t DataTypeSize(DataType type) {
@@ -49,4 +38,4 @@ inline std::size_t DataTypeSize(DataType type) {
   }
 }
 
-}  // namespace base
+} // namespace base

@@ -59,11 +59,9 @@ TEST(CudaMatmulTest, Stream) {
   tensor::Tensor out_cpu = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {4}, base::DeviceType::kDeviceCPU);
 
-  base::CudaConfig config;
   cudaStream_t stream;
   cudaStreamCreate(&stream);
-  config.stream = stream;
-  kernel::matmul_kernel_cu(input, weight, out_cu, 1.f, &config);
+  kernel::matmul_kernel_cu(input, weight, out_cu, 1.f, stream);
 
   for (int row = 0; row < 4; ++row) {
     float sum = 0.0f;
