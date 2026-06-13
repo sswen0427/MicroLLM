@@ -2,8 +2,8 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
+#include "backend/kernels/kernels_interface.h"
 #include "base/buffer.h"
-#include "op/kernels/kernels_interface.h"
 
 TEST(CudaEmbTest, NoStream) {
   int32_t token = 4;

@@ -7,8 +7,8 @@
 #include <utility>
 #include <vector>
 
+#include "backend/kernels/kernels_interface.h"
 #include "model/llama_backend_util.h"
-#include "op/kernels/kernels_interface.h"
 
 namespace model {
 namespace {

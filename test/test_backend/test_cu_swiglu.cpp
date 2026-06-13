@@ -4,8 +4,8 @@
 
 #include <random>
 
+#include "backend/kernels/kernels_interface.h"
 #include "base/buffer.h"
-#include "op/kernels/kernels_interface.h"
 
 TEST(SwiGLUTest, NoStream) {
   int32_t size = 32 * 151;
