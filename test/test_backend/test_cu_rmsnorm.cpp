@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <random>
 
-#include "cuda/kernels/rmsnorm_kernel.cuh"
+#include "cuda/rmsnorm_kernel.cuh"
 
 namespace {
 

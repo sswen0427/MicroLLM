@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <random>
 
-#include "cuda/kernels/swiglu_kernel.cuh"
+#include "cuda/swiglu_kernel.cuh"
 
 namespace {
 

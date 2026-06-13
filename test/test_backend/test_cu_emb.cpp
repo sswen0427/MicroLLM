@@ -1,7 +1,7 @@
 #include <cuda_runtime_api.h>
 #include <gtest/gtest.h>
 
-#include "cuda/kernels/emb_kernel.cuh"
+#include "cuda/emb_kernel.cuh"
 
 TEST(CudaEmbTest, NoStream) {
   int32_t token = 4;

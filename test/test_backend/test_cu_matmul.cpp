@@ -1,7 +1,7 @@
 #include <cuda_runtime_api.h>
 #include <gtest/gtest.h>
 
-#include "cuda/kernels/matmul_kernel.cuh"
+#include "cuda/matmul_kernel.cuh"
 
 TEST(CudaMatmulTest, RunCUDA) {
   tensor::Tensor input = tensor::Tensor::allocate(

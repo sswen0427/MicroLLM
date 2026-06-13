@@ -7,10 +7,10 @@
 #include <utility>
 #include <vector>
 
-#include "cuda/kernels/emb_kernel.cuh"
-#include "cuda/kernels/matmul_kernel.cuh"
-#include "cuda/kernels/rmsnorm_kernel.cuh"
-#include "cuda/kernels/swiglu_kernel.cuh"
+#include "cuda/emb_kernel.cuh"
+#include "cuda/matmul_kernel.cuh"
+#include "cuda/rmsnorm_kernel.cuh"
+#include "cuda/swiglu_kernel.cuh"
 #include "model/llama_backend_util.h"
 
 namespace model {
