@@ -10,6 +10,7 @@ class CudaLlamaBackend final : public LlamaBackend {
 public:
   base::DeviceType device_type() const override;
 
+private:
   void Embedding(const tensor::Tensor &weight, int32_t token_id,
                  std::vector<float> &output) const override;
   tensor::Tensor EmbeddingTensor(const tensor::Tensor &weight,
@@ -46,8 +47,6 @@ public:
   void AddInPlaceTensor(tensor::Tensor &left,
                         const tensor::Tensor &right) const override;
   int32_t ArgMaxToken(const tensor::Tensor &logits) const override;
-
-private:
   const tensor::Tensor &Fp32CudaWeight(const tensor::Tensor &weight) const;
 
   CpuLlamaBackend cpu_;
