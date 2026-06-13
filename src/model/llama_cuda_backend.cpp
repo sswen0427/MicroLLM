@@ -1,7 +1,5 @@
 #include "model/llama_cuda_backend.h"
 
-#include <cuda_runtime_api.h>
-
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -9,7 +7,6 @@
 #include <utility>
 #include <vector>
 
-#include "base/cuda_check.h"
 #include "model/llama_backend_util.h"
 #include "op/kernels/kernels_interface.h"
 
@@ -58,7 +55,6 @@ void CudaLlamaBackend::Embedding(const tensor::Tensor& weight, int32_t token_id,
       base::DeviceType::kDeviceCUDA);
   kernel::get_emb_kernel(base::DeviceType::kDeviceCUDA)(
       input, Fp32CudaWeight(weight), output_tensor, weight.get_dim(0), nullptr);
-  CHECK_CUDA(cudaDeviceSynchronize());
   output = CopyTensorToVector(std::move(output_tensor));
 }
 
@@ -76,7 +72,6 @@ void CudaLlamaBackend::RmsNorm(const std::vector<float>& input,
       base::DeviceType::kDeviceCUDA);
   kernel::get_rmsnorm_kernel(base::DeviceType::kDeviceCUDA)(
       input_tensor, Fp32CudaWeight(weight), output_tensor, nullptr);
-  CHECK_CUDA(cudaDeviceSynchronize());
   output = CopyTensorToVector(std::move(output_tensor));
 }
 
@@ -87,10 +82,8 @@ void CudaLlamaBackend::MatVec(const tensor::Tensor& weight,
   tensor::Tensor output_tensor = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {weight.get_dim(0)},
       base::DeviceType::kDeviceCUDA);
-  base::CudaConfig config;
   kernel::get_matmul_kernel(base::DeviceType::kDeviceCUDA)(
-      input_tensor, Fp32CudaWeight(weight), output_tensor, 1.0f, &config);
-  CHECK_CUDA(cudaDeviceSynchronize());
+      input_tensor, Fp32CudaWeight(weight), output_tensor, 1.0f, nullptr);
   output = CopyTensorToVector(std::move(output_tensor));
 }
 
@@ -132,7 +125,6 @@ void CudaLlamaBackend::SwiGlu(const std::vector<float>& gate,
       base::DeviceType::kDeviceCUDA);
   kernel::get_swiglu_kernel(base::DeviceType::kDeviceCUDA)(
       gate_tensor, up_tensor, output_tensor, nullptr);
-  CHECK_CUDA(cudaDeviceSynchronize());
   output = CopyTensorToVector(std::move(output_tensor));
 }
 
