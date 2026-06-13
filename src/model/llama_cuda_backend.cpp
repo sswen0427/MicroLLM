@@ -42,7 +42,7 @@ std::vector<float> CopyTensorToVector(tensor::Tensor tensor) {
   return values;
 }
 
-} // namespace
+}  // namespace
 
 base::DeviceType CudaLlamaBackend::device_type() const {
   return base::DeviceType::kDeviceCUDA;
@@ -139,8 +139,8 @@ int32_t CudaLlamaBackend::ArgMaxToken(const tensor::Tensor &logits) const {
   return cpu_.ArgMaxToken(logits);
 }
 
-const tensor::Tensor &
-CudaLlamaBackend::Fp32CudaWeight(const tensor::Tensor &weight) const {
+const tensor::Tensor &CudaLlamaBackend::Fp32CudaWeight(
+    const tensor::Tensor &weight) const {
   const auto cached = fp32_cuda_weights_.find(&weight);
   if (cached != fp32_cuda_weights_.end()) {
     return cached->second;
@@ -167,4 +167,4 @@ CudaLlamaBackend::Fp32CudaWeight(const tensor::Tensor &weight) const {
   return insert_result.first->second;
 }
 
-} // namespace model
+}  // namespace model

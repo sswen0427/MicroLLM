@@ -23,7 +23,7 @@ void RmsNormGolden(const tensor::Tensor &input, const tensor::Tensor &weight,
   }
 }
 
-} // namespace
+}  // namespace
 
 TEST(RMSNormTest, NoStream) {
   int32_t size = 32 * 15;
