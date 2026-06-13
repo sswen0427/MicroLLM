@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "base/types.h"
 #include "model/llama_hf_forward.h"
 #include "model/llama_hf_model_loader.h"
 #include "tokenizer/tokenizer.h"
@@ -16,6 +17,7 @@ namespace runtime {
 
 struct GenerationConfig {
   int32_t max_new_tokens = 32;
+  base::DeviceType device_type = base::DeviceType::kDeviceCPU;
   bool trace_steps = false;
   int32_t trace_top_k = 5;
 };
