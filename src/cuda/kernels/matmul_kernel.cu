@@ -22,8 +22,8 @@ namespace kernel {
  * @param K      Number of rows in the weight matrix (length of output vector).
  */
 template <int THREAD_PER_BLOCK, int ROW_PER_BLOCK>
-__global__ void matmul_kernel_cu_fp32(const float* input, const float* weight,
-                                      float* output, int M, int K) {
+__global__ void matmul_kernel_cu_fp32(const float *input, const float *weight,
+                                      float *output, int M, int K) {
   __shared__ float sdata[THREAD_PER_BLOCK];
   unsigned int tid = threadIdx.x;
 
@@ -41,8 +41,8 @@ __global__ void matmul_kernel_cu_fp32(const float* input, const float* weight,
   for (int p = start_row; p < end_row; ++p) {
     sdata[tid] = 0;
     int row_offset = p * M;
-    float4* input_float4_ptr = (float4*)input;
-    float4* weight_float4_ptr = (float4*)(weight + row_offset);
+    float4 *input_float4_ptr = (float4 *)input;
+    float4 *weight_float4_ptr = (float4 *)(weight + row_offset);
 
 #pragma unroll
     for (int i = tid; i < pack_num; i += blockDim.x) {
@@ -72,16 +72,16 @@ __global__ void matmul_kernel_cu_fp32(const float* input, const float* weight,
   }
 }
 
-void matmul_kernel_cu(const tensor::Tensor& input, const tensor::Tensor& weight,
-                      const tensor::Tensor& output, const float scale,
-                      const base::CudaConfig* config) {
+void matmul_kernel_cu(const tensor::Tensor &input, const tensor::Tensor &weight,
+                      const tensor::Tensor &output, const float scale,
+                      const base::CudaConfig *config) {
   CHECK(input.is_empty() == false && input.dims_size() <= 2);
   CHECK(input.device_type() == base::DeviceType::kDeviceCUDA);
 
   CHECK(weight.is_empty() == false && weight.dims_size() == 2);
   CHECK(weight.device_type() == base::DeviceType::kDeviceCUDA);
-  const int32_t K = weight.get_dim(0);  // row
-  const int32_t M = weight.get_dim(1);  // col
+  const int32_t K = weight.get_dim(0); // row
+  const int32_t M = weight.get_dim(1); // col
   int packet_size = 4;
   CHECK_EQ(M % packet_size, 0);
 
@@ -89,12 +89,12 @@ void matmul_kernel_cu(const tensor::Tensor& input, const tensor::Tensor& weight,
   if (config && config->stream) {
     matmul_kernel_cu_fp32<128, 1><<<K, 128, 0, config->stream>>>(
         input.data<float>(), weight.data<float>(),
-        const_cast<float*>(output.data<float>()), M, K);
+        const_cast<float *>(output.data<float>()), M, K);
   } else {
     matmul_kernel_cu_fp32<128, 1>
         <<<K, 128>>>(input.data<float>(), weight.data<float>(),
-                     const_cast<float*>(output.data<float>()), M, K);
+                     const_cast<float *>(output.data<float>()), M, K);
   }
   CHECK_CUDA(cudaGetLastError());
 }
-}  // namespace kernel
+} // namespace kernel

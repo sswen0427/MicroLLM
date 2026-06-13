@@ -1,35 +1,7 @@
-#include <cublas_v2.h>
 #include <cuda_runtime_api.h>
-#include <glog/logging.h>
 #include <gtest/gtest.h>
 
-#include "backend/kernels/kernels_interface.h"
-#include "base/buffer.h"
-
-TEST(CudaMatmulTest, RunCPU) {
-  tensor::Tensor input = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {3}, base::DeviceType::kDeviceCPU);
-  tensor::Tensor weight = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {3, 3}, base::DeviceType::kDeviceCPU);
-
-  input.at<float>(0) = float(1);
-  input.at<float>(1) = float(1);
-  input.at<float>(2) = float(-1);
-
-  for (int i = 1; i <= 9; ++i) {
-    weight.at<float>(i - 1) = float(i);
-  }
-
-  tensor::Tensor out = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {3}, base::DeviceType::kDeviceCPU);
-
-  kernel::get_matmul_kernel(base::DeviceType::kDeviceCPU)(input, weight, out,
-                                                          1.f, nullptr);
-
-  EXPECT_EQ(out.at<float>(0), 0);
-  EXPECT_EQ(out.at<float>(1), 3);
-  EXPECT_EQ(out.at<float>(2), 6);
-}
+#include "cuda/kernels/matmul_kernel.cuh"
 
 TEST(CudaMatmulTest, RunCUDA) {
   tensor::Tensor input = tensor::Tensor::allocate(
@@ -52,8 +24,7 @@ TEST(CudaMatmulTest, RunCUDA) {
   tensor::Tensor out_cu = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {4}, base::DeviceType::kDeviceCUDA);
 
-  kernel::get_matmul_kernel(base::DeviceType::kDeviceCUDA)(
-      input, weight, out_cu, 1.f, nullptr);
+  kernel::matmul_kernel_cu(input, weight, out_cu, 1.f, nullptr);
 
   tensor::Tensor out_cpu = out_cu.clone();
   out_cpu.to_cpu();
@@ -88,18 +59,23 @@ TEST(CudaMatmulTest, Stream) {
   tensor::Tensor out_cpu = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {4}, base::DeviceType::kDeviceCPU);
 
-  auto* config = new base::CudaConfig;
+  base::CudaConfig config;
   cudaStream_t stream;
   cudaStreamCreate(&stream);
-  config->stream = stream;
-  kernel::get_matmul_kernel(base::DeviceType::kDeviceCUDA)(input, weight,
-                                                           out_cu, 1.f, config);
+  config.stream = stream;
+  kernel::matmul_kernel_cu(input, weight, out_cu, 1.f, &config);
 
-  kernel::get_matmul_kernel(base::DeviceType::kDeviceCPU)(input_cpu, weight_cpu,
-                                                          out_cpu, 1.f, config);
+  for (int row = 0; row < 4; ++row) {
+    float sum = 0.0f;
+    for (int col = 0; col < 4; ++col) {
+      sum += weight_cpu.at<float>(row * 4 + col) * input_cpu.at<float>(col);
+    }
+    out_cpu.at<float>(row) = sum;
+  }
 
   out_cu.to_cpu();
   for (int i = 0; i < out_cu.size(); ++i) {
     EXPECT_EQ(out_cu.at<float>(i), out_cpu.at<float>(i));
   }
+  cudaStreamDestroy(stream);
 }

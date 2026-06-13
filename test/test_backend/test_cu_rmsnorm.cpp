@@ -1,11 +1,29 @@
 #include <cuda_runtime_api.h>
-#include <glog/logging.h>
 #include <gtest/gtest.h>
 
+#include <cmath>
+#include <cstddef>
 #include <random>
 
-#include "backend/kernels/kernels_interface.h"
-#include "base/buffer.h"
+#include "cuda/kernels/rmsnorm_kernel.cuh"
+
+namespace {
+
+void RmsNormGolden(const tensor::Tensor &input, const tensor::Tensor &weight,
+                   tensor::Tensor &output) {
+  float square_sum = 0.0f;
+  for (size_t i = 0; i < input.size(); ++i) {
+    const float value = input.at<float>(i);
+    square_sum += value * value;
+  }
+  const float mean_square = square_sum / static_cast<float>(input.size());
+  const float scale = 1.0f / std::sqrt(mean_square + 1e-5f);
+  for (size_t i = 0; i < input.size(); ++i) {
+    output.at<float>(i) = input.at<float>(i) * scale * weight.at<float>(i);
+  }
+}
+
+} // namespace
 
 TEST(RMSNormTest, NoStream) {
   int32_t size = 32 * 15;
@@ -31,11 +49,9 @@ TEST(RMSNormTest, NoStream) {
   wei_cu.to_cuda(nullptr);
   out_cu.to_cuda(nullptr);
 
-  kernel::get_rmsnorm_kernel(base::DeviceType::kDeviceCUDA)(in_cu, wei_cu,
-                                                            out_cu, nullptr);
+  kernel::rmsnorm_kernel_cu(in_cu, wei_cu, out_cu, nullptr);
   out_cu.to_cpu();
-  kernel::get_rmsnorm_kernel(base::DeviceType::kDeviceCPU)(in_cpu, wei_cpu,
-                                                           out_cpu, nullptr);
+  RmsNormGolden(in_cpu, wei_cpu, out_cpu);
 
   for (int i = 0; i < size; ++i) {
     ASSERT_NEAR(out_cu.at<float>(i), out_cpu.at<float>(i), 1e-5f);
@@ -68,12 +84,10 @@ TEST(RMSNormTest, Stream2) {
   out_cu.to_cuda(nullptr);
   cudaStream_t stream;
   cudaStreamCreate(&stream);
-  kernel::get_rmsnorm_kernel(base::DeviceType::kDeviceCUDA)(in_cu, wei_cu,
-                                                            out_cu, stream);
+  kernel::rmsnorm_kernel_cu(in_cu, wei_cu, out_cu, stream);
   out_cu.to_cpu();
 
-  kernel::get_rmsnorm_kernel(base::DeviceType::kDeviceCPU)(in_cpu, wei_cpu,
-                                                           out_cpu, nullptr);
+  RmsNormGolden(in_cpu, wei_cpu, out_cpu);
 
   for (int i = 0; i < size; ++i) {
     ASSERT_NEAR(out_cu.at<float>(i), out_cpu.at<float>(i), 1e-5f);
@@ -107,12 +121,10 @@ TEST(RMSNormTest, Stream3) {
   out_cu.to_cuda(nullptr);
   cudaStream_t stream;
   cudaStreamCreate(&stream);
-  kernel::get_rmsnorm_kernel(base::DeviceType::kDeviceCUDA)(in_cu, wei_cu,
-                                                            out_cu, stream);
+  kernel::rmsnorm_kernel_cu(in_cu, wei_cu, out_cu, stream);
   out_cu.to_cpu();
 
-  kernel::get_rmsnorm_kernel(base::DeviceType::kDeviceCPU)(in_cpu, wei_cpu,
-                                                           out_cpu, nullptr);
+  RmsNormGolden(in_cpu, wei_cpu, out_cpu);
 
   for (int i = 0; i < size; ++i) {
     ASSERT_NEAR(out_cu.at<float>(i), out_cpu.at<float>(i), 1e-5f);

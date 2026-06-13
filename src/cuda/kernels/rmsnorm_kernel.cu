@@ -6,7 +6,7 @@
 #include "rmsnorm_kernel.cuh"
 namespace kernel {
 template <int32_t BLOCK_DIM>
-static __global__ void row_rmsnorm_f32(float* in, float* wei, float* out,
+static __global__ void row_rmsnorm_f32(float *in, float *wei, float *out,
                                        int size, float eps) {
   const int tid = threadIdx.x;
 
@@ -15,7 +15,7 @@ static __global__ void row_rmsnorm_f32(float* in, float* wei, float* out,
   const int pack_off = pack_size * pack_num;
 
   float sum = 0.0f;
-  float4* in_pack = reinterpret_cast<float4*>(in);
+  float4 *in_pack = reinterpret_cast<float4 *>(in);
   for (int i = tid; i < pack_num; i += blockDim.x) {
     float4 in_float4 = *(in_pack + i);
     sum += in_float4.x * in_float4.x;
@@ -39,8 +39,8 @@ static __global__ void row_rmsnorm_f32(float* in, float* wei, float* out,
   sum = shared_val;
   const float scale = rsqrtf(sum / static_cast<float>(size) + eps);
 
-  float4* wei_pack = reinterpret_cast<float4*>(wei);
-  float4* out_pack = reinterpret_cast<float4*>(out);
+  float4 *wei_pack = reinterpret_cast<float4 *>(wei);
+  float4 *out_pack = reinterpret_cast<float4 *>(out);
   for (int i = tid; i < pack_num; i += blockDim.x) {
     float4 in_float4 = *(in_pack + i);
     float4 wei_float4 = *(wei_pack + i);
@@ -54,9 +54,9 @@ static __global__ void row_rmsnorm_f32(float* in, float* wei, float* out,
   }
 }
 
-void rmsnorm_kernel_cu(const tensor::Tensor& input,
-                       const tensor::Tensor& weight,
-                       const tensor::Tensor& output, void* stream) {
+void rmsnorm_kernel_cu(const tensor::Tensor &input,
+                       const tensor::Tensor &weight,
+                       const tensor::Tensor &output, void *stream) {
   CHECK(!input.is_empty());
   CHECK(!weight.is_empty());
   CHECK(!output.is_empty());
@@ -71,9 +71,9 @@ void rmsnorm_kernel_cu(const tensor::Tensor& input,
   const float eps = 1e-5f;
 #endif
   const int32_t size = static_cast<int32_t>(input.size());
-  float* in_ptr = const_cast<float*>(input.data<float>());
-  float* wei_ptr = const_cast<float*>(weight.data<float>());
-  float* out_ptr = const_cast<float*>(output.data<float>());
+  float *in_ptr = const_cast<float *>(input.data<float>());
+  float *wei_ptr = const_cast<float *>(weight.data<float>());
+  float *out_ptr = const_cast<float *>(output.data<float>());
   constexpr int threads_num = 128;
   if (stream) {
     cudaStream_t stream_ = static_cast<cudaStream_t>(stream);
@@ -85,4 +85,4 @@ void rmsnorm_kernel_cu(const tensor::Tensor& input,
   }
   CHECK_CUDA(cudaGetLastError());
 }
-}  // namespace kernel
+} // namespace kernel

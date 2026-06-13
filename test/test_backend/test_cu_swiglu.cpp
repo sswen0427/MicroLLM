@@ -1,11 +1,23 @@
 #include <cuda_runtime_api.h>
-#include <glog/logging.h>
 #include <gtest/gtest.h>
 
+#include <cmath>
+#include <cstddef>
 #include <random>
 
-#include "backend/kernels/kernels_interface.h"
-#include "base/buffer.h"
+#include "cuda/kernels/swiglu_kernel.cuh"
+
+namespace {
+
+void SwiGluGolden(const tensor::Tensor &gate, const tensor::Tensor &up,
+                  tensor::Tensor &output) {
+  for (size_t i = 0; i < gate.size(); ++i) {
+    const float value = gate.at<float>(i);
+    output.at<float>(i) = value / (1.0f + std::exp(-value)) * up.at<float>(i);
+  }
+}
+
+} // namespace
 
 TEST(SwiGLUTest, NoStream) {
   int32_t size = 32 * 151;
@@ -32,12 +44,10 @@ TEST(SwiGLUTest, NoStream) {
   wei_cu.to_cuda(nullptr);
   out_cu.to_cuda(nullptr);
 
-  kernel::get_swiglu_kernel(base::DeviceType::kDeviceCUDA)(in_cu, wei_cu,
-                                                           out_cu, nullptr);
+  kernel::swiglu_kernel_cu(in_cu, wei_cu, out_cu, nullptr);
   out_cu.to_cpu();
 
-  kernel::get_swiglu_kernel(base::DeviceType::kDeviceCPU)(in_cpu, wei_cpu,
-                                                          out_cpu, nullptr);
+  SwiGluGolden(in_cpu, wei_cpu, out_cpu);
 
   for (int i = 0; i < size; ++i) {
     ASSERT_NEAR(out_cu.at<float>(i), out_cpu.at<float>(i), 1e-5f);
@@ -71,12 +81,10 @@ TEST(SwiGLUTest, Stream) {
   cudaStream_t stream;
   cudaStreamCreate(&stream);
 
-  kernel::get_swiglu_kernel(base::DeviceType::kDeviceCUDA)(in_cu, wei_cu,
-                                                           out_cu, stream);
+  kernel::swiglu_kernel_cu(in_cu, wei_cu, out_cu, stream);
   out_cu.to_cpu();
 
-  kernel::get_swiglu_kernel(base::DeviceType::kDeviceCPU)(in_cpu, wei_cpu,
-                                                          out_cpu, nullptr);
+  SwiGluGolden(in_cpu, wei_cpu, out_cpu);
 
   for (int i = 0; i < size; ++i) {
     ASSERT_NEAR(out_cu.at<float>(i), out_cpu.at<float>(i), 1e-5f);

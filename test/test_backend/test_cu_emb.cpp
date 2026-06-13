@@ -1,9 +1,7 @@
 #include <cuda_runtime_api.h>
-#include <glog/logging.h>
 #include <gtest/gtest.h>
 
-#include "backend/kernels/kernels_interface.h"
-#include "base/buffer.h"
+#include "cuda/kernels/emb_kernel.cuh"
 
 TEST(CudaEmbTest, NoStream) {
   int32_t token = 4;
@@ -11,7 +9,7 @@ TEST(CudaEmbTest, NoStream) {
 
   // init input
   tensor::Tensor input = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {1}, base::DeviceType::kDeviceCPU);
+      base::DataType::kDataTypeInt32, {1}, base::DeviceType::kDeviceCPU);
   input.at<int32_t>(0) = 1;
 
   // init weight
@@ -27,8 +25,7 @@ TEST(CudaEmbTest, NoStream) {
   tensor::Tensor output = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {dim}, base::DeviceType::kDeviceCUDA);
 
-  kernel::get_emb_kernel(base::DeviceType::kDeviceCUDA)(input, weight, output,
-                                                        token, nullptr);
+  kernel::emb_kernel_cu(input, weight, output, token, nullptr);
 
   output.to_cpu();
   for (int i = 0; i < dim; ++i) {
@@ -58,8 +55,7 @@ TEST(CudaEmbTest, NoStream2) {
   tensor::Tensor output = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {dim}, base::DeviceType::kDeviceCUDA);
 
-  kernel::get_emb_kernel(base::DeviceType::kDeviceCUDA)(input, weight, output,
-                                                        token, nullptr);
+  kernel::emb_kernel_cu(input, weight, output, token, nullptr);
   output.to_cpu();
   for (int i = 0; i < dim; ++i) {
     EXPECT_EQ(output.at<float>(i), 1024 + i);
@@ -91,8 +87,7 @@ TEST(CudaEmbTest, Stream) {
   // init stream
   cudaStream_t stream;
   cudaStreamCreate(&stream);
-  kernel::get_emb_kernel(base::DeviceType::kDeviceCUDA)(input, weight, output,
-                                                        token, stream);
+  kernel::emb_kernel_cu(input, weight, output, token, stream);
 
   output.to_cpu();
   for (int i = 0; i < dim; ++i) {
