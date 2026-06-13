@@ -30,9 +30,9 @@ LlamaHfRuntime::LlamaHfRuntime(const LlamaHfModel &model,
   }
 }
 
-absl::StatusOr<LlamaForwardResult>
-LlamaHfRuntime::ForwardToken(int32_t token_id, int32_t position) {
+absl::StatusOr<LlamaForwardResult> LlamaHfRuntime::ForwardToken(
+    int32_t token_id, int32_t position) {
   return backend_->ForwardToken(model_, state_, token_id, position);
 }
 
-} // namespace model
+}  // namespace model

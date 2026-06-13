@@ -7,13 +7,13 @@
 namespace model {
 
 class CudaLlamaBackend final : public LlamaBackend {
-public:
+ public:
   base::DeviceType device_type() const override;
-  absl::StatusOr<LlamaForwardResult>
-  ForwardToken(const LlamaHfModel &model, LlamaForwardState &state,
-               int32_t token_id, int32_t position) const override;
+  absl::StatusOr<LlamaForwardResult> ForwardToken(
+      const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
+      int32_t position) const override;
 
-private:
+ private:
   void Embedding(const tensor::Tensor &weight, int32_t token_id,
                  std::vector<float> &output) const;
   tensor::Tensor EmbeddingTensor(const tensor::Tensor &weight,
@@ -56,4 +56,4 @@ private:
       fp32_cuda_weights_;
 };
 
-} // namespace model
+}  // namespace model

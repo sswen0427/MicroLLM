@@ -53,15 +53,15 @@ struct LlamaForwardState {
 };
 
 class LlamaBackend {
-public:
+ public:
   virtual ~LlamaBackend() = default;
 
   virtual base::DeviceType device_type() const = 0;
-  virtual absl::StatusOr<LlamaForwardResult>
-  ForwardToken(const LlamaHfModel &model, LlamaForwardState &state,
-               int32_t token_id, int32_t position) const = 0;
+  virtual absl::StatusOr<LlamaForwardResult> ForwardToken(
+      const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
+      int32_t position) const = 0;
 };
 
 std::unique_ptr<LlamaBackend> CreateLlamaBackend(base::DeviceType device_type);
 
-} // namespace model
+}  // namespace model

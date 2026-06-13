@@ -32,16 +32,15 @@ tensor::Tensor CopyVectorToCpuTensor(const std::vector<float> &values) {
   return tensor;
 }
 
-} // namespace
+}  // namespace
 
 base::DeviceType CpuLlamaBackend::device_type() const {
   return base::DeviceType::kDeviceCPU;
 }
 
-absl::StatusOr<LlamaForwardResult>
-CpuLlamaBackend::ForwardToken(const LlamaHfModel &model,
-                              LlamaForwardState &state, int32_t token_id,
-                              int32_t position) const {
+absl::StatusOr<LlamaForwardResult> CpuLlamaBackend::ForwardToken(
+    const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
+    int32_t position) const {
   const HfLlamaConfig &config = model.config;
   if (token_id < 0 || token_id >= config.vocab_size) {
     return absl::InvalidArgumentError(
@@ -221,9 +220,8 @@ void CpuLlamaBackend::MatVec(const tensor::Tensor &weight,
   }
 }
 
-tensor::Tensor
-CpuLlamaBackend::MatVecTensor(const tensor::Tensor &weight,
-                              const tensor::Tensor &input) const {
+tensor::Tensor CpuLlamaBackend::MatVecTensor(
+    const tensor::Tensor &weight, const tensor::Tensor &input) const {
   std::vector<float> output;
   MatVec(weight, CopyTensorToVector(input), output);
   return CopyVectorToCpuTensor(output);
@@ -372,4 +370,4 @@ void CpuLlamaBackend::SoftmaxInPlace(std::vector<float> &values) {
   }
 }
 
-} // namespace model
+}  // namespace model

@@ -1,5 +1,4 @@
 #include "add_kernel.cuh"
-
 #include "cuda/cuda_check.h"
 
 namespace kernel {
@@ -14,7 +13,7 @@ __global__ void add_inplace_kernel_cu_fp32(float *left, const float *right,
   left[idx] += right[idx];
 }
 
-} // namespace
+}  // namespace
 
 void add_inplace_kernel_cu(tensor::Tensor &left, const tensor::Tensor &right,
                            void *stream) {
@@ -40,4 +39,4 @@ void add_inplace_kernel_cu(tensor::Tensor &left, const tensor::Tensor &right,
   CHECK_CUDA(cudaGetLastError());
 }
 
-} // namespace kernel
+}  // namespace kernel

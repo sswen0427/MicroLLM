@@ -5,13 +5,13 @@
 namespace model {
 
 class CpuLlamaBackend final : public LlamaBackend {
-public:
+ public:
   base::DeviceType device_type() const override;
-  absl::StatusOr<LlamaForwardResult>
-  ForwardToken(const LlamaHfModel &model, LlamaForwardState &state,
-               int32_t token_id, int32_t position) const override;
+  absl::StatusOr<LlamaForwardResult> ForwardToken(
+      const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
+      int32_t position) const override;
 
-private:
+ private:
   friend class CudaLlamaBackend;
 
   void Embedding(const tensor::Tensor &weight, int32_t token_id,
@@ -52,4 +52,4 @@ private:
   static void SoftmaxInPlace(std::vector<float> &values);
 };
 
-} // namespace model
+}  // namespace model

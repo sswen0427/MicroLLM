@@ -2,6 +2,7 @@
 
 #include <absl/status/status.h>
 #include <absl/strings/str_cat.h>
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -55,16 +56,15 @@ std::vector<float> CopyTensorToVector(tensor::Tensor tensor) {
   return values;
 }
 
-} // namespace
+}  // namespace
 
 base::DeviceType CudaLlamaBackend::device_type() const {
   return base::DeviceType::kDeviceCUDA;
 }
 
-absl::StatusOr<LlamaForwardResult>
-CudaLlamaBackend::ForwardToken(const LlamaHfModel &model,
-                               LlamaForwardState &state, int32_t token_id,
-                               int32_t position) const {
+absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardToken(
+    const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
+    int32_t position) const {
   const HfLlamaConfig &config = model.config;
   if (token_id < 0 || token_id >= config.vocab_size) {
     return absl::InvalidArgumentError(
@@ -268,9 +268,8 @@ void CudaLlamaBackend::MatVec(const tensor::Tensor &weight,
   output = CopyTensorToVector(std::move(output_tensor));
 }
 
-tensor::Tensor
-CudaLlamaBackend::MatVecTensor(const tensor::Tensor &weight,
-                               const tensor::Tensor &input) const {
+tensor::Tensor CudaLlamaBackend::MatVecTensor(
+    const tensor::Tensor &weight, const tensor::Tensor &input) const {
   tensor::Tensor input_tensor = EnsureCudaTensor(input);
   tensor::Tensor output_tensor = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {weight.get_dim(0)},
@@ -355,8 +354,8 @@ int32_t CudaLlamaBackend::ArgMaxToken(const tensor::Tensor &logits) const {
   return cpu_.ArgMaxToken(logits);
 }
 
-const tensor::Tensor &
-CudaLlamaBackend::Fp32CudaWeight(const tensor::Tensor &weight) const {
+const tensor::Tensor &CudaLlamaBackend::Fp32CudaWeight(
+    const tensor::Tensor &weight) const {
   const auto cached = fp32_cuda_weights_.find(&weight);
   if (cached != fp32_cuda_weights_.end()) {
     return cached->second;
@@ -383,4 +382,4 @@ CudaLlamaBackend::Fp32CudaWeight(const tensor::Tensor &weight) const {
   return insert_result.first->second;
 }
 
-} // namespace model
+}  // namespace model

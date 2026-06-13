@@ -10,7 +10,7 @@
 namespace model {
 
 class LlamaHfRuntime {
-public:
+ public:
   explicit LlamaHfRuntime(
       const LlamaHfModel &model,
       base::DeviceType device_type = base::DeviceType::kDeviceCPU);
@@ -20,10 +20,10 @@ public:
 
   const LlamaForwardProfile &profile() const { return state_.profile; }
 
-private:
+ private:
   const LlamaHfModel &model_;
   LlamaForwardState state_;
   std::unique_ptr<LlamaBackend> backend_;
 };
 
-} // namespace model
+}  // namespace model
