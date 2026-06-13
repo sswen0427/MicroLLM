@@ -1,4 +1,4 @@
-#include "base/cuda_check.h"
+#include "cuda/cuda_check.h"
 #include "emb_kernel.cuh"
 
 namespace kernel {

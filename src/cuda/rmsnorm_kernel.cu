@@ -2,7 +2,7 @@
 
 #include <cub/block/block_reduce.cuh>
 
-#include "base/cuda_check.h"
+#include "cuda/cuda_check.h"
 #include "rmsnorm_kernel.cuh"
 namespace kernel {
 template <int32_t BLOCK_DIM>

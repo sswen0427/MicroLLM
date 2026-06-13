@@ -1,7 +1,6 @@
 #include <cub/block/block_reduce.cuh>
 
-#include "base/cuda_check.h"
-#include "base/types.h"
+#include "cuda/cuda_check.h"
 #include "matmul_kernel.cuh"
 #include "tensor/tensor.h"
 
@@ -74,7 +73,7 @@ __global__ void matmul_kernel_cu_fp32(const float *input, const float *weight,
 
 void matmul_kernel_cu(const tensor::Tensor &input, const tensor::Tensor &weight,
                       const tensor::Tensor &output, const float scale,
-                      const base::CudaConfig *config) {
+                      void *stream) {
   CHECK(input.is_empty() == false && input.dims_size() <= 2);
   CHECK(input.device_type() == base::DeviceType::kDeviceCUDA);
 
@@ -86,8 +85,9 @@ void matmul_kernel_cu(const tensor::Tensor &input, const tensor::Tensor &weight,
   CHECK_EQ(M % packet_size, 0);
 
   CHECK_EQ(M, input.get_dim(0));
-  if (config && config->stream) {
-    matmul_kernel_cu_fp32<128, 1><<<K, 128, 0, config->stream>>>(
+  cudaStream_t cuda_stream = static_cast<cudaStream_t>(stream);
+  if (cuda_stream != nullptr) {
+    matmul_kernel_cu_fp32<128, 1><<<K, 128, 0, cuda_stream>>>(
         input.data<float>(), weight.data<float>(),
         const_cast<float *>(output.data<float>()), M, K);
   } else {

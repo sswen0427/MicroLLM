@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cuda_runtime_api.h>
 #include <glog/logging.h>
 
 #include <cstddef>
@@ -11,16 +10,6 @@ enum class DeviceType : uint8_t {
   kDeviceUnknown = 0,
   kDeviceCPU = 1,
   kDeviceCUDA = 2,
-};
-
-struct CudaConfig {
-  cudaStream_t stream = nullptr;
-
-  ~CudaConfig() {
-    if (stream != nullptr) {
-      cudaStreamDestroy(stream);
-    }
-  }
 };
 
 enum class DataType : uint8_t {

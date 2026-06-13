@@ -6,18 +6,18 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "base/cuda_check.h"
+#include "cuda/cuda_check.h"
 
 namespace base {
 
 CPUDeviceAllocator::CPUDeviceAllocator()
     : DeviceAllocator(DeviceType::kDeviceCPU) {}
 
-void* CPUDeviceAllocator::allocate(std::size_t byte_size) const {
+void *CPUDeviceAllocator::allocate(std::size_t byte_size) const {
   CHECK(byte_size > 0) << "CPUDeviceAllocator::allocate(): byte_size is 0";
   const size_t alignment = (byte_size >= 1024) ? 32 : 16;
   const size_t aligned_size = (byte_size + alignment - 1) & ~(alignment - 1);
-  void* data = std::aligned_alloc(alignment, aligned_size);
+  void *data = std::aligned_alloc(alignment, aligned_size);
   if (data == nullptr) {
     LOG(ERROR) << "std::aligned_alloc failed! "
                << "(alignment: " << alignment
@@ -28,7 +28,7 @@ void* CPUDeviceAllocator::allocate(std::size_t byte_size) const {
   return data;
 }
 
-void CPUDeviceAllocator::release(void* ptr) const {
+void CPUDeviceAllocator::release(void *ptr) const {
   if (ptr) {
     std::free(ptr);
   }
@@ -37,15 +37,15 @@ void CPUDeviceAllocator::release(void* ptr) const {
 CUDADeviceAllocator::CUDADeviceAllocator()
     : DeviceAllocator(DeviceType::kDeviceCUDA) {}
 
-void* CUDADeviceAllocator::allocate(std::size_t byte_size) const {
+void *CUDADeviceAllocator::allocate(std::size_t byte_size) const {
   CHECK(byte_size > 0) << "CUDADeviceAllocator::allocate(): byte_size is 0";
 
-  void* ptr = nullptr;
+  void *ptr = nullptr;
   CHECK_CUDA(cudaMalloc(&ptr, byte_size));
   return ptr;
 }
 
-void CUDADeviceAllocator::release(void* ptr) const {
+void CUDADeviceAllocator::release(void *ptr) const {
   CHECK(ptr) << "CUDADeviceAllocator::release(): ptr is nullptr";
   CHECK_CUDA(cudaFree(ptr));
 }
@@ -66,7 +66,7 @@ std::shared_ptr<DeviceAllocator> GetDeviceAllocator(DeviceType device_type) {
   return nullptr;
 }
 
-void CopyMemory(void* dst, const void* src, std::size_t size,
+void CopyMemory(void *dst, const void *src, std::size_t size,
                 cudaMemcpyKind kind, cudaStream_t stream) {
   CHECK_NE(src, nullptr) << "src is nullptr";
   CHECK_NE(dst, nullptr) << "dst is nullptr";
@@ -100,7 +100,7 @@ void CopyMemory(void* dst, const void* src, std::size_t size,
   }
 }
 
-void MemsetZero(DeviceType device_type, void* ptr, std::size_t byte_size,
+void MemsetZero(DeviceType device_type, void *ptr, std::size_t byte_size,
                 cudaStream_t stream) {
   CHECK_NE(ptr, nullptr) << "ptr is nullptr";
   CHECK_NE(byte_size, 0) << "byte_size is 0";
