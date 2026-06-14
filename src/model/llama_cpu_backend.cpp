@@ -117,6 +117,23 @@ void SoftmaxInPlace(std::vector<float> &values) {
   }
 }
 
+/**
+ * Computes single-token causal attention using the existing K/V cache.
+ *
+ * For each query head:
+ *   scores_t = dot(q_head, k_t) / sqrt(head_size), t in [0, position]
+ *   probs = softmax(scores)
+ *   output_head = sum_t probs_t * v_t
+ *
+ * Loop structure:
+ *   head loop  : computes one output head at a time.
+ *   token loop : first builds scores against cached keys, then mixes cached
+ *                values with the softmax probabilities.
+ *
+ * GQA/MQA mapping:
+ *   kv_head = head / kv_mul
+ * so multiple query heads may share the same K/V cache head.
+ */
 void AttentionWithCache(const std::vector<float> &query,
                         const std::vector<float> &key_cache,
                         const std::vector<float> &value_cache, int32_t position,
@@ -153,6 +170,11 @@ void AttentionWithCache(const std::vector<float> &query,
   }
 }
 
+/**
+ * SwiGLU is the gated activation used in LLaMA's FFN:
+ *   silu(x) = x / (1 + exp(-x))
+ *   output = silu(gate_proj(x)) * up_proj(x)
+ */
 void SwiGlu(const std::vector<float> &gate, const std::vector<float> &up,
             std::vector<float> &output) {
   CHECK_EQ(gate.size(), up.size());
