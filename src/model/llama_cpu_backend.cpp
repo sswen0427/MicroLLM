@@ -170,6 +170,9 @@ void AttentionWithCache(const std::vector<float> &query,
   }
 }
 
+// SwiGLU is the gated activation used in LLaMA's FFN:
+//   silu(x) = x / (1 + exp(-x))
+//   output = silu(gate_proj(x)) * up_proj(x)
 void SwiGlu(const std::vector<float> &gate, const std::vector<float> &up,
             std::vector<float> &output) {
   CHECK_EQ(gate.size(), up.size());

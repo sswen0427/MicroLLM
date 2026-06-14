@@ -224,6 +224,9 @@ tensor::Tensor MatVecTensor(const tensor::Tensor &weight,
   return output_tensor;
 }
 
+// SwiGLU is the gated activation used in LLaMA's FFN:
+//   silu(x) = x / (1 + exp(-x))
+//   output = silu(gate_proj(x)) * up_proj(x)
 tensor::Tensor SwiGluTensor(const tensor::Tensor &gate,
                             const tensor::Tensor &up) {
   tensor::Tensor gate_tensor = EnsureCudaTensor(gate);
