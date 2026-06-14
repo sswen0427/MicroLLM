@@ -191,21 +191,20 @@ int32_t ArgMaxToken(const tensor::Tensor &logits) {
 }
 
 class CpuLlamaBackend final : public LlamaBackend {
-public:
+ public:
   base::DeviceType device_type() const override;
-  absl::StatusOr<LlamaForwardResult>
-  ForwardToken(const LlamaHfModel &model, LlamaForwardState &state,
-               int32_t token_id, int32_t position) const override;
+  absl::StatusOr<LlamaForwardResult> ForwardToken(
+      const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
+      int32_t position) const override;
 };
 
 base::DeviceType CpuLlamaBackend::device_type() const {
   return base::DeviceType::kDeviceCPU;
 }
 
-absl::StatusOr<LlamaForwardResult>
-CpuLlamaBackend::ForwardToken(const LlamaHfModel &model,
-                              LlamaForwardState &state, int32_t token_id,
-                              int32_t position) const {
+absl::StatusOr<LlamaForwardResult> CpuLlamaBackend::ForwardToken(
+    const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
+    int32_t position) const {
   const HfLlamaConfig &config = model.config;
   if (token_id < 0 || token_id >= config.vocab_size) {
     return absl::InvalidArgumentError(
@@ -327,10 +326,10 @@ CpuLlamaBackend::ForwardToken(const LlamaHfModel &model,
   return result;
 }
 
-} // namespace
+}  // namespace
 
 std::unique_ptr<LlamaBackend> CreateCpuLlamaBackend() {
   return std::make_unique<CpuLlamaBackend>();
 }
 
-} // namespace model
+}  // namespace model
