@@ -1,18 +1,19 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <memory>
 #include <utility>
 #include <vector>
 
 #include "base/types.h"
-#include "model/llama_hf_forward.h"
+#include "model/llama_backend.h"
 #include "model/llama_hf_model_loader.h"
 #include "tensor/tensor.h"
 
 namespace {
 
-tensor::Tensor MakeFp32Tensor(const std::vector<int32_t>& dims,
-                              const std::vector<float>& values) {
+tensor::Tensor MakeFp32Tensor(const std::vector<int32_t> &dims,
+                              const std::vector<float> &values) {
   tensor::Tensor tensor = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, dims, base::DeviceType::kDeviceCPU);
   EXPECT_EQ(tensor.size(), values.size());
@@ -20,7 +21,7 @@ tensor::Tensor MakeFp32Tensor(const std::vector<int32_t>& dims,
   return tensor;
 }
 
-tensor::Tensor Zeros(const std::vector<int32_t>& dims, size_t size) {
+tensor::Tensor Zeros(const std::vector<int32_t> &dims, size_t size) {
   return MakeFp32Tensor(dims, std::vector<float>(size, 0.0f));
 }
 
@@ -63,9 +64,11 @@ model::LlamaHfModel MakeTinyForwardModel() {
 
 TEST(LlamaHfForwardTest, RunsOneTokenForward) {
   model::LlamaHfModel model = MakeTinyForwardModel();
-  model::LlamaHfRuntime runtime(model);
+  std::unique_ptr<model::LlamaBackend> backend =
+      model::CreateLlamaBackend(base::DeviceType::kDeviceCPU);
+  model::LlamaForwardState state = model::CreateLlamaForwardState(model.config);
 
-  auto result = runtime.ForwardToken(0, 0);
+  auto result = backend->ForwardToken(model, state, 0, 0);
 
   ASSERT_TRUE(result.ok()) << result.status();
   EXPECT_EQ(result->logits.size(), 3);
@@ -74,14 +77,16 @@ TEST(LlamaHfForwardTest, RunsOneTokenForward) {
   EXPECT_GT(result->logits.at<float>(1), result->logits.at<float>(2));
 }
 
-TEST(LlamaHfForwardTest, RuntimeKeepsKvCacheAcrossTokens) {
+TEST(LlamaHfForwardTest, BackendStateKeepsKvCacheAcrossTokens) {
   model::LlamaHfModel model = MakeTinyForwardModel();
-  model::LlamaHfRuntime runtime(model);
+  std::unique_ptr<model::LlamaBackend> backend =
+      model::CreateLlamaBackend(base::DeviceType::kDeviceCPU);
+  model::LlamaForwardState state = model::CreateLlamaForwardState(model.config);
 
-  auto first = runtime.ForwardToken(0, 0);
+  auto first = backend->ForwardToken(model, state, 0, 0);
   ASSERT_TRUE(first.ok()) << first.status();
 
-  auto second = runtime.ForwardToken(1, 1);
+  auto second = backend->ForwardToken(model, state, 1, 1);
   ASSERT_TRUE(second.ok()) << second.status();
   EXPECT_EQ(second->next_token, 2);
 }
