@@ -118,12 +118,21 @@ void SoftmaxInPlace(std::vector<float> &values) {
 }
 
 /**
- * Computes single-token causal attention against the K/V cache:
- *    scores_t = dot(q, k_t) / sqrt(head_size), t in [0, position]
- *    probs = softmax(scores)
- *    output = sum_t probs_t * v_t
- * `query` holds the current token's per-head Q vectors, while `key_cache` and
- * `value_cache` contain all tokens from positions [0, position].
+ * Computes single-token causal attention using the existing K/V cache.
+ *
+ * For each query head:
+ *   scores_t = dot(q_head, k_t) / sqrt(head_size), t in [0, position]
+ *   probs = softmax(scores)
+ *   output_head = sum_t probs_t * v_t
+ *
+ * Loop structure:
+ *   head loop  : computes one output head at a time.
+ *   token loop : first builds scores against cached keys, then mixes cached
+ *                values with the softmax probabilities.
+ *
+ * GQA/MQA mapping:
+ *   kv_head = head / kv_mul
+ * so multiple query heads may share the same K/V cache head.
  */
 void AttentionWithCache(const std::vector<float> &query,
                         const std::vector<float> &key_cache,
@@ -193,20 +202,21 @@ int32_t ArgMaxToken(const tensor::Tensor &logits) {
 }
 
 class CpuLlamaBackend final : public LlamaBackend {
- public:
+public:
   base::DeviceType device_type() const override;
-  absl::StatusOr<LlamaForwardResult> ForwardToken(
-      const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
-      int32_t position) const override;
+  absl::StatusOr<LlamaForwardResult>
+  ForwardToken(const LlamaHfModel &model, LlamaForwardState &state,
+               int32_t token_id, int32_t position) const override;
 };
 
 base::DeviceType CpuLlamaBackend::device_type() const {
   return base::DeviceType::kDeviceCPU;
 }
 
-absl::StatusOr<LlamaForwardResult> CpuLlamaBackend::ForwardToken(
-    const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
-    int32_t position) const {
+absl::StatusOr<LlamaForwardResult>
+CpuLlamaBackend::ForwardToken(const LlamaHfModel &model,
+                              LlamaForwardState &state, int32_t token_id,
+                              int32_t position) const {
   const HfLlamaConfig &config = model.config;
   if (token_id < 0 || token_id >= config.vocab_size) {
     return absl::InvalidArgumentError(
@@ -328,10 +338,10 @@ absl::StatusOr<LlamaForwardResult> CpuLlamaBackend::ForwardToken(
   return result;
 }
 
-}  // namespace
+} // namespace
 
 std::unique_ptr<LlamaBackend> CreateCpuLlamaBackend() {
   return std::make_unique<CpuLlamaBackend>();
 }
 
-}  // namespace model
+} // namespace model
