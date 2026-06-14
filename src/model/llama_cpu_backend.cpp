@@ -117,12 +117,14 @@ void SoftmaxInPlace(std::vector<float> &values) {
   }
 }
 
-// Computes single-token causal attention against the K/V cache:
-//   scores_t = dot(q, k_t) / sqrt(head_size), t in [0, position]
-//   probs = softmax(scores)
-//   output = sum_t probs_t * v_t
-// `query` holds the current token's per-head Q vectors, while `key_cache` and
-// `value_cache` contain all tokens from positions [0, position].
+/**
+ * Computes single-token causal attention against the K/V cache:
+ *    scores_t = dot(q, k_t) / sqrt(head_size), t in [0, position]
+ *    probs = softmax(scores)
+ *    output = sum_t probs_t * v_t
+ * `query` holds the current token's per-head Q vectors, while `key_cache` and
+ * `value_cache` contain all tokens from positions [0, position].
+ */
 void AttentionWithCache(const std::vector<float> &query,
                         const std::vector<float> &key_cache,
                         const std::vector<float> &value_cache, int32_t position,
