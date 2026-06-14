@@ -163,11 +163,93 @@ void AttentionWithCacheCpu(const std::vector<float> &query,
   }
 }
 
-void AddInPlaceCpu(std::vector<float> &left, const std::vector<float> &right) {
+tensor::Tensor EmbeddingTensor(const tensor::Tensor &fp32_cuda_weight,
+                               int32_t token_id) {
+  tensor::Tensor input = tensor::Tensor::allocate(
+      base::DataType::kDataTypeInt32, {1}, base::DeviceType::kDeviceCPU);
+  input.data<int32_t>()[0] = token_id;
+  tensor::Tensor output_tensor = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {fp32_cuda_weight.get_dim(1)},
+      base::DeviceType::kDeviceCUDA);
+  kernel::emb_kernel_cu(input, fp32_cuda_weight, output_tensor,
+                        fp32_cuda_weight.get_dim(0), nullptr);
+  return output_tensor;
+}
+
+tensor::Tensor RmsNormTensor(const tensor::Tensor &input,
+                             const tensor::Tensor &weight,
+                             const tensor::Tensor &fp32_cuda_weight,
+                             double eps) {
+  if (std::abs(eps - 1e-5) > 1e-12) {
+    std::vector<float> output;
+    RmsNormCpu(CopyTensorToVector(input), weight, eps, output);
+    return CopyVectorToCudaTensor(output);
+  }
+
+  tensor::Tensor input_tensor = EnsureCudaTensor(input);
+  tensor::Tensor output_tensor =
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
+                               {static_cast<int32_t>(input_tensor.size())},
+                               base::DeviceType::kDeviceCUDA);
+  kernel::rmsnorm_kernel_cu(input_tensor, fp32_cuda_weight, output_tensor,
+                            nullptr);
+  return output_tensor;
+}
+
+tensor::Tensor MatVecTensor(const tensor::Tensor &weight,
+                            const tensor::Tensor &fp32_cuda_weight,
+                            const tensor::Tensor &input) {
+  tensor::Tensor input_tensor = EnsureCudaTensor(input);
+  tensor::Tensor output_tensor = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {weight.get_dim(0)},
+      base::DeviceType::kDeviceCUDA);
+  kernel::matmul_kernel_cu(input_tensor, fp32_cuda_weight, output_tensor, 1.0f,
+                           nullptr);
+  return output_tensor;
+}
+
+tensor::Tensor SwiGluTensor(const tensor::Tensor &gate,
+                            const tensor::Tensor &up) {
+  tensor::Tensor gate_tensor = EnsureCudaTensor(gate);
+  tensor::Tensor up_tensor = EnsureCudaTensor(up);
+  tensor::Tensor output_tensor = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {static_cast<int32_t>(gate.size())},
+      base::DeviceType::kDeviceCUDA);
+  kernel::swiglu_kernel_cu(gate_tensor, up_tensor, output_tensor, nullptr);
+  return output_tensor;
+}
+
+void AddInPlaceTensor(tensor::Tensor &left, const tensor::Tensor &right) {
+  if (left.device_type() == base::DeviceType::kDeviceCUDA ||
+      right.device_type() == base::DeviceType::kDeviceCUDA) {
+    tensor::Tensor right_tensor = EnsureCudaTensor(right);
+    if (left.device_type() == base::DeviceType::kDeviceCPU) {
+      left.to_cuda();
+    }
+    kernel::add_inplace_kernel_cu(left, right_tensor, nullptr);
+    return;
+  }
+
+  CHECK(left.device_type() == base::DeviceType::kDeviceCPU);
+  CHECK(right.device_type() == base::DeviceType::kDeviceCPU);
   CHECK_EQ(left.size(), right.size());
   for (size_t i = 0; i < left.size(); ++i) {
-    left[i] += right[i];
+    left.data<float>()[i] += right.data<float>()[i];
   }
+}
+
+int32_t ArgMaxToken(const tensor::Tensor &logits) {
+  CHECK(logits.data_type() == base::DataType::kDataTypeFp32);
+  const float *data = logits.data<float>();
+  int32_t best = 0;
+  float best_value = data[0];
+  for (int32_t i = 1; i < static_cast<int32_t>(logits.size()); ++i) {
+    if (data[i] > best_value) {
+      best = i;
+      best_value = data[i];
+    }
+  }
+  return best;
 }
 
 } // namespace
@@ -180,41 +262,6 @@ public:
                int32_t token_id, int32_t position) const override;
 
 private:
-  void Embedding(const tensor::Tensor &weight, int32_t token_id,
-                 std::vector<float> &output) const;
-  tensor::Tensor EmbeddingTensor(const tensor::Tensor &weight,
-                                 int32_t token_id) const;
-  void RmsNorm(const std::vector<float> &input, const tensor::Tensor &weight,
-               double eps, std::vector<float> &output) const;
-  tensor::Tensor RmsNormTensor(const tensor::Tensor &input,
-                               const tensor::Tensor &weight, double eps) const;
-  void MatVec(const tensor::Tensor &weight, const std::vector<float> &input,
-              std::vector<float> &output) const;
-  tensor::Tensor MatVecTensor(const tensor::Tensor &weight,
-                              const tensor::Tensor &input) const;
-  void ApplyRopeToHeads(std::vector<float> &values, int32_t head_count,
-                        int32_t head_size, int32_t position,
-                        double rope_theta) const;
-  void StoreKvCache(const std::vector<float> &key,
-                    const std::vector<float> &value, int32_t position,
-                    int32_t max_position, int32_t kv_dim,
-                    std::vector<float> &key_cache,
-                    std::vector<float> &value_cache) const;
-  void AttentionWithCache(const std::vector<float> &query,
-                          const std::vector<float> &key_cache,
-                          const std::vector<float> &value_cache,
-                          int32_t position, int32_t head_count,
-                          int32_t head_size, int32_t kv_dim, int32_t kv_mul,
-                          std::vector<float> &output) const;
-  void SwiGlu(const std::vector<float> &gate, const std::vector<float> &up,
-              std::vector<float> &output) const;
-  tensor::Tensor SwiGluTensor(const tensor::Tensor &gate,
-                              const tensor::Tensor &up) const;
-  void AddInPlace(std::vector<float> &left,
-                  const std::vector<float> &right) const;
-  void AddInPlaceTensor(tensor::Tensor &left,
-                        const tensor::Tensor &right) const;
-  int32_t ArgMaxToken(const tensor::Tensor &logits) const;
   const tensor::Tensor &Fp32CudaWeight(const tensor::Tensor &weight) const;
 
   mutable std::unordered_map<const tensor::Tensor *, tensor::Tensor>
@@ -252,7 +299,8 @@ CudaLlamaBackend::ForwardToken(const LlamaHfModel &model,
   tensor::Tensor hidden_state;
   {
     base::ScopedProfile profile(state.profile.embedding_ms);
-    hidden_state = EmbeddingTensor(model.weights.token_embedding, token_id);
+    hidden_state = EmbeddingTensor(
+        Fp32CudaWeight(model.weights.token_embedding), token_id);
   }
 
   tensor::Tensor norm;
@@ -275,41 +323,46 @@ CudaLlamaBackend::ForwardToken(const LlamaHfModel &model,
     {
       base::ScopedProfile profile(state.profile.attention_norm_ms);
       norm = RmsNormTensor(hidden_state, weights.input_layernorm,
+                           Fp32CudaWeight(weights.input_layernorm),
                            config.rms_norm_eps);
     }
     {
       base::ScopedProfile profile(state.profile.qkv_proj_ms);
-      query_tensor = MatVecTensor(weights.q_proj, norm);
-      key_tensor = MatVecTensor(weights.k_proj, norm);
-      value_tensor = MatVecTensor(weights.v_proj, norm);
+      query_tensor =
+          MatVecTensor(weights.q_proj, Fp32CudaWeight(weights.q_proj), norm);
+      key_tensor =
+          MatVecTensor(weights.k_proj, Fp32CudaWeight(weights.k_proj), norm);
+      value_tensor =
+          MatVecTensor(weights.v_proj, Fp32CudaWeight(weights.v_proj), norm);
       query = CopyTensorToVector(query_tensor);
       key = CopyTensorToVector(key_tensor);
       value = CopyTensorToVector(value_tensor);
     }
     {
       base::ScopedProfile profile(state.profile.rope_ms);
-      ApplyRopeToHeads(query, config.num_attention_heads, state.head_size,
-                       position, config.rope_theta);
-      ApplyRopeToHeads(key, config.num_key_value_heads, state.head_size,
-                       position, config.rope_theta);
+      ApplyRopeToHeadsCpu(query, config.num_attention_heads, state.head_size,
+                          position, config.rope_theta);
+      ApplyRopeToHeadsCpu(key, config.num_key_value_heads, state.head_size,
+                          position, config.rope_theta);
     }
     {
       base::ScopedProfile profile(state.profile.kv_cache_ms);
-      StoreKvCache(key, value, position, config.max_position_embeddings,
-                   state.kv_dim, state.layer_caches[layer].key,
-                   state.layer_caches[layer].value);
+      StoreKvCacheCpu(key, value, position, config.max_position_embeddings,
+                      state.kv_dim, state.layer_caches[layer].key,
+                      state.layer_caches[layer].value);
     }
     {
       base::ScopedProfile profile(state.profile.attention_ms);
-      AttentionWithCache(query, state.layer_caches[layer].key,
-                         state.layer_caches[layer].value, position,
-                         config.num_attention_heads, state.head_size,
-                         state.kv_dim, state.kv_mul, attention_output);
+      AttentionWithCacheCpu(query, state.layer_caches[layer].key,
+                            state.layer_caches[layer].value, position,
+                            config.num_attention_heads, state.head_size,
+                            state.kv_dim, state.kv_mul, attention_output);
     }
     {
       base::ScopedProfile profile(state.profile.attention_output_proj_ms);
-      projected_attention = MatVecTensor(
-          weights.o_proj, CopyVectorToCudaTensor(attention_output));
+      projected_attention =
+          MatVecTensor(weights.o_proj, Fp32CudaWeight(weights.o_proj),
+                       CopyVectorToCudaTensor(attention_output));
     }
     {
       base::ScopedProfile profile(state.profile.attention_residual_ms);
@@ -318,12 +371,14 @@ CudaLlamaBackend::ForwardToken(const LlamaHfModel &model,
     {
       base::ScopedProfile profile(state.profile.ffn_norm_ms);
       norm = RmsNormTensor(hidden_state, weights.post_attention_layernorm,
+                           Fp32CudaWeight(weights.post_attention_layernorm),
                            config.rms_norm_eps);
     }
     {
       base::ScopedProfile profile(state.profile.ffn_up_gate_proj_ms);
-      gate = MatVecTensor(weights.gate_proj, norm);
-      up = MatVecTensor(weights.up_proj, norm);
+      gate = MatVecTensor(weights.gate_proj, Fp32CudaWeight(weights.gate_proj),
+                          norm);
+      up = MatVecTensor(weights.up_proj, Fp32CudaWeight(weights.up_proj), norm);
     }
     {
       base::ScopedProfile profile(state.profile.swiglu_ms);
@@ -331,7 +386,8 @@ CudaLlamaBackend::ForwardToken(const LlamaHfModel &model,
     }
     {
       base::ScopedProfile profile(state.profile.ffn_down_proj_ms);
-      projected_ffn = MatVecTensor(weights.down_proj, activated);
+      projected_ffn = MatVecTensor(
+          weights.down_proj, Fp32CudaWeight(weights.down_proj), activated);
     }
     {
       base::ScopedProfile profile(state.profile.ffn_residual_ms);
@@ -342,13 +398,15 @@ CudaLlamaBackend::ForwardToken(const LlamaHfModel &model,
   {
     base::ScopedProfile profile(state.profile.final_norm_ms);
     norm = RmsNormTensor(hidden_state, model.weights.final_norm,
+                         Fp32CudaWeight(model.weights.final_norm),
                          config.rms_norm_eps);
   }
 
   LlamaForwardResult result;
   {
     base::ScopedProfile profile(state.profile.lm_head_ms);
-    result.logits = MatVecTensor(model.weights.lm_head, norm);
+    result.logits = MatVecTensor(model.weights.lm_head,
+                                 Fp32CudaWeight(model.weights.lm_head), norm);
   }
   result.logits.to_cpu();
   CHECK_EQ(static_cast<int32_t>(result.logits.size()), config.vocab_size);
@@ -360,182 +418,6 @@ CudaLlamaBackend::ForwardToken(const LlamaHfModel &model,
   LOG(INFO) << "finish LLaMA CUDA one-token forward: next_token="
             << result.next_token;
   return result;
-}
-
-void CudaLlamaBackend::Embedding(const tensor::Tensor &weight, int32_t token_id,
-                                 std::vector<float> &output) const {
-  tensor::Tensor input = tensor::Tensor::allocate(
-      base::DataType::kDataTypeInt32, {1}, base::DeviceType::kDeviceCPU);
-  input.data<int32_t>()[0] = token_id;
-  tensor::Tensor output_tensor = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {weight.get_dim(1)},
-      base::DeviceType::kDeviceCUDA);
-  kernel::emb_kernel_cu(input, Fp32CudaWeight(weight), output_tensor,
-                        weight.get_dim(0), nullptr);
-  output = CopyTensorToVector(std::move(output_tensor));
-}
-
-tensor::Tensor CudaLlamaBackend::EmbeddingTensor(const tensor::Tensor &weight,
-                                                 int32_t token_id) const {
-  tensor::Tensor input = tensor::Tensor::allocate(
-      base::DataType::kDataTypeInt32, {1}, base::DeviceType::kDeviceCPU);
-  input.data<int32_t>()[0] = token_id;
-  tensor::Tensor output_tensor = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {weight.get_dim(1)},
-      base::DeviceType::kDeviceCUDA);
-  kernel::emb_kernel_cu(input, Fp32CudaWeight(weight), output_tensor,
-                        weight.get_dim(0), nullptr);
-  return output_tensor;
-}
-
-void CudaLlamaBackend::RmsNorm(const std::vector<float> &input,
-                               const tensor::Tensor &weight, double eps,
-                               std::vector<float> &output) const {
-  if (std::abs(eps - 1e-5) > 1e-12) {
-    RmsNormCpu(input, weight, eps, output);
-    return;
-  }
-
-  tensor::Tensor input_tensor = CopyVectorToCudaTensor(input);
-  tensor::Tensor output_tensor = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {static_cast<int32_t>(input.size())},
-      base::DeviceType::kDeviceCUDA);
-  kernel::rmsnorm_kernel_cu(input_tensor, Fp32CudaWeight(weight), output_tensor,
-                            nullptr);
-  output = CopyTensorToVector(std::move(output_tensor));
-}
-
-tensor::Tensor CudaLlamaBackend::RmsNormTensor(const tensor::Tensor &input,
-                                               const tensor::Tensor &weight,
-                                               double eps) const {
-  if (std::abs(eps - 1e-5) > 1e-12) {
-    std::vector<float> output;
-    RmsNormCpu(CopyTensorToVector(input), weight, eps, output);
-    return CopyVectorToCudaTensor(output);
-  }
-
-  tensor::Tensor input_tensor = EnsureCudaTensor(input);
-  tensor::Tensor output_tensor =
-      tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
-                               {static_cast<int32_t>(input_tensor.size())},
-                               base::DeviceType::kDeviceCUDA);
-  kernel::rmsnorm_kernel_cu(input_tensor, Fp32CudaWeight(weight), output_tensor,
-                            nullptr);
-  return output_tensor;
-}
-
-void CudaLlamaBackend::MatVec(const tensor::Tensor &weight,
-                              const std::vector<float> &input,
-                              std::vector<float> &output) const {
-  tensor::Tensor input_tensor = CopyVectorToCudaTensor(input);
-  tensor::Tensor output_tensor = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {weight.get_dim(0)},
-      base::DeviceType::kDeviceCUDA);
-  kernel::matmul_kernel_cu(input_tensor, Fp32CudaWeight(weight), output_tensor,
-                           1.0f, nullptr);
-  output = CopyTensorToVector(std::move(output_tensor));
-}
-
-tensor::Tensor
-CudaLlamaBackend::MatVecTensor(const tensor::Tensor &weight,
-                               const tensor::Tensor &input) const {
-  tensor::Tensor input_tensor = EnsureCudaTensor(input);
-  tensor::Tensor output_tensor = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {weight.get_dim(0)},
-      base::DeviceType::kDeviceCUDA);
-  kernel::matmul_kernel_cu(input_tensor, Fp32CudaWeight(weight), output_tensor,
-                           1.0f, nullptr);
-  return output_tensor;
-}
-
-void CudaLlamaBackend::ApplyRopeToHeads(std::vector<float> &values,
-                                        int32_t head_count, int32_t head_size,
-                                        int32_t position,
-                                        double rope_theta) const {
-  ApplyRopeToHeadsCpu(values, head_count, head_size, position, rope_theta);
-}
-
-void CudaLlamaBackend::StoreKvCache(const std::vector<float> &key,
-                                    const std::vector<float> &value,
-                                    int32_t position, int32_t max_position,
-                                    int32_t kv_dim,
-                                    std::vector<float> &key_cache,
-                                    std::vector<float> &value_cache) const {
-  StoreKvCacheCpu(key, value, position, max_position, kv_dim, key_cache,
-                  value_cache);
-}
-
-void CudaLlamaBackend::AttentionWithCache(const std::vector<float> &query,
-                                          const std::vector<float> &key_cache,
-                                          const std::vector<float> &value_cache,
-                                          int32_t position, int32_t head_count,
-                                          int32_t head_size, int32_t kv_dim,
-                                          int32_t kv_mul,
-                                          std::vector<float> &output) const {
-  AttentionWithCacheCpu(query, key_cache, value_cache, position, head_count,
-                        head_size, kv_dim, kv_mul, output);
-}
-
-void CudaLlamaBackend::SwiGlu(const std::vector<float> &gate,
-                              const std::vector<float> &up,
-                              std::vector<float> &output) const {
-  tensor::Tensor gate_tensor = CopyVectorToCudaTensor(gate);
-  tensor::Tensor up_tensor = CopyVectorToCudaTensor(up);
-  tensor::Tensor output_tensor = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {static_cast<int32_t>(gate.size())},
-      base::DeviceType::kDeviceCUDA);
-  kernel::swiglu_kernel_cu(gate_tensor, up_tensor, output_tensor, nullptr);
-  output = CopyTensorToVector(std::move(output_tensor));
-}
-
-tensor::Tensor CudaLlamaBackend::SwiGluTensor(const tensor::Tensor &gate,
-                                              const tensor::Tensor &up) const {
-  tensor::Tensor gate_tensor = EnsureCudaTensor(gate);
-  tensor::Tensor up_tensor = EnsureCudaTensor(up);
-  tensor::Tensor output_tensor = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {static_cast<int32_t>(gate.size())},
-      base::DeviceType::kDeviceCUDA);
-  kernel::swiglu_kernel_cu(gate_tensor, up_tensor, output_tensor, nullptr);
-  return output_tensor;
-}
-
-void CudaLlamaBackend::AddInPlace(std::vector<float> &left,
-                                  const std::vector<float> &right) const {
-  AddInPlaceCpu(left, right);
-}
-
-void CudaLlamaBackend::AddInPlaceTensor(tensor::Tensor &left,
-                                        const tensor::Tensor &right) const {
-  if (left.device_type() == base::DeviceType::kDeviceCUDA ||
-      right.device_type() == base::DeviceType::kDeviceCUDA) {
-    tensor::Tensor right_tensor = EnsureCudaTensor(right);
-    if (left.device_type() == base::DeviceType::kDeviceCPU) {
-      left.to_cuda();
-    }
-    kernel::add_inplace_kernel_cu(left, right_tensor, nullptr);
-    return;
-  }
-
-  CHECK(left.device_type() == base::DeviceType::kDeviceCPU);
-  CHECK(right.device_type() == base::DeviceType::kDeviceCPU);
-  CHECK_EQ(left.size(), right.size());
-  for (size_t i = 0; i < left.size(); ++i) {
-    left.data<float>()[i] += right.data<float>()[i];
-  }
-}
-
-int32_t CudaLlamaBackend::ArgMaxToken(const tensor::Tensor &logits) const {
-  CHECK(logits.data_type() == base::DataType::kDataTypeFp32);
-  const float *data = logits.data<float>();
-  int32_t best = 0;
-  float best_value = data[0];
-  for (int32_t i = 1; i < static_cast<int32_t>(logits.size()); ++i) {
-    if (data[i] > best_value) {
-      best = i;
-      best_value = data[i];
-    }
-  }
-  return best;
 }
 
 const tensor::Tensor &

@@ -17,14 +17,6 @@
 namespace model {
 namespace {
 
-std::vector<float> CopyTensorToVector(tensor::Tensor tensor) {
-  tensor.to_cpu();
-  std::vector<float> values(tensor.size());
-  std::copy(tensor.data<float>(), tensor.data<float>() + tensor.size(),
-            values.begin());
-  return values;
-}
-
 tensor::Tensor CopyVectorToCpuTensor(const std::vector<float> &values) {
   tensor::Tensor tensor = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {static_cast<int32_t>(values.size())},
@@ -32,6 +24,30 @@ tensor::Tensor CopyVectorToCpuTensor(const std::vector<float> &values) {
   std::copy(values.begin(), values.end(), tensor.data<float>());
   return tensor;
 }
+
+void Embedding(const tensor::Tensor &weight, int32_t token_id,
+               std::vector<float> &output);
+void RmsNorm(const std::vector<float> &input, const tensor::Tensor &weight,
+             double eps, std::vector<float> &output);
+void MatVec(const tensor::Tensor &weight, const std::vector<float> &input,
+            std::vector<float> &output);
+void ApplyRopeToHeads(std::vector<float> &values, int32_t head_count,
+                      int32_t head_size, int32_t position, double rope_theta);
+void StoreKvCache(const std::vector<float> &key,
+                  const std::vector<float> &value, int32_t position,
+                  int32_t max_position, int32_t kv_dim,
+                  std::vector<float> &key_cache,
+                  std::vector<float> &value_cache);
+void AttentionWithCache(const std::vector<float> &query,
+                        const std::vector<float> &key_cache,
+                        const std::vector<float> &value_cache, int32_t position,
+                        int32_t head_count, int32_t head_size, int32_t kv_dim,
+                        int32_t kv_mul, std::vector<float> &output);
+void SwiGlu(const std::vector<float> &gate, const std::vector<float> &up,
+            std::vector<float> &output);
+void AddInPlace(std::vector<float> &left, const std::vector<float> &right);
+int32_t ArgMaxToken(const tensor::Tensor &logits);
+void SoftmaxInPlace(std::vector<float> &values);
 
 } // namespace
 
@@ -41,44 +57,6 @@ public:
   absl::StatusOr<LlamaForwardResult>
   ForwardToken(const LlamaHfModel &model, LlamaForwardState &state,
                int32_t token_id, int32_t position) const override;
-
-private:
-  void Embedding(const tensor::Tensor &weight, int32_t token_id,
-                 std::vector<float> &output) const;
-  tensor::Tensor EmbeddingTensor(const tensor::Tensor &weight,
-                                 int32_t token_id) const;
-  void RmsNorm(const std::vector<float> &input, const tensor::Tensor &weight,
-               double eps, std::vector<float> &output) const;
-  tensor::Tensor RmsNormTensor(const tensor::Tensor &input,
-                               const tensor::Tensor &weight, double eps) const;
-  void MatVec(const tensor::Tensor &weight, const std::vector<float> &input,
-              std::vector<float> &output) const;
-  tensor::Tensor MatVecTensor(const tensor::Tensor &weight,
-                              const tensor::Tensor &input) const;
-  void ApplyRopeToHeads(std::vector<float> &values, int32_t head_count,
-                        int32_t head_size, int32_t position,
-                        double rope_theta) const;
-  void StoreKvCache(const std::vector<float> &key,
-                    const std::vector<float> &value, int32_t position,
-                    int32_t max_position, int32_t kv_dim,
-                    std::vector<float> &key_cache,
-                    std::vector<float> &value_cache) const;
-  void AttentionWithCache(const std::vector<float> &query,
-                          const std::vector<float> &key_cache,
-                          const std::vector<float> &value_cache,
-                          int32_t position, int32_t head_count,
-                          int32_t head_size, int32_t kv_dim, int32_t kv_mul,
-                          std::vector<float> &output) const;
-  void SwiGlu(const std::vector<float> &gate, const std::vector<float> &up,
-              std::vector<float> &output) const;
-  tensor::Tensor SwiGluTensor(const tensor::Tensor &gate,
-                              const tensor::Tensor &up) const;
-  void AddInPlace(std::vector<float> &left,
-                  const std::vector<float> &right) const;
-  void AddInPlaceTensor(tensor::Tensor &left,
-                        const tensor::Tensor &right) const;
-  int32_t ArgMaxToken(const tensor::Tensor &logits) const;
-  static void SoftmaxInPlace(std::vector<float> &values);
 };
 
 std::unique_ptr<LlamaBackend> CreateCpuLlamaBackend() {
@@ -214,8 +192,10 @@ CpuLlamaBackend::ForwardToken(const LlamaHfModel &model,
   return result;
 }
 
-void CpuLlamaBackend::Embedding(const tensor::Tensor &weight, int32_t token_id,
-                                std::vector<float> &output) const {
+namespace {
+
+void Embedding(const tensor::Tensor &weight, int32_t token_id,
+               std::vector<float> &output) {
   const int32_t cols = weight.get_dim(1);
   output.resize(cols);
   const size_t row_offset = static_cast<size_t>(token_id) * cols;
@@ -224,16 +204,8 @@ void CpuLlamaBackend::Embedding(const tensor::Tensor &weight, int32_t token_id,
   }
 }
 
-tensor::Tensor CpuLlamaBackend::EmbeddingTensor(const tensor::Tensor &weight,
-                                                int32_t token_id) const {
-  std::vector<float> output;
-  Embedding(weight, token_id, output);
-  return CopyVectorToCpuTensor(output);
-}
-
-void CpuLlamaBackend::RmsNorm(const std::vector<float> &input,
-                              const tensor::Tensor &weight, double eps,
-                              std::vector<float> &output) const {
+void RmsNorm(const std::vector<float> &input, const tensor::Tensor &weight,
+             double eps, std::vector<float> &output) {
   float square_sum = 0.0f;
   for (const float value : input) {
     square_sum += value * value;
@@ -247,17 +219,8 @@ void CpuLlamaBackend::RmsNorm(const std::vector<float> &input,
   }
 }
 
-tensor::Tensor CpuLlamaBackend::RmsNormTensor(const tensor::Tensor &input,
-                                              const tensor::Tensor &weight,
-                                              double eps) const {
-  std::vector<float> output;
-  RmsNorm(CopyTensorToVector(input), weight, eps, output);
-  return CopyVectorToCpuTensor(output);
-}
-
-void CpuLlamaBackend::MatVec(const tensor::Tensor &weight,
-                             const std::vector<float> &input,
-                             std::vector<float> &output) const {
+void MatVec(const tensor::Tensor &weight, const std::vector<float> &input,
+            std::vector<float> &output) {
   const int32_t rows = weight.get_dim(0);
   const int32_t cols = weight.get_dim(1);
   CHECK_EQ(static_cast<int32_t>(input.size()), cols);
@@ -272,18 +235,8 @@ void CpuLlamaBackend::MatVec(const tensor::Tensor &weight,
   }
 }
 
-tensor::Tensor
-CpuLlamaBackend::MatVecTensor(const tensor::Tensor &weight,
-                              const tensor::Tensor &input) const {
-  std::vector<float> output;
-  MatVec(weight, CopyTensorToVector(input), output);
-  return CopyVectorToCpuTensor(output);
-}
-
-void CpuLlamaBackend::ApplyRopeToHeads(std::vector<float> &values,
-                                       int32_t head_count, int32_t head_size,
-                                       int32_t position,
-                                       double rope_theta) const {
+void ApplyRopeToHeads(std::vector<float> &values, int32_t head_count,
+                      int32_t head_size, int32_t position, double rope_theta) {
   CHECK_EQ(static_cast<int32_t>(values.size()), head_count * head_size);
   CHECK_EQ(head_size % 2, 0);
   const int32_t half_head_size = head_size / 2;
@@ -307,12 +260,11 @@ void CpuLlamaBackend::ApplyRopeToHeads(std::vector<float> &values,
   }
 }
 
-void CpuLlamaBackend::StoreKvCache(const std::vector<float> &key,
-                                   const std::vector<float> &value,
-                                   int32_t position, int32_t max_position,
-                                   int32_t kv_dim,
-                                   std::vector<float> &key_cache,
-                                   std::vector<float> &value_cache) const {
+void StoreKvCache(const std::vector<float> &key,
+                  const std::vector<float> &value, int32_t position,
+                  int32_t max_position, int32_t kv_dim,
+                  std::vector<float> &key_cache,
+                  std::vector<float> &value_cache) {
   CHECK_EQ(static_cast<int32_t>(key.size()), kv_dim);
   CHECK_EQ(static_cast<int32_t>(value.size()), kv_dim);
   CHECK_GE(position, 0);
@@ -322,13 +274,11 @@ void CpuLlamaBackend::StoreKvCache(const std::vector<float> &key,
   std::copy(value.begin(), value.end(), value_cache.begin() + offset);
 }
 
-void CpuLlamaBackend::AttentionWithCache(const std::vector<float> &query,
-                                         const std::vector<float> &key_cache,
-                                         const std::vector<float> &value_cache,
-                                         int32_t position, int32_t head_count,
-                                         int32_t head_size, int32_t kv_dim,
-                                         int32_t kv_mul,
-                                         std::vector<float> &output) const {
+void AttentionWithCache(const std::vector<float> &query,
+                        const std::vector<float> &key_cache,
+                        const std::vector<float> &value_cache, int32_t position,
+                        int32_t head_count, int32_t head_size, int32_t kv_dim,
+                        int32_t kv_mul, std::vector<float> &output) {
   CHECK_GE(position, 0);
   CHECK_EQ(static_cast<int32_t>(query.size()), head_count * head_size);
   output.assign(static_cast<size_t>(head_count) * head_size, 0.0f);
@@ -360,9 +310,8 @@ void CpuLlamaBackend::AttentionWithCache(const std::vector<float> &query,
   }
 }
 
-void CpuLlamaBackend::SwiGlu(const std::vector<float> &gate,
-                             const std::vector<float> &up,
-                             std::vector<float> &output) const {
+void SwiGlu(const std::vector<float> &gate, const std::vector<float> &up,
+            std::vector<float> &output) {
   CHECK_EQ(gate.size(), up.size());
   output.resize(gate.size());
   for (size_t i = 0; i < gate.size(); ++i) {
@@ -371,32 +320,14 @@ void CpuLlamaBackend::SwiGlu(const std::vector<float> &gate,
   }
 }
 
-tensor::Tensor CpuLlamaBackend::SwiGluTensor(const tensor::Tensor &gate,
-                                             const tensor::Tensor &up) const {
-  std::vector<float> output;
-  SwiGlu(CopyTensorToVector(gate), CopyTensorToVector(up), output);
-  return CopyVectorToCpuTensor(output);
-}
-
-void CpuLlamaBackend::AddInPlace(std::vector<float> &left,
-                                 const std::vector<float> &right) const {
+void AddInPlace(std::vector<float> &left, const std::vector<float> &right) {
   CHECK_EQ(left.size(), right.size());
   for (size_t i = 0; i < left.size(); ++i) {
     left[i] += right[i];
   }
 }
 
-void CpuLlamaBackend::AddInPlaceTensor(tensor::Tensor &left,
-                                       const tensor::Tensor &right) const {
-  CHECK(left.device_type() == base::DeviceType::kDeviceCPU);
-  CHECK(right.device_type() == base::DeviceType::kDeviceCPU);
-  CHECK_EQ(left.size(), right.size());
-  for (size_t i = 0; i < left.size(); ++i) {
-    left.data<float>()[i] += right.data<float>()[i];
-  }
-}
-
-int32_t CpuLlamaBackend::ArgMaxToken(const tensor::Tensor &logits) const {
+int32_t ArgMaxToken(const tensor::Tensor &logits) {
   CHECK(logits.data_type() == base::DataType::kDataTypeFp32);
   const float *data = logits.data<float>();
   int32_t best = 0;
@@ -410,7 +341,7 @@ int32_t CpuLlamaBackend::ArgMaxToken(const tensor::Tensor &logits) const {
   return best;
 }
 
-void CpuLlamaBackend::SoftmaxInPlace(std::vector<float> &values) {
+void SoftmaxInPlace(std::vector<float> &values) {
   CHECK(!values.empty());
   const float max_value = *std::max_element(values.begin(), values.end());
   float sum = 0.0f;
@@ -422,5 +353,7 @@ void CpuLlamaBackend::SoftmaxInPlace(std::vector<float> &values) {
     value /= sum;
   }
 }
+
+} // namespace
 
 } // namespace model
