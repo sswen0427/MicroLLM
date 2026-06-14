@@ -60,7 +60,7 @@ model::LlamaHfModel MakeTinyForwardModel() {
   return model;
 }
 
-} // namespace
+}  // namespace
 
 TEST(LlamaHfForwardTest, RunsOneTokenForward) {
   model::LlamaHfModel model = MakeTinyForwardModel();

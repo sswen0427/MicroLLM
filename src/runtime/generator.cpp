@@ -38,12 +38,11 @@ std::vector<std::pair<int32_t, float>> TopLogits(const tensor::Tensor &logits,
   return top_logits;
 }
 
-} // namespace
+}  // namespace
 
-absl::StatusOr<GenerationResult>
-GenerateText(const model::LlamaHfModel &model,
-             const tokenizer::Tokenizer &tokenizer, const std::string &prompt,
-             const GenerationConfig &config) {
+absl::StatusOr<GenerationResult> GenerateText(
+    const model::LlamaHfModel &model, const tokenizer::Tokenizer &tokenizer,
+    const std::string &prompt, const GenerationConfig &config) {
   if (prompt.empty()) {
     return absl::InvalidArgumentError("prompt must not be empty.");
   }
@@ -131,4 +130,4 @@ void GenerationProfile::Log() const {
   forward.Log();
 }
 
-} // namespace runtime
+}  // namespace runtime
