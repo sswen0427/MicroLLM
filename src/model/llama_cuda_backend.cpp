@@ -125,6 +125,12 @@ void SoftmaxInPlace(std::vector<float> &values) {
   }
 }
 
+// Computes single-token causal attention against the K/V cache:
+//   scores_t = dot(q, k_t) / sqrt(head_size), t in [0, position]
+//   probs = softmax(scores)
+//   output = sum_t probs_t * v_t
+// `query` holds the current token's per-head Q vectors, while `key_cache` and
+// `value_cache` contain all tokens from positions [0, position].
 void AttentionWithCacheCpu(const std::vector<float> &query,
                            const std::vector<float> &key_cache,
                            const std::vector<float> &value_cache,
@@ -251,16 +257,16 @@ int32_t ArgMaxToken(const tensor::Tensor &logits) {
   return best;
 }
 
-}  // namespace
+} // namespace
 
 class CudaLlamaBackend final : public LlamaBackend {
- public:
+public:
   base::DeviceType device_type() const override;
-  absl::StatusOr<LlamaForwardResult> ForwardToken(
-      const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
-      int32_t position) const override;
+  absl::StatusOr<LlamaForwardResult>
+  ForwardToken(const LlamaHfModel &model, LlamaForwardState &state,
+               int32_t token_id, int32_t position) const override;
 
- private:
+private:
   const tensor::Tensor &Fp32CudaWeight(const tensor::Tensor &weight) const;
 
   mutable std::unordered_map<const tensor::Tensor *, tensor::Tensor>
@@ -275,9 +281,10 @@ base::DeviceType CudaLlamaBackend::device_type() const {
   return base::DeviceType::kDeviceCUDA;
 }
 
-absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardToken(
-    const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
-    int32_t position) const {
+absl::StatusOr<LlamaForwardResult>
+CudaLlamaBackend::ForwardToken(const LlamaHfModel &model,
+                               LlamaForwardState &state, int32_t token_id,
+                               int32_t position) const {
   const HfLlamaConfig &config = model.config;
   if (token_id < 0 || token_id >= config.vocab_size) {
     return absl::InvalidArgumentError(
@@ -418,8 +425,8 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardToken(
   return result;
 }
 
-const tensor::Tensor &CudaLlamaBackend::Fp32CudaWeight(
-    const tensor::Tensor &weight) const {
+const tensor::Tensor &
+CudaLlamaBackend::Fp32CudaWeight(const tensor::Tensor &weight) const {
   const auto cached = fp32_cuda_weights_.find(&weight);
   if (cached != fp32_cuda_weights_.end()) {
     return cached->second;
@@ -446,4 +453,4 @@ const tensor::Tensor &CudaLlamaBackend::Fp32CudaWeight(
   return insert_result.first->second;
 }
 
-}  // namespace model
+} // namespace model
