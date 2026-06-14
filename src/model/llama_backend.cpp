@@ -2,6 +2,7 @@
 
 #include <glog/logging.h>
 
+#include <cstddef>
 #include <memory>
 
 #include "model/llama_cpu_backend.h"
@@ -19,6 +20,31 @@ std::unique_ptr<LlamaBackend> CreateLlamaBackend(base::DeviceType device_type) {
   LOG(FATAL) << "Unsupported LLaMA backend device type: "
              << static_cast<int>(device_type);
   return nullptr;
+}
+
+LlamaForwardState CreateLlamaForwardState(const HfLlamaConfig &config) {
+  LlamaForwardState state;
+  if (config.num_attention_heads > 0) {
+    state.head_size = config.hidden_size / config.num_attention_heads;
+  }
+  state.kv_dim = config.num_key_value_heads * state.head_size;
+  if (config.num_key_value_heads > 0) {
+    state.kv_mul = config.num_attention_heads / config.num_key_value_heads;
+  }
+
+  if (config.num_hidden_layers <= 0 || config.max_position_embeddings <= 0 ||
+      state.kv_dim <= 0) {
+    return state;
+  }
+
+  state.layer_caches.resize(config.num_hidden_layers);
+  const size_t cache_size =
+      static_cast<size_t>(config.max_position_embeddings) * state.kv_dim;
+  for (LlamaLayerCache &cache : state.layer_caches) {
+    cache.key.assign(cache_size, 0.0f);
+    cache.value.assign(cache_size, 0.0f);
+  }
+  return state;
 }
 
 void LlamaForwardProfile::Log() const {
@@ -46,4 +72,4 @@ void LlamaForwardProfile::Log() const {
   LOG(INFO) << "      argmax_s=" << argmax_ms / 1000.0;
 }
 
-}  // namespace model
+} // namespace model

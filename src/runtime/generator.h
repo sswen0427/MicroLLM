@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "base/types.h"
-#include "model/llama_hf_forward.h"
+#include "model/llama_backend.h"
 #include "model/llama_hf_model_loader.h"
 #include "tokenizer/tokenizer.h"
 
@@ -46,8 +46,9 @@ struct GenerationResult {
   GenerationProfile profile;
 };
 
-absl::StatusOr<GenerationResult> GenerateText(
-    const model::LlamaHfModel& model, const tokenizer::Tokenizer& tokenizer,
-    const std::string& prompt, const GenerationConfig& config);
+absl::StatusOr<GenerationResult>
+GenerateText(const model::LlamaHfModel &model,
+             const tokenizer::Tokenizer &tokenizer, const std::string &prompt,
+             const GenerationConfig &config);
 
-}  // namespace runtime
+} // namespace runtime

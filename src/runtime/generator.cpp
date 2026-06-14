@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <memory>
 #include <numeric>
 #include <utility>
 #include <vector>
@@ -16,7 +17,7 @@
 namespace runtime {
 namespace {
 
-std::vector<std::pair<int32_t, float>> TopLogits(const tensor::Tensor& logits,
+std::vector<std::pair<int32_t, float>> TopLogits(const tensor::Tensor &logits,
                                                  int32_t top_k) {
   CHECK(logits.data_type() == base::DataType::kDataTypeFp32);
   CHECK(logits.device_type() == base::DeviceType::kDeviceCPU);
@@ -24,7 +25,7 @@ std::vector<std::pair<int32_t, float>> TopLogits(const tensor::Tensor& logits,
   const int32_t k = std::min(top_k, size);
   std::vector<int32_t> indices(size);
   std::iota(indices.begin(), indices.end(), 0);
-  const float* data = logits.data<float>();
+  const float *data = logits.data<float>();
   std::partial_sort(
       indices.begin(), indices.begin() + k, indices.end(),
       [data](int32_t lhs, int32_t rhs) { return data[lhs] > data[rhs]; });
@@ -37,11 +38,12 @@ std::vector<std::pair<int32_t, float>> TopLogits(const tensor::Tensor& logits,
   return top_logits;
 }
 
-}  // namespace
+} // namespace
 
-absl::StatusOr<GenerationResult> GenerateText(
-    const model::LlamaHfModel& model, const tokenizer::Tokenizer& tokenizer,
-    const std::string& prompt, const GenerationConfig& config) {
+absl::StatusOr<GenerationResult>
+GenerateText(const model::LlamaHfModel &model,
+             const tokenizer::Tokenizer &tokenizer, const std::string &prompt,
+             const GenerationConfig &config) {
   if (prompt.empty()) {
     return absl::InvalidArgumentError("prompt must not be empty.");
   }
@@ -64,7 +66,10 @@ absl::StatusOr<GenerationResult> GenerateText(
         model.config.max_position_embeddings));
   }
 
-  model::LlamaHfRuntime runtime(model, config.device_type);
+  std::unique_ptr<model::LlamaBackend> backend =
+      model::CreateLlamaBackend(config.device_type);
+  model::LlamaForwardState forward_state =
+      model::CreateLlamaForwardState(model.config);
   GenerationResult result;
   result.prompt_tokens = prompt_tokens;
   result.tokens.reserve(config.max_new_tokens);
@@ -77,7 +82,8 @@ absl::StatusOr<GenerationResult> GenerateText(
   model::LlamaForwardResult last_forward;
   for (int32_t pos = 0; pos < static_cast<int32_t>(prompt_tokens.size());
        ++pos) {
-    auto forward_or = runtime.ForwardToken(prompt_tokens[pos], pos);
+    auto forward_or =
+        backend->ForwardToken(model, forward_state, prompt_tokens[pos], pos);
     if (!forward_or.ok()) {
       return forward_or.status();
     }
@@ -102,7 +108,8 @@ absl::StatusOr<GenerationResult> GenerateText(
     }
     result.tokens.push_back(next_token);
 
-    auto forward_or = runtime.ForwardToken(next_token, pos);
+    auto forward_or =
+        backend->ForwardToken(model, forward_state, next_token, pos);
     if (!forward_or.ok()) {
       return forward_or.status();
     }
@@ -112,7 +119,7 @@ absl::StatusOr<GenerationResult> GenerateText(
 
   result.text = tokenizer.Decode(result.tokens);
   result.profile.generated_tokens = result.tokens.size();
-  result.profile.forward = runtime.profile();
+  result.profile.forward = forward_state.profile;
   LOG(INFO) << "Generated tokens: " << result.tokens.size();
   return result;
 }
@@ -124,4 +131,4 @@ void GenerationProfile::Log() const {
   forward.Log();
 }
 
-}  // namespace runtime
+} // namespace runtime
