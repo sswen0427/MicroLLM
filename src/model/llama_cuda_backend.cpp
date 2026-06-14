@@ -1,4 +1,4 @@
-#include "model/llama_cuda_backend.h"
+#include "model/llama_backend.h"
 
 #include <absl/status/status.h>
 #include <absl/strings/str_cat.h>
@@ -7,6 +7,8 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -56,15 +58,181 @@ std::vector<float> CopyTensorToVector(tensor::Tensor tensor) {
   return values;
 }
 
-}  // namespace
+void RmsNormCpu(const std::vector<float> &input, const tensor::Tensor &weight,
+                double eps, std::vector<float> &output) {
+  float square_sum = 0.0f;
+  for (const float value : input) {
+    square_sum += value * value;
+  }
+  const float mean_square = square_sum / static_cast<float>(input.size());
+  const float scale = 1.0f / std::sqrt(mean_square + static_cast<float>(eps));
+
+  output.resize(input.size());
+  for (size_t i = 0; i < input.size(); ++i) {
+    output[i] = input[i] * scale * TensorElementAsFloat(weight, i);
+  }
+}
+
+void ApplyRopeToHeadsCpu(std::vector<float> &values, int32_t head_count,
+                         int32_t head_size, int32_t position,
+                         double rope_theta) {
+  CHECK_EQ(static_cast<int32_t>(values.size()), head_count * head_size);
+  CHECK_EQ(head_size % 2, 0);
+  const int32_t half_head_size = head_size / 2;
+  for (int32_t head = 0; head < head_count; ++head) {
+    const int32_t head_offset = head * head_size;
+    for (int32_t i = 0; i < half_head_size; ++i) {
+      const float freq = 1.0f / std::pow(static_cast<float>(rope_theta),
+                                         static_cast<float>(2 * i) /
+                                             static_cast<float>(head_size));
+      const float angle = static_cast<float>(position) * freq;
+      const float cos_value = std::cos(angle);
+      const float sin_value = std::sin(angle);
+
+      const int32_t first = head_offset + i;
+      const int32_t second = head_offset + i + half_head_size;
+      const float x0 = values[first];
+      const float x1 = values[second];
+      values[first] = x0 * cos_value - x1 * sin_value;
+      values[second] = x0 * sin_value + x1 * cos_value;
+    }
+  }
+}
+
+void StoreKvCacheCpu(const std::vector<float> &key,
+                     const std::vector<float> &value, int32_t position,
+                     int32_t max_position, int32_t kv_dim,
+                     std::vector<float> &key_cache,
+                     std::vector<float> &value_cache) {
+  CHECK_EQ(static_cast<int32_t>(key.size()), kv_dim);
+  CHECK_EQ(static_cast<int32_t>(value.size()), kv_dim);
+  CHECK_GE(position, 0);
+  CHECK_LT(position, max_position);
+  const size_t offset = static_cast<size_t>(position) * kv_dim;
+  std::copy(key.begin(), key.end(), key_cache.begin() + offset);
+  std::copy(value.begin(), value.end(), value_cache.begin() + offset);
+}
+
+void SoftmaxInPlace(std::vector<float> &values) {
+  CHECK(!values.empty());
+  const float max_value = *std::max_element(values.begin(), values.end());
+  float sum = 0.0f;
+  for (float &value : values) {
+    value = std::exp(value - max_value);
+    sum += value;
+  }
+  for (float &value : values) {
+    value /= sum;
+  }
+}
+
+void AttentionWithCacheCpu(const std::vector<float> &query,
+                           const std::vector<float> &key_cache,
+                           const std::vector<float> &value_cache,
+                           int32_t position, int32_t head_count,
+                           int32_t head_size, int32_t kv_dim, int32_t kv_mul,
+                           std::vector<float> &output) {
+  CHECK_GE(position, 0);
+  CHECK_EQ(static_cast<int32_t>(query.size()), head_count * head_size);
+  output.assign(static_cast<size_t>(head_count) * head_size, 0.0f);
+
+  std::vector<float> scores(static_cast<size_t>(position) + 1);
+  const float scale = 1.0f / std::sqrt(static_cast<float>(head_size));
+  for (int32_t head = 0; head < head_count; ++head) {
+    const int32_t kv_head = head / kv_mul;
+    const int32_t query_offset = head * head_size;
+    const int32_t output_offset = head * head_size;
+
+    for (int32_t token = 0; token <= position; ++token) {
+      const int32_t cache_offset = token * kv_dim + kv_head * head_size;
+      float score = 0.0f;
+      for (int32_t i = 0; i < head_size; ++i) {
+        score += query[query_offset + i] * key_cache[cache_offset + i];
+      }
+      scores[token] = score * scale;
+    }
+    SoftmaxInPlace(scores);
+
+    for (int32_t token = 0; token <= position; ++token) {
+      const int32_t cache_offset = token * kv_dim + kv_head * head_size;
+      const float score = scores[token];
+      for (int32_t i = 0; i < head_size; ++i) {
+        output[output_offset + i] += score * value_cache[cache_offset + i];
+      }
+    }
+  }
+}
+
+void AddInPlaceCpu(std::vector<float> &left, const std::vector<float> &right) {
+  CHECK_EQ(left.size(), right.size());
+  for (size_t i = 0; i < left.size(); ++i) {
+    left[i] += right[i];
+  }
+}
+
+} // namespace
+
+class CudaLlamaBackend final : public LlamaBackend {
+public:
+  base::DeviceType device_type() const override;
+  absl::StatusOr<LlamaForwardResult>
+  ForwardToken(const LlamaHfModel &model, LlamaForwardState &state,
+               int32_t token_id, int32_t position) const override;
+
+private:
+  void Embedding(const tensor::Tensor &weight, int32_t token_id,
+                 std::vector<float> &output) const;
+  tensor::Tensor EmbeddingTensor(const tensor::Tensor &weight,
+                                 int32_t token_id) const;
+  void RmsNorm(const std::vector<float> &input, const tensor::Tensor &weight,
+               double eps, std::vector<float> &output) const;
+  tensor::Tensor RmsNormTensor(const tensor::Tensor &input,
+                               const tensor::Tensor &weight, double eps) const;
+  void MatVec(const tensor::Tensor &weight, const std::vector<float> &input,
+              std::vector<float> &output) const;
+  tensor::Tensor MatVecTensor(const tensor::Tensor &weight,
+                              const tensor::Tensor &input) const;
+  void ApplyRopeToHeads(std::vector<float> &values, int32_t head_count,
+                        int32_t head_size, int32_t position,
+                        double rope_theta) const;
+  void StoreKvCache(const std::vector<float> &key,
+                    const std::vector<float> &value, int32_t position,
+                    int32_t max_position, int32_t kv_dim,
+                    std::vector<float> &key_cache,
+                    std::vector<float> &value_cache) const;
+  void AttentionWithCache(const std::vector<float> &query,
+                          const std::vector<float> &key_cache,
+                          const std::vector<float> &value_cache,
+                          int32_t position, int32_t head_count,
+                          int32_t head_size, int32_t kv_dim, int32_t kv_mul,
+                          std::vector<float> &output) const;
+  void SwiGlu(const std::vector<float> &gate, const std::vector<float> &up,
+              std::vector<float> &output) const;
+  tensor::Tensor SwiGluTensor(const tensor::Tensor &gate,
+                              const tensor::Tensor &up) const;
+  void AddInPlace(std::vector<float> &left,
+                  const std::vector<float> &right) const;
+  void AddInPlaceTensor(tensor::Tensor &left,
+                        const tensor::Tensor &right) const;
+  int32_t ArgMaxToken(const tensor::Tensor &logits) const;
+  const tensor::Tensor &Fp32CudaWeight(const tensor::Tensor &weight) const;
+
+  mutable std::unordered_map<const tensor::Tensor *, tensor::Tensor>
+      fp32_cuda_weights_;
+};
+
+std::unique_ptr<LlamaBackend> CreateCudaLlamaBackend() {
+  return std::make_unique<CudaLlamaBackend>();
+}
 
 base::DeviceType CudaLlamaBackend::device_type() const {
   return base::DeviceType::kDeviceCUDA;
 }
 
-absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardToken(
-    const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
-    int32_t position) const {
+absl::StatusOr<LlamaForwardResult>
+CudaLlamaBackend::ForwardToken(const LlamaHfModel &model,
+                               LlamaForwardState &state, int32_t token_id,
+                               int32_t position) const {
   const HfLlamaConfig &config = model.config;
   if (token_id < 0 || token_id >= config.vocab_size) {
     return absl::InvalidArgumentError(
@@ -224,7 +392,7 @@ void CudaLlamaBackend::RmsNorm(const std::vector<float> &input,
                                const tensor::Tensor &weight, double eps,
                                std::vector<float> &output) const {
   if (std::abs(eps - 1e-5) > 1e-12) {
-    cpu_.RmsNorm(input, weight, eps, output);
+    RmsNormCpu(input, weight, eps, output);
     return;
   }
 
@@ -242,7 +410,7 @@ tensor::Tensor CudaLlamaBackend::RmsNormTensor(const tensor::Tensor &input,
                                                double eps) const {
   if (std::abs(eps - 1e-5) > 1e-12) {
     std::vector<float> output;
-    cpu_.RmsNorm(CopyTensorToVector(input), weight, eps, output);
+    RmsNormCpu(CopyTensorToVector(input), weight, eps, output);
     return CopyVectorToCudaTensor(output);
   }
 
@@ -268,8 +436,9 @@ void CudaLlamaBackend::MatVec(const tensor::Tensor &weight,
   output = CopyTensorToVector(std::move(output_tensor));
 }
 
-tensor::Tensor CudaLlamaBackend::MatVecTensor(
-    const tensor::Tensor &weight, const tensor::Tensor &input) const {
+tensor::Tensor
+CudaLlamaBackend::MatVecTensor(const tensor::Tensor &weight,
+                               const tensor::Tensor &input) const {
   tensor::Tensor input_tensor = EnsureCudaTensor(input);
   tensor::Tensor output_tensor = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {weight.get_dim(0)},
@@ -283,7 +452,7 @@ void CudaLlamaBackend::ApplyRopeToHeads(std::vector<float> &values,
                                         int32_t head_count, int32_t head_size,
                                         int32_t position,
                                         double rope_theta) const {
-  cpu_.ApplyRopeToHeads(values, head_count, head_size, position, rope_theta);
+  ApplyRopeToHeadsCpu(values, head_count, head_size, position, rope_theta);
 }
 
 void CudaLlamaBackend::StoreKvCache(const std::vector<float> &key,
@@ -292,8 +461,8 @@ void CudaLlamaBackend::StoreKvCache(const std::vector<float> &key,
                                     int32_t kv_dim,
                                     std::vector<float> &key_cache,
                                     std::vector<float> &value_cache) const {
-  cpu_.StoreKvCache(key, value, position, max_position, kv_dim, key_cache,
-                    value_cache);
+  StoreKvCacheCpu(key, value, position, max_position, kv_dim, key_cache,
+                  value_cache);
 }
 
 void CudaLlamaBackend::AttentionWithCache(const std::vector<float> &query,
@@ -303,8 +472,8 @@ void CudaLlamaBackend::AttentionWithCache(const std::vector<float> &query,
                                           int32_t head_size, int32_t kv_dim,
                                           int32_t kv_mul,
                                           std::vector<float> &output) const {
-  cpu_.AttentionWithCache(query, key_cache, value_cache, position, head_count,
-                          head_size, kv_dim, kv_mul, output);
+  AttentionWithCacheCpu(query, key_cache, value_cache, position, head_count,
+                        head_size, kv_dim, kv_mul, output);
 }
 
 void CudaLlamaBackend::SwiGlu(const std::vector<float> &gate,
@@ -332,7 +501,7 @@ tensor::Tensor CudaLlamaBackend::SwiGluTensor(const tensor::Tensor &gate,
 
 void CudaLlamaBackend::AddInPlace(std::vector<float> &left,
                                   const std::vector<float> &right) const {
-  cpu_.AddInPlace(left, right);
+  AddInPlaceCpu(left, right);
 }
 
 void CudaLlamaBackend::AddInPlaceTensor(tensor::Tensor &left,
@@ -347,15 +516,30 @@ void CudaLlamaBackend::AddInPlaceTensor(tensor::Tensor &left,
     return;
   }
 
-  cpu_.AddInPlaceTensor(left, right);
+  CHECK(left.device_type() == base::DeviceType::kDeviceCPU);
+  CHECK(right.device_type() == base::DeviceType::kDeviceCPU);
+  CHECK_EQ(left.size(), right.size());
+  for (size_t i = 0; i < left.size(); ++i) {
+    left.data<float>()[i] += right.data<float>()[i];
+  }
 }
 
 int32_t CudaLlamaBackend::ArgMaxToken(const tensor::Tensor &logits) const {
-  return cpu_.ArgMaxToken(logits);
+  CHECK(logits.data_type() == base::DataType::kDataTypeFp32);
+  const float *data = logits.data<float>();
+  int32_t best = 0;
+  float best_value = data[0];
+  for (int32_t i = 1; i < static_cast<int32_t>(logits.size()); ++i) {
+    if (data[i] > best_value) {
+      best = i;
+      best_value = data[i];
+    }
+  }
+  return best;
 }
 
-const tensor::Tensor &CudaLlamaBackend::Fp32CudaWeight(
-    const tensor::Tensor &weight) const {
+const tensor::Tensor &
+CudaLlamaBackend::Fp32CudaWeight(const tensor::Tensor &weight) const {
   const auto cached = fp32_cuda_weights_.find(&weight);
   if (cached != fp32_cuda_weights_.end()) {
     return cached->second;
@@ -382,4 +566,4 @@ const tensor::Tensor &CudaLlamaBackend::Fp32CudaWeight(
   return insert_result.first->second;
 }
 
-}  // namespace model
+} // namespace model
