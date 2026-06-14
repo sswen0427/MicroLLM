@@ -1,5 +1,3 @@
-#include "model/llama_backend.h"
-
 #include <absl/status/status.h>
 #include <absl/strings/str_cat.h>
 #include <glog/logging.h>
@@ -12,6 +10,7 @@
 #include <vector>
 
 #include "base/profile.h"
+#include "model/llama_backend.h"
 #include "model/llama_backend_util.h"
 
 namespace model {
@@ -49,14 +48,14 @@ void AddInPlace(std::vector<float> &left, const std::vector<float> &right);
 int32_t ArgMaxToken(const tensor::Tensor &logits);
 void SoftmaxInPlace(std::vector<float> &values);
 
-} // namespace
+}  // namespace
 
 class CpuLlamaBackend final : public LlamaBackend {
-public:
+ public:
   base::DeviceType device_type() const override;
-  absl::StatusOr<LlamaForwardResult>
-  ForwardToken(const LlamaHfModel &model, LlamaForwardState &state,
-               int32_t token_id, int32_t position) const override;
+  absl::StatusOr<LlamaForwardResult> ForwardToken(
+      const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
+      int32_t position) const override;
 };
 
 std::unique_ptr<LlamaBackend> CreateCpuLlamaBackend() {
@@ -67,10 +66,9 @@ base::DeviceType CpuLlamaBackend::device_type() const {
   return base::DeviceType::kDeviceCPU;
 }
 
-absl::StatusOr<LlamaForwardResult>
-CpuLlamaBackend::ForwardToken(const LlamaHfModel &model,
-                              LlamaForwardState &state, int32_t token_id,
-                              int32_t position) const {
+absl::StatusOr<LlamaForwardResult> CpuLlamaBackend::ForwardToken(
+    const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
+    int32_t position) const {
   const HfLlamaConfig &config = model.config;
   if (token_id < 0 || token_id >= config.vocab_size) {
     return absl::InvalidArgumentError(
@@ -354,6 +352,6 @@ void SoftmaxInPlace(std::vector<float> &values) {
   }
 }
 
-} // namespace
+}  // namespace
 
-} // namespace model
+}  // namespace model
