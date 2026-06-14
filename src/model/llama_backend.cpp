@@ -72,4 +72,4 @@ void LlamaForwardProfile::Log() const {
   LOG(INFO) << "      argmax_s=" << argmax_ms / 1000.0;
 }
 
-} // namespace model
+}  // namespace model

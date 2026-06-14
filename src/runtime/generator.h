@@ -46,9 +46,8 @@ struct GenerationResult {
   GenerationProfile profile;
 };
 
-absl::StatusOr<GenerationResult>
-GenerateText(const model::LlamaHfModel &model,
-             const tokenizer::Tokenizer &tokenizer, const std::string &prompt,
-             const GenerationConfig &config);
+absl::StatusOr<GenerationResult> GenerateText(
+    const model::LlamaHfModel &model, const tokenizer::Tokenizer &tokenizer,
+    const std::string &prompt, const GenerationConfig &config);
 
-} // namespace runtime
+}  // namespace runtime
