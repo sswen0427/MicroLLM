@@ -1,0 +1,14 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "0dd568e5a24f8fe5a213597ee6e02568931e0c59",
+  "prompts": {},
+  "humans": {
+    "h_d17bb99b4329f0": {
+      "author": "sswen0427 <799438891@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
