@@ -24,4 +24,4 @@ void attention_with_cache_kernel_cu(const tensor::Tensor &query,
                                     int32_t head_size, int32_t kv_dim,
                                     int32_t kv_mul, void *stream = nullptr);
 
-} // namespace kernel
+}  // namespace kernel

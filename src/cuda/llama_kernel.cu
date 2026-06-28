@@ -1,10 +1,9 @@
-#include "cuda/llama_kernel.cuh"
-
 #include <cuda_runtime_api.h>
 
 #include <cmath>
 
 #include "cuda/cuda_check.h"
+#include "cuda/llama_kernel.cuh"
 
 namespace kernel {
 namespace {
@@ -25,8 +24,8 @@ __global__ void rope_inplace_kernel_fp32(float *values, int32_t head_count,
   const int32_t first = head_offset + i;
   const int32_t second = first + half_head_size;
 
-  const float freq = powf(rope_theta, -static_cast<float>(2 * i) /
-                                          static_cast<float>(head_size));
+  const float freq = powf(
+      rope_theta, -static_cast<float>(2 * i) / static_cast<float>(head_size));
   const float angle = static_cast<float>(position) * freq;
   float sin_value;
   float cos_value;
