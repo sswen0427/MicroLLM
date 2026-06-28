@@ -22,15 +22,15 @@ inline std::filesystem::path TinyLlamaAlignmentModelDir() {
          "TinyLlama-1___1B-Chat-v1___0";
 }
 
-inline bool
-TinyLlamaAlignmentModelExists(const std::filesystem::path &model_dir) {
+inline bool TinyLlamaAlignmentModelExists(
+    const std::filesystem::path &model_dir) {
   return std::filesystem::exists(model_dir / "config.json") &&
          std::filesystem::exists(model_dir / "model.safetensors") &&
          std::filesystem::exists(model_dir / "tokenizer.model");
 }
 
-inline void
-ExpectTinyLlamaReferenceMatch(const runtime::GenerationResult &result) {
+inline void ExpectTinyLlamaReferenceMatch(
+    const runtime::GenerationResult &result) {
   const std::vector<int32_t> expected_prompt_tokens = {1, 306, 626, 263};
   const std::vector<int32_t> expected_generated_tokens = {
       13524, 310, 278, 1510, 29889, 306, 505, 1063};
@@ -174,4 +174,4 @@ inline void RunTinyLlamaGreedyAlignment(base::DeviceType device_type) {
   ExpectTinyLlamaReferenceMatch(*result_or);
 }
 
-} // namespace test_runtime
+}  // namespace test_runtime
