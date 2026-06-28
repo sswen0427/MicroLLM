@@ -167,6 +167,7 @@ tensor::Tensor EmbeddingTensor(const tensor::Tensor &fp32_cuda_weight,
   tensor::Tensor input = tensor::Tensor::allocate(
       base::DataType::kDataTypeInt32, {1}, base::DeviceType::kDeviceCPU);
   input.data<int32_t>()[0] = token_id;
+  input.to_cuda();
   tensor::Tensor output_tensor = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {fp32_cuda_weight.get_dim(1)},
       base::DeviceType::kDeviceCUDA);

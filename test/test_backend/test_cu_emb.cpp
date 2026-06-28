@@ -11,6 +11,7 @@ TEST(CudaEmbTest, NoStream) {
   tensor::Tensor input = tensor::Tensor::allocate(
       base::DataType::kDataTypeInt32, {1}, base::DeviceType::kDeviceCPU);
   input.at<int32_t>(0) = 1;
+  input.to_cuda();
 
   // init weight
   tensor::Tensor weight =
@@ -41,6 +42,7 @@ TEST(CudaEmbTest, NoStream2) {
   tensor::Tensor input = tensor::Tensor::allocate(
       base::DataType::kDataTypeInt32, {1}, base::DeviceType::kDeviceCPU);
   input.at<int32_t>(0) = 2;
+  input.to_cuda();
 
   // init weight
   tensor::Tensor weight =
@@ -87,6 +89,7 @@ TEST(CudaEmbTest, Stream) {
   // init stream
   cudaStream_t stream;
   cudaStreamCreate(&stream);
+  input.to_cuda();
   kernel::EmbeddingCuda(input, weight, output, token, stream);
 
   output.to_cpu();

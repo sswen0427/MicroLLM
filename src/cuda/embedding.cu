@@ -29,21 +29,15 @@ __global__ void EmbeddingKernel(int32_t vocab_size, int32_t token_num,
 void EmbeddingCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
                    const tensor::Tensor &output, int32_t vocab_size,
                    void *stream) {
-  tensor::Tensor input_cu;
-  const tensor::Tensor *input_tensor = &input;
   cudaStream_t cuda_stream = static_cast<cudaStream_t>(stream);
-  if (input.device_type() != base::DeviceType::kDeviceCUDA) {
-    input_cu = input.clone();
-    input_cu.to_cuda(cuda_stream);
-    input_tensor = &input_cu;
-  }
   const auto input_num = static_cast<int32_t>(input.size());
   const int32_t weight_dim = weight.get_dim(1);
-  CHECK(weight.device_type() == output.device_type());
+  CHECK(input.device_type() == base::DeviceType::kDeviceCUDA);
+  CHECK(weight.device_type() == base::DeviceType::kDeviceCUDA);
   CHECK(output.device_type() == base::DeviceType::kDeviceCUDA);
 
   constexpr int32_t thread_num = 128;
-  auto *in_ptr = input_tensor->data<int32_t>();
+  auto *in_ptr = input.data<int32_t>();
   auto *wei_ptr = const_cast<float *>(weight.data<float>());
   auto *out_ptr = const_cast<float *>(output.data<float>());
   if (stream) {
