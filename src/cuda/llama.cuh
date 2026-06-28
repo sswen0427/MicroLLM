@@ -12,8 +12,7 @@ void RopeInPlaceCuda(tensor::Tensor &values, int32_t head_count,
 
 void StoreKvCacheCuda(const tensor::Tensor &key, const tensor::Tensor &value,
                       tensor::Tensor &key_cache, tensor::Tensor &value_cache,
-                      int32_t position, int32_t kv_dim,
-                      void *stream = nullptr);
+                      int32_t position, int32_t kv_dim, void *stream = nullptr);
 
 void AttentionWithCacheCuda(const tensor::Tensor &query,
                             const tensor::Tensor &key_cache,

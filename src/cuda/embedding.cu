@@ -5,8 +5,7 @@ namespace kernel {
 namespace {
 
 __global__ void EmbeddingKernel(int32_t vocab_size, int32_t token_num,
-                                int32_t weight_dim,
-                                const int32_t *input_ptr,
+                                int32_t weight_dim, const int32_t *input_ptr,
                                 const float *weight_ptr, float *output_ptr) {
   int32_t token_idx = blockIdx.x;
   if (token_idx >= token_num) {

@@ -76,8 +76,7 @@ __global__ void MatmulKernel(const float *input, const float *weight,
 }  // namespace
 
 void MatmulCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
-                const tensor::Tensor &output, const float scale,
-                void *stream) {
+                const tensor::Tensor &output, const float scale, void *stream) {
   CHECK(input.is_empty() == false && input.dims_size() <= 2);
   CHECK(input.device_type() == base::DeviceType::kDeviceCUDA);
 
@@ -95,9 +94,9 @@ void MatmulCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
         input.data<float>(), weight.data<float>(),
         const_cast<float *>(output.data<float>()), M, K);
   } else {
-    MatmulKernel<128, 1><<<K, 128>>>(
-        input.data<float>(), weight.data<float>(),
-        const_cast<float *>(output.data<float>()), M, K);
+    MatmulKernel<128, 1><<<K, 128>>>(input.data<float>(), weight.data<float>(),
+                                     const_cast<float *>(output.data<float>()),
+                                     M, K);
   }
   CHECK_CUDA(cudaGetLastError());
 }

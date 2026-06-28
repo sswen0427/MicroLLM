@@ -50,8 +50,8 @@ __global__ void StoreKvCacheKernel(const float *key, const float *value,
 }
 
 __device__ float AttentionScore(const float *query, const float *key_cache,
-                                 int32_t token, int32_t head, int32_t head_size,
-                                 int32_t kv_dim, int32_t kv_mul) {
+                                int32_t token, int32_t head, int32_t head_size,
+                                int32_t kv_dim, int32_t kv_mul) {
   const int32_t kv_head = head / kv_mul;
   const int32_t query_offset = head * head_size;
   const int32_t cache_offset = token * kv_dim + kv_head * head_size;
@@ -63,10 +63,12 @@ __device__ float AttentionScore(const float *query, const float *key_cache,
   return score * rsqrtf(static_cast<float>(head_size));
 }
 
-__global__ void AttentionWithCacheKernel(
-    const float *query, const float *key_cache, const float *value_cache,
-    float *output, int32_t position, int32_t head_count, int32_t head_size,
-    int32_t kv_dim, int32_t kv_mul) {
+__global__ void AttentionWithCacheKernel(const float *query,
+                                         const float *key_cache,
+                                         const float *value_cache,
+                                         float *output, int32_t position,
+                                         int32_t head_count, int32_t head_size,
+                                         int32_t kv_dim, int32_t kv_mul) {
   const int32_t head = blockIdx.x;
   const int32_t dim = threadIdx.x;
   if (head >= head_count || dim >= head_size) {
@@ -75,23 +77,23 @@ __global__ void AttentionWithCacheKernel(
 
   float max_score = -INFINITY;
   for (int32_t token = 0; token <= position; ++token) {
-    const float score = AttentionScore(query, key_cache, token, head,
-                                        head_size, kv_dim, kv_mul);
+    const float score = AttentionScore(query, key_cache, token, head, head_size,
+                                       kv_dim, kv_mul);
     max_score = fmaxf(max_score, score);
   }
 
   float denom = 0.0f;
   for (int32_t token = 0; token <= position; ++token) {
-    const float score = AttentionScore(query, key_cache, token, head,
-                                        head_size, kv_dim, kv_mul);
+    const float score = AttentionScore(query, key_cache, token, head, head_size,
+                                       kv_dim, kv_mul);
     denom += expf(score - max_score);
   }
 
   const int32_t kv_head = head / kv_mul;
   float sum = 0.0f;
   for (int32_t token = 0; token <= position; ++token) {
-    const float score = AttentionScore(query, key_cache, token, head,
-                                        head_size, kv_dim, kv_mul);
+    const float score = AttentionScore(query, key_cache, token, head, head_size,
+                                       kv_dim, kv_mul);
     const float prob = expf(score - max_score) / denom;
     const int32_t cache_offset = token * kv_dim + kv_head * head_size + dim;
     sum += prob * value_cache[cache_offset];
