@@ -11,11 +11,11 @@
 #include <vector>
 
 #include "base/profile.h"
-#include "cuda/add_kernel.cuh"
-#include "cuda/emb_kernel.cuh"
-#include "cuda/matmul_kernel.cuh"
-#include "cuda/rmsnorm_kernel.cuh"
-#include "cuda/swiglu_kernel.cuh"
+#include "cuda/add.cuh"
+#include "cuda/embedding.cuh"
+#include "cuda/matmul.cuh"
+#include "cuda/rmsnorm.cuh"
+#include "cuda/swiglu.cuh"
 #include "model/llama_backend.h"
 #include "model/llama_backend_util.h"
 
@@ -170,7 +170,7 @@ tensor::Tensor EmbeddingTensor(const tensor::Tensor &fp32_cuda_weight,
   tensor::Tensor output_tensor = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {fp32_cuda_weight.get_dim(1)},
       base::DeviceType::kDeviceCUDA);
-  kernel::emb_kernel_cu(input, fp32_cuda_weight, output_tensor,
+  kernel::EmbeddingCuda(input, fp32_cuda_weight, output_tensor,
                         fp32_cuda_weight.get_dim(0), nullptr);
   return output_tensor;
 }
@@ -190,8 +190,7 @@ tensor::Tensor RmsNormTensor(const tensor::Tensor &input,
       tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
                                {static_cast<int32_t>(input_tensor.size())},
                                base::DeviceType::kDeviceCUDA);
-  kernel::rmsnorm_kernel_cu(input_tensor, fp32_cuda_weight, output_tensor,
-                            nullptr);
+  kernel::RmsNormCuda(input_tensor, fp32_cuda_weight, output_tensor, nullptr);
   return output_tensor;
 }
 
@@ -202,8 +201,8 @@ tensor::Tensor MatVecTensor(const tensor::Tensor &weight,
   tensor::Tensor output_tensor = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {weight.get_dim(0)},
       base::DeviceType::kDeviceCUDA);
-  kernel::matmul_kernel_cu(input_tensor, fp32_cuda_weight, output_tensor, 1.0f,
-                           nullptr);
+  kernel::MatmulCuda(input_tensor, fp32_cuda_weight, output_tensor, 1.0f,
+                     nullptr);
   return output_tensor;
 }
 
@@ -214,7 +213,7 @@ tensor::Tensor SwiGluTensor(const tensor::Tensor &gate,
   tensor::Tensor output_tensor = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {static_cast<int32_t>(gate.size())},
       base::DeviceType::kDeviceCUDA);
-  kernel::swiglu_kernel_cu(gate_tensor, up_tensor, output_tensor, nullptr);
+  kernel::SwiGluCuda(gate_tensor, up_tensor, output_tensor, nullptr);
   return output_tensor;
 }
 
@@ -225,7 +224,7 @@ void AddInPlaceTensor(tensor::Tensor &left, const tensor::Tensor &right) {
     if (left.device_type() == base::DeviceType::kDeviceCPU) {
       left.to_cuda();
     }
-    kernel::add_inplace_kernel_cu(left, right_tensor, nullptr);
+    kernel::AddInPlaceCuda(left, right_tensor, nullptr);
     return;
   }
 

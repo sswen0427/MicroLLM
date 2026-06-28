@@ -1,7 +1,7 @@
 #include <cuda_runtime_api.h>
 #include <gtest/gtest.h>
 
-#include "cuda/matmul_kernel.cuh"
+#include "cuda/matmul.cuh"
 
 TEST(CudaMatmulTest, RunCUDA) {
   tensor::Tensor input = tensor::Tensor::allocate(
@@ -24,7 +24,7 @@ TEST(CudaMatmulTest, RunCUDA) {
   tensor::Tensor out_cu = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {4}, base::DeviceType::kDeviceCUDA);
 
-  kernel::matmul_kernel_cu(input, weight, out_cu, 1.f, nullptr);
+  kernel::MatmulCuda(input, weight, out_cu, 1.f, nullptr);
 
   tensor::Tensor out_cpu = out_cu.clone();
   out_cpu.to_cpu();
@@ -61,7 +61,7 @@ TEST(CudaMatmulTest, Stream) {
 
   cudaStream_t stream;
   cudaStreamCreate(&stream);
-  kernel::matmul_kernel_cu(input, weight, out_cu, 1.f, stream);
+  kernel::MatmulCuda(input, weight, out_cu, 1.f, stream);
 
   for (int row = 0; row < 4; ++row) {
     float sum = 0.0f;

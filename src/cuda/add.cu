@@ -1,11 +1,10 @@
-#include "add_kernel.cuh"
+#include "add.cuh"
 #include "cuda/cuda_check.h"
 
 namespace kernel {
 namespace {
 
-__global__ void add_inplace_kernel_cu_fp32(float *left, const float *right,
-                                           int size) {
+__global__ void AddInPlaceKernel(float *left, const float *right, int size) {
   const int idx = threadIdx.x + blockDim.x * blockIdx.x;
   if (idx >= size) {
     return;
@@ -15,8 +14,8 @@ __global__ void add_inplace_kernel_cu_fp32(float *left, const float *right,
 
 }  // namespace
 
-void add_inplace_kernel_cu(tensor::Tensor &left, const tensor::Tensor &right,
-                           void *stream) {
+void AddInPlaceCuda(tensor::Tensor &left, const tensor::Tensor &right,
+                    void *stream) {
   CHECK(!left.is_empty());
   CHECK(!right.is_empty());
   CHECK_EQ(left.size(), right.size());
@@ -30,11 +29,11 @@ void add_inplace_kernel_cu(tensor::Tensor &left, const tensor::Tensor &right,
   const int blocks = (size + threads - 1) / threads;
   cudaStream_t cuda_stream = static_cast<cudaStream_t>(stream);
   if (cuda_stream != nullptr) {
-    add_inplace_kernel_cu_fp32<<<blocks, threads, 0, cuda_stream>>>(
+    AddInPlaceKernel<<<blocks, threads, 0, cuda_stream>>>(
         left.data<float>(), right.data<float>(), size);
   } else {
-    add_inplace_kernel_cu_fp32<<<blocks, threads>>>(left.data<float>(),
-                                                    right.data<float>(), size);
+    AddInPlaceKernel<<<blocks, threads>>>(left.data<float>(),
+                                          right.data<float>(), size);
   }
   CHECK_CUDA(cudaGetLastError());
 }

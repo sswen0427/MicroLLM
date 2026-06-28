@@ -1,10 +1,12 @@
 #include "cuda/cuda_check.h"
-#include "swiglu_kernel.cuh"
+#include "swiglu.cuh"
 #include "tensor/tensor.h"
 
 namespace kernel {
-__global__ void swiglu_kernel_cu_fp32(int size, const float *in1,
-                                      const float *in2, float *out) {
+namespace {
+
+__global__ void SwiGluKernel(int size, const float *in1, const float *in2,
+                             float *out) {
   int idx = threadIdx.x + blockDim.x * blockIdx.x;
   if (idx >= size) {
     return;
@@ -15,9 +17,10 @@ __global__ void swiglu_kernel_cu_fp32(int size, const float *in1,
   out[idx] = silu * in2[idx];
 }
 
-void swiglu_kernel_cu(const tensor::Tensor &input1,
-                      const tensor::Tensor &input2,
-                      const tensor::Tensor &output, void *stream) {
+}  // namespace
+
+void SwiGluCuda(const tensor::Tensor &input1, const tensor::Tensor &input2,
+                const tensor::Tensor &output, void *stream) {
   CHECK_EQ(input1.is_empty(), false);
   CHECK(input1.device_type() == base::DeviceType::kDeviceCUDA);
 
@@ -31,12 +34,12 @@ void swiglu_kernel_cu(const tensor::Tensor &input1,
   int threads = 128;
   int blocks = (size + threads - 1) / threads;
   if (!stream) {
-    swiglu_kernel_cu_fp32<<<blocks, threads>>>(
+    SwiGluKernel<<<blocks, threads>>>(
         size, input1.data<float>(), input2.data<float>(),
         const_cast<float *>(output.data<float>()));
   } else {
     cudaStream_t stream_ = static_cast<cudaStream_t>(stream);
-    swiglu_kernel_cu_fp32<<<blocks, threads, 0, stream_>>>(
+    SwiGluKernel<<<blocks, threads, 0, stream_>>>(
         size, input1.data<float>(), input2.data<float>(),
         const_cast<float *>(output.data<float>()));
   }

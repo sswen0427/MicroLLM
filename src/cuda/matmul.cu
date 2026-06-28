@@ -1,10 +1,12 @@
 #include <cub/block/block_reduce.cuh>
 
 #include "cuda/cuda_check.h"
-#include "matmul_kernel.cuh"
+#include "matmul.cuh"
 #include "tensor/tensor.h"
 
 namespace kernel {
+namespace {
+
 /**
  * @brief Highly optimized FP32 GEMV (Matrix-Vector Multiplication) kernel.
  *        Computes Y = W * X, specifically optimized for Batch Size = 1
@@ -21,8 +23,8 @@ namespace kernel {
  * @param K      Number of rows in the weight matrix (length of output vector).
  */
 template <int THREAD_PER_BLOCK, int ROW_PER_BLOCK>
-__global__ void matmul_kernel_cu_fp32(const float *input, const float *weight,
-                                      float *output, int M, int K) {
+__global__ void MatmulKernel(const float *input, const float *weight,
+                             float *output, int M, int K) {
   __shared__ float sdata[THREAD_PER_BLOCK];
   unsigned int tid = threadIdx.x;
 
@@ -71,9 +73,11 @@ __global__ void matmul_kernel_cu_fp32(const float *input, const float *weight,
   }
 }
 
-void matmul_kernel_cu(const tensor::Tensor &input, const tensor::Tensor &weight,
-                      const tensor::Tensor &output, const float scale,
-                      void *stream) {
+}  // namespace
+
+void MatmulCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
+                const tensor::Tensor &output, const float scale,
+                void *stream) {
   CHECK(input.is_empty() == false && input.dims_size() <= 2);
   CHECK(input.device_type() == base::DeviceType::kDeviceCUDA);
 
@@ -87,13 +91,13 @@ void matmul_kernel_cu(const tensor::Tensor &input, const tensor::Tensor &weight,
   CHECK_EQ(M, input.get_dim(0));
   cudaStream_t cuda_stream = static_cast<cudaStream_t>(stream);
   if (cuda_stream != nullptr) {
-    matmul_kernel_cu_fp32<128, 1><<<K, 128, 0, cuda_stream>>>(
+    MatmulKernel<128, 1><<<K, 128, 0, cuda_stream>>>(
         input.data<float>(), weight.data<float>(),
         const_cast<float *>(output.data<float>()), M, K);
   } else {
-    matmul_kernel_cu_fp32<128, 1>
-        <<<K, 128>>>(input.data<float>(), weight.data<float>(),
-                     const_cast<float *>(output.data<float>()), M, K);
+    MatmulKernel<128, 1><<<K, 128>>>(
+        input.data<float>(), weight.data<float>(),
+        const_cast<float *>(output.data<float>()), M, K);
   }
   CHECK_CUDA(cudaGetLastError());
 }

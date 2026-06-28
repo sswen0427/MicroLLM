@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <random>
 
-#include "cuda/swiglu_kernel.cuh"
+#include "cuda/swiglu.cuh"
 
 namespace {
 
@@ -44,7 +44,7 @@ TEST(SwiGLUTest, NoStream) {
   wei_cu.to_cuda(nullptr);
   out_cu.to_cuda(nullptr);
 
-  kernel::swiglu_kernel_cu(in_cu, wei_cu, out_cu, nullptr);
+  kernel::SwiGluCuda(in_cu, wei_cu, out_cu, nullptr);
   out_cu.to_cpu();
 
   SwiGluGolden(in_cpu, wei_cpu, out_cpu);
@@ -81,7 +81,7 @@ TEST(SwiGLUTest, Stream) {
   cudaStream_t stream;
   cudaStreamCreate(&stream);
 
-  kernel::swiglu_kernel_cu(in_cu, wei_cu, out_cu, stream);
+  kernel::SwiGluCuda(in_cu, wei_cu, out_cu, stream);
   out_cu.to_cpu();
 
   SwiGluGolden(in_cpu, wei_cpu, out_cpu);

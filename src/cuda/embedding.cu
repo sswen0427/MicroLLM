@@ -1,10 +1,13 @@
 #include "cuda/cuda_check.h"
-#include "emb_kernel.cuh"
+#include "embedding.cuh"
 
 namespace kernel {
-__global__ void emb_kernel_cu_fp32(int32_t vocab_size, int32_t token_num,
-                                   int32_t weight_dim, const int32_t *input_ptr,
-                                   const float *weight_ptr, float *output_ptr) {
+namespace {
+
+__global__ void EmbeddingKernel(int32_t vocab_size, int32_t token_num,
+                                int32_t weight_dim,
+                                const int32_t *input_ptr,
+                                const float *weight_ptr, float *output_ptr) {
   int32_t token_idx = blockIdx.x;
   if (token_idx >= token_num) {
     return;
@@ -22,7 +25,9 @@ __global__ void emb_kernel_cu_fp32(int32_t vocab_size, int32_t token_num,
   }
 }
 
-void emb_kernel_cu(const tensor::Tensor &input, const tensor::Tensor &weight,
+}  // namespace
+
+void EmbeddingCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
                    const tensor::Tensor &output, int32_t vocab_size,
                    void *stream) {
   tensor::Tensor input_cu;
@@ -43,10 +48,10 @@ void emb_kernel_cu(const tensor::Tensor &input, const tensor::Tensor &weight,
   auto *wei_ptr = const_cast<float *>(weight.data<float>());
   auto *out_ptr = const_cast<float *>(output.data<float>());
   if (stream) {
-    emb_kernel_cu_fp32<<<input_num, thread_num, 0, cuda_stream>>>(
+    EmbeddingKernel<<<input_num, thread_num, 0, cuda_stream>>>(
         vocab_size, input_num, weight_dim, in_ptr, wei_ptr, out_ptr);
   } else {
-    emb_kernel_cu_fp32<<<input_num, thread_num>>>(
+    EmbeddingKernel<<<input_num, thread_num>>>(
         vocab_size, input_num, weight_dim, in_ptr, wei_ptr, out_ptr);
   }
   CHECK_CUDA(cudaGetLastError());

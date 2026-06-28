@@ -3,11 +3,13 @@
 #include <cub/block/block_reduce.cuh>
 
 #include "cuda/cuda_check.h"
-#include "rmsnorm_kernel.cuh"
+#include "rmsnorm.cuh"
 namespace kernel {
+namespace {
+
 template <int32_t BLOCK_DIM>
-static __global__ void row_rmsnorm_f32(float *in, float *wei, float *out,
-                                       int size, float eps) {
+__global__ void RmsNormKernel(float *in, float *wei, float *out, int size,
+                              float eps) {
   const int tid = threadIdx.x;
 
   constexpr int pack_size = 4;
@@ -54,9 +56,10 @@ static __global__ void row_rmsnorm_f32(float *in, float *wei, float *out,
   }
 }
 
-void rmsnorm_kernel_cu(const tensor::Tensor &input,
-                       const tensor::Tensor &weight,
-                       const tensor::Tensor &output, void *stream, float eps) {
+}  // namespace
+
+void RmsNormCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
+                 const tensor::Tensor &output, void *stream, float eps) {
   CHECK(!input.is_empty());
   CHECK(!weight.is_empty());
   CHECK(!output.is_empty());
@@ -72,11 +75,10 @@ void rmsnorm_kernel_cu(const tensor::Tensor &input,
   constexpr int threads_num = 128;
   if (stream) {
     cudaStream_t stream_ = static_cast<cudaStream_t>(stream);
-    row_rmsnorm_f32<128>
+    RmsNormKernel<128>
         <<<1, threads_num, 0, stream_>>>(in_ptr, wei_ptr, out_ptr, size, eps);
   } else {
-    row_rmsnorm_f32<128>
-        <<<1, threads_num>>>(in_ptr, wei_ptr, out_ptr, size, eps);
+    RmsNormKernel<128><<<1, threads_num>>>(in_ptr, wei_ptr, out_ptr, size, eps);
   }
   CHECK_CUDA(cudaGetLastError());
 }
