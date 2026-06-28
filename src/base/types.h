@@ -22,19 +22,19 @@ enum class DataType : uint8_t {
 };
 
 inline std::size_t DataTypeSize(DataType type) {
-  if (type == DataType::kDataTypeFp32) {
-    return 4;
-  } else if (type == DataType::kDataTypeInt8) {
-    return 1;
-  } else if (type == DataType::kDataTypeInt32) {
-    return 4;
-  } else if (type == DataType::kDataTypeBf16) {
-    return 2;
-  } else if (type == DataType::kDataTypeFp16) {
-    return 2;
-  } else {
-    LOG(FATAL) << "Unknown data type";
-    return 0;
+  switch (type) {
+    case DataType::kDataTypeFp32:
+      return 4;
+    case DataType::kDataTypeInt8:
+      return 1;
+    case DataType::kDataTypeInt32:
+      return 4;
+    case DataType::kDataTypeBf16:
+    case DataType::kDataTypeFp16:
+      return 2;
+    default:
+      LOG(FATAL) << "Unknown data type";
+      return 0;
   }
 }
 
