@@ -4,6 +4,14 @@
 namespace kernel {
 namespace {
 
+/**
+ * @brief Embedding kernel.
+ *
+ * Copies token embeddings from the weight table to the output tensor. Each
+ * block handles one token, and threads within the block cooperate to copy that
+ * token's embedding vector.
+ *
+ */
 __global__ void EmbeddingKernel(int32_t vocab_size, int32_t token_num,
                                 int32_t weight_dim, const int32_t *input_ptr,
                                 const float *weight_ptr, float *output_ptr) {
@@ -19,6 +27,7 @@ __global__ void EmbeddingKernel(int32_t vocab_size, int32_t token_num,
   float *output_ptr_start = output_ptr + token_idx * weight_dim;
   const float *weight_ptr_start = weight_ptr + token * weight_dim;
 
+  // Adjacent threads copy adjacent elements each round for coalesced access.
   for (int32_t i = threadIdx.x; i < weight_dim; i += blockDim.x) {
     output_ptr_start[i] = weight_ptr_start[i];
   }
