@@ -8,6 +8,17 @@
 namespace kernel {
 namespace {
 
+/**
+ * @brief Applies RoPE rotation to query/key vectors in place.
+ *
+ * Tensor shapes in logical row-major layout:
+ *   values: [head_count, head_size]
+ *
+ * Each thread rotates one pair in one attention head:
+ *   [x0, x1] -> [x0 * cos(theta) - x1 * sin(theta),
+ *                x0 * sin(theta) + x1 * cos(theta)]
+ * where theta = position * rope_theta^(-2i / head_size).
+ */
 __global__ void RopeInPlaceKernel(float *values, int32_t head_count,
                                   int32_t head_size, int32_t position,
                                   float rope_theta) {
@@ -18,6 +29,8 @@ __global__ void RopeInPlaceKernel(float *values, int32_t head_count,
     return;
   }
 
+  // Map the flat pair index to (head, pair_index). RoPE rotates the i-th value
+  // in the first half of a head with the i-th value in the second half.
   const int32_t head = idx / half_head_size;
   const int32_t i = idx % half_head_size;
   const int32_t head_offset = head * head_size;
@@ -37,6 +50,19 @@ __global__ void RopeInPlaceKernel(float *values, int32_t head_count,
   values[second] = x0 * sin_value + x1 * cos_value;
 }
 
+/**
+ * @brief Stores the current token's key/value vectors into the KV cache.
+ *
+ * Tensor shapes in logical row-major layout:
+ *   key:         [kv_dim]
+ *   value:       [kv_dim]
+ *   key_cache:   [max_seq_len, kv_dim]
+ *   value_cache: [max_seq_len, kv_dim]
+ *
+ * Each thread copies one element:
+ *   key_cache[position, idx] = key[idx]
+ *   value_cache[position, idx] = value[idx]
+ */
 __global__ void StoreKvCacheKernel(const float *key, const float *value,
                                    float *key_cache, float *value_cache,
                                    int32_t position, int32_t kv_dim) {
@@ -49,6 +75,25 @@ __global__ void StoreKvCacheKernel(const float *key, const float *value,
   value_cache[cache_offset] = value[idx];
 }
 
+/**
+ * @brief Computes the scaled dot-product score for one query head and token.
+ *
+ * Tensor shapes in logical row-major layout:
+ *   query:     [head_count, head_size]
+ *   key_cache: [max_seq_len, kv_dim], kv_dim = kv_head_count * head_size
+ *
+ * kv_mul maps multiple query heads to one KV head for GQA/MQA:
+ *   kv_head = query_head / kv_mul
+ *   score = dot(query[query_head], key_cache[token, kv_head]) / sqrt(head_size)
+ *
+ * @param query Current token query vectors.
+ * @param key_cache Cached key vectors for previous and current tokens.
+ * @param token Cache token index to score against.
+ * @param head Query head index.
+ * @param head_size Number of values in one attention head.
+ * @param kv_dim Number of key values stored per token.
+ * @param kv_mul Number of query heads sharing one KV head.
+ */
 __device__ float AttentionScore(const float *query, const float *key_cache,
                                 int32_t token, int32_t head, int32_t head_size,
                                 int32_t kv_dim, int32_t kv_mul) {
@@ -63,6 +108,22 @@ __device__ float AttentionScore(const float *query, const float *key_cache,
   return score * rsqrtf(static_cast<float>(head_size));
 }
 
+/**
+ * @brief Computes single-token attention using cached keys and values.
+ *
+ * Tensor shapes in logical row-major layout:
+ *   query:       [head_count, head_size]
+ *   key_cache:   [max_seq_len, kv_dim], kv_dim = kv_head_count * head_size
+ *   value_cache: [max_seq_len, kv_dim], kv_dim = kv_head_count * head_size
+ *   output:      [head_count, head_size]
+ *
+ * Each block handles one query head, and each thread writes one output
+ * dimension in that head. For the current position, the kernel attends over
+ * all cached tokens in [0, position]:
+ *   score_t = dot(query_head, key_cache[t, kv_head]) / sqrt(head_size)
+ *   prob_t = softmax(score_t)
+ *   output[head, dim] = sum_t prob_t * value_cache[t, kv_head, dim]
+ */
 __global__ void AttentionWithCacheKernel(const float *query,
                                          const float *key_cache,
                                          const float *value_cache,
