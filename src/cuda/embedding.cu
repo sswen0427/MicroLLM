@@ -7,10 +7,15 @@ namespace {
 /**
  * @brief Embedding kernel.
  *
+ * Tensor shapes in logical row-major layout:
+ *   input_ptr:  [token_num]
+ *   weight_ptr: [vocab_size, weight_dim]
+ *   output_ptr: [token_num, weight_dim]
+ *
  * Copies token embeddings from the weight table to the output tensor. Each
  * block handles one token, and threads within the block cooperate to copy that
- * token's embedding vector.
- *
+ * token's embedding vector:
+ *   output_ptr[token_idx, dim] = weight_ptr[input_ptr[token_idx], dim]
  */
 __global__ void EmbeddingKernel(int32_t vocab_size, int32_t token_num,
                                 int32_t weight_dim, const int32_t *input_ptr,
