@@ -47,8 +47,7 @@ __global__ void MatmulKernel(const float *input, const float *weight,
     sdata[tid] = 0;
     int row_offset = p * M;
     if (use_float4) {
-      const float4 *input_float4_ptr =
-          reinterpret_cast<const float4 *>(input);
+      const float4 *input_float4_ptr = reinterpret_cast<const float4 *>(input);
       const float4 *weight_float4_ptr =
           reinterpret_cast<const float4 *>(weight + row_offset);
 
