@@ -16,6 +16,35 @@
 namespace model {
 namespace {
 
+LlamaForwardState CreateCpuForwardState(const HfLlamaConfig &config) {
+  LlamaForwardState state;
+  if (config.num_attention_heads > 0) {
+    state.head_size = config.hidden_size / config.num_attention_heads;
+  }
+  state.kv_dim = config.num_key_value_heads * state.head_size;
+  if (config.num_key_value_heads > 0) {
+    state.kv_mul = config.num_attention_heads / config.num_key_value_heads;
+  }
+
+  if (config.num_hidden_layers <= 0 || config.max_position_embeddings <= 0 ||
+      state.kv_dim <= 0) {
+    return state;
+  }
+
+  state.layer_caches.resize(config.num_hidden_layers);
+  for (LlamaLayerCache &cache : state.layer_caches) {
+    cache.key =
+        tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
+                                 {config.max_position_embeddings, state.kv_dim},
+                                 base::DeviceType::kDeviceCPU);
+    cache.value =
+        tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
+                                 {config.max_position_embeddings, state.kv_dim},
+                                 base::DeviceType::kDeviceCPU);
+  }
+  return state;
+}
+
 tensor::Tensor CopyVectorToCpuTensor(const std::vector<float> &values) {
   tensor::Tensor tensor = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {static_cast<int32_t>(values.size())},
@@ -93,15 +122,24 @@ void ApplyRopeToHeads(std::vector<float> &values, int32_t head_count,
 void StoreKvCache(const std::vector<float> &key,
                   const std::vector<float> &value, int32_t position,
                   int32_t max_position, int32_t kv_dim,
-                  std::vector<float> &key_cache,
-                  std::vector<float> &value_cache) {
+                  tensor::Tensor &key_cache, tensor::Tensor &value_cache) {
   CHECK_EQ(static_cast<int32_t>(key.size()), kv_dim);
   CHECK_EQ(static_cast<int32_t>(value.size()), kv_dim);
+  CHECK(key_cache.device_type() == base::DeviceType::kDeviceCPU);
+  CHECK(value_cache.device_type() == base::DeviceType::kDeviceCPU);
+  CHECK(key_cache.data_type() == base::DataType::kDataTypeFp32);
+  CHECK(value_cache.data_type() == base::DataType::kDataTypeFp32);
+  CHECK_EQ(key_cache.dims_size(), 2);
+  CHECK_EQ(value_cache.dims_size(), 2);
+  CHECK_EQ(key_cache.get_dim(1), kv_dim);
+  CHECK_EQ(value_cache.get_dim(1), kv_dim);
   CHECK_GE(position, 0);
   CHECK_LT(position, max_position);
+  CHECK_LT(position, key_cache.get_dim(0));
+  CHECK_EQ(key_cache.get_dim(0), value_cache.get_dim(0));
   const size_t offset = static_cast<size_t>(position) * kv_dim;
-  std::copy(key.begin(), key.end(), key_cache.begin() + offset);
-  std::copy(value.begin(), value.end(), value_cache.begin() + offset);
+  std::copy(key.begin(), key.end(), key_cache.data<float>() + offset);
+  std::copy(value.begin(), value.end(), value_cache.data<float>() + offset);
 }
 
 void SoftmaxInPlace(std::vector<float> &values) {
@@ -135,12 +173,24 @@ void SoftmaxInPlace(std::vector<float> &values) {
  * so multiple query heads may share the same K/V cache head.
  */
 void AttentionWithCache(const std::vector<float> &query,
-                        const std::vector<float> &key_cache,
-                        const std::vector<float> &value_cache, int32_t position,
+                        const tensor::Tensor &key_cache,
+                        const tensor::Tensor &value_cache, int32_t position,
                         int32_t head_count, int32_t head_size, int32_t kv_dim,
                         int32_t kv_mul, std::vector<float> &output) {
   CHECK_GE(position, 0);
   CHECK_EQ(static_cast<int32_t>(query.size()), head_count * head_size);
+  CHECK(key_cache.device_type() == base::DeviceType::kDeviceCPU);
+  CHECK(value_cache.device_type() == base::DeviceType::kDeviceCPU);
+  CHECK(key_cache.data_type() == base::DataType::kDataTypeFp32);
+  CHECK(value_cache.data_type() == base::DataType::kDataTypeFp32);
+  CHECK_EQ(key_cache.dims_size(), 2);
+  CHECK_EQ(value_cache.dims_size(), 2);
+  CHECK_EQ(key_cache.get_dim(1), kv_dim);
+  CHECK_EQ(value_cache.get_dim(1), kv_dim);
+  CHECK_EQ(key_cache.get_dim(0), value_cache.get_dim(0));
+  CHECK_LT(position, key_cache.get_dim(0));
+  const float *key_cache_data = key_cache.data<float>();
+  const float *value_cache_data = value_cache.data<float>();
   output.assign(static_cast<size_t>(head_count) * head_size, 0.0f);
 
   std::vector<float> scores(static_cast<size_t>(position) + 1);
@@ -154,7 +204,7 @@ void AttentionWithCache(const std::vector<float> &query,
       const int32_t cache_offset = token * kv_dim + kv_head * head_size;
       float score = 0.0f;
       for (int32_t i = 0; i < head_size; ++i) {
-        score += query[query_offset + i] * key_cache[cache_offset + i];
+        score += query[query_offset + i] * key_cache_data[cache_offset + i];
       }
       scores[token] = score * scale;
     }
@@ -164,7 +214,7 @@ void AttentionWithCache(const std::vector<float> &query,
       const int32_t cache_offset = token * kv_dim + kv_head * head_size;
       const float score = scores[token];
       for (int32_t i = 0; i < head_size; ++i) {
-        output[output_offset + i] += score * value_cache[cache_offset + i];
+        output[output_offset + i] += score * value_cache_data[cache_offset + i];
       }
     }
   }
@@ -208,19 +258,29 @@ int32_t ArgMaxToken(const tensor::Tensor &logits) {
 
 class CpuLlamaBackend final : public LlamaBackend {
  public:
+  explicit CpuLlamaBackend(const HfLlamaConfig &config);
+
   base::DeviceType device_type() const override;
-  absl::StatusOr<LlamaForwardResult> ForwardToken(
-      const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
-      int32_t position) const override;
+
+  absl::StatusOr<LlamaForwardResult> ForwardToken(const LlamaHfModel &model,
+                                                  int32_t token_id,
+                                                  int32_t position) override;
+
+  const LlamaForwardProfile &profile() const override;
+
+ private:
+  LlamaForwardState forward_state_;
 };
+
+CpuLlamaBackend::CpuLlamaBackend(const HfLlamaConfig &config)
+    : forward_state_(CreateCpuForwardState(config)) {}
 
 base::DeviceType CpuLlamaBackend::device_type() const {
   return base::DeviceType::kDeviceCPU;
 }
 
 absl::StatusOr<LlamaForwardResult> CpuLlamaBackend::ForwardToken(
-    const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
-    int32_t position) const {
+    const LlamaHfModel &model, int32_t token_id, int32_t position) {
   const HfLlamaConfig &config = model.config;
   if (token_id < 0 || token_id >= config.vocab_size) {
     return absl::InvalidArgumentError(
@@ -235,11 +295,11 @@ absl::StatusOr<LlamaForwardResult> CpuLlamaBackend::ForwardToken(
 
   LOG(INFO) << "start LLaMA CPU one-token forward: token_id=" << token_id
             << ", position=" << position;
-  state.profile.forward_calls += 1;
+  forward_state_.profile.forward_calls += 1;
 
   std::vector<float> hidden_state;
   {
-    base::ScopedProfile profile(state.profile.embedding_ms);
+    base::ScopedProfile profile(forward_state_.profile.embedding_ms);
     Embedding(model.weights.token_embedding, token_id, hidden_state);
   }
 
@@ -258,82 +318,85 @@ absl::StatusOr<LlamaForwardResult> CpuLlamaBackend::ForwardToken(
     const LlamaHfLayerWeights &weights = model.weights.layers[layer];
 
     {
-      base::ScopedProfile profile(state.profile.attention_norm_ms);
+      base::ScopedProfile profile(forward_state_.profile.attention_norm_ms);
       RmsNorm(hidden_state, weights.input_layernorm, config.rms_norm_eps, norm);
     }
     {
-      base::ScopedProfile profile(state.profile.qkv_proj_ms);
+      base::ScopedProfile profile(forward_state_.profile.qkv_proj_ms);
       MatVec(weights.q_proj, norm, query);
       MatVec(weights.k_proj, norm, key);
       MatVec(weights.v_proj, norm, value);
     }
     {
-      base::ScopedProfile profile(state.profile.rope_ms);
-      ApplyRopeToHeads(query, config.num_attention_heads, state.head_size,
-                       position, config.rope_theta);
-      ApplyRopeToHeads(key, config.num_key_value_heads, state.head_size,
-                       position, config.rope_theta);
+      base::ScopedProfile profile(forward_state_.profile.rope_ms);
+      ApplyRopeToHeads(query, config.num_attention_heads,
+                       forward_state_.head_size, position, config.rope_theta);
+      ApplyRopeToHeads(key, config.num_key_value_heads,
+                       forward_state_.head_size, position, config.rope_theta);
     }
     {
-      base::ScopedProfile profile(state.profile.kv_cache_ms);
+      base::ScopedProfile profile(forward_state_.profile.kv_cache_ms);
       StoreKvCache(key, value, position, config.max_position_embeddings,
-                   state.kv_dim, state.layer_caches[layer].key,
-                   state.layer_caches[layer].value);
+                   forward_state_.kv_dim,
+                   forward_state_.layer_caches[layer].key,
+                   forward_state_.layer_caches[layer].value);
     }
     {
-      base::ScopedProfile profile(state.profile.attention_ms);
-      AttentionWithCache(query, state.layer_caches[layer].key,
-                         state.layer_caches[layer].value, position,
-                         config.num_attention_heads, state.head_size,
-                         state.kv_dim, state.kv_mul, attention_output);
+      base::ScopedProfile profile(forward_state_.profile.attention_ms);
+      AttentionWithCache(query, forward_state_.layer_caches[layer].key,
+                         forward_state_.layer_caches[layer].value, position,
+                         config.num_attention_heads, forward_state_.head_size,
+                         forward_state_.kv_dim, forward_state_.kv_mul,
+                         attention_output);
     }
     {
-      base::ScopedProfile profile(state.profile.attention_output_proj_ms);
+      base::ScopedProfile profile(
+          forward_state_.profile.attention_output_proj_ms);
       MatVec(weights.o_proj, attention_output, projected_attention);
     }
     {
-      base::ScopedProfile profile(state.profile.attention_residual_ms);
+      base::ScopedProfile profile(forward_state_.profile.attention_residual_ms);
       AddInPlace(hidden_state, projected_attention);
     }
     {
-      base::ScopedProfile profile(state.profile.ffn_norm_ms);
+      base::ScopedProfile profile(forward_state_.profile.ffn_norm_ms);
       RmsNorm(hidden_state, weights.post_attention_layernorm,
               config.rms_norm_eps, norm);
     }
     {
-      base::ScopedProfile profile(state.profile.ffn_up_gate_proj_ms);
+      base::ScopedProfile profile(forward_state_.profile.ffn_up_gate_proj_ms);
       MatVec(weights.gate_proj, norm, gate);
       MatVec(weights.up_proj, norm, up);
     }
     {
-      base::ScopedProfile profile(state.profile.swiglu_ms);
+      base::ScopedProfile profile(forward_state_.profile.swiglu_ms);
       SwiGlu(gate, up, activated);
     }
     {
-      base::ScopedProfile profile(state.profile.ffn_down_proj_ms);
+      base::ScopedProfile profile(forward_state_.profile.ffn_down_proj_ms);
       MatVec(weights.down_proj, activated, projected_ffn);
     }
     {
-      base::ScopedProfile profile(state.profile.ffn_residual_ms);
+      base::ScopedProfile profile(forward_state_.profile.ffn_residual_ms);
       AddInPlace(hidden_state, projected_ffn);
     }
   }
 
   {
-    base::ScopedProfile profile(state.profile.final_norm_ms);
+    base::ScopedProfile profile(forward_state_.profile.final_norm_ms);
     RmsNorm(hidden_state, model.weights.final_norm, config.rms_norm_eps, norm);
   }
 
   LlamaForwardResult result;
   std::vector<float> logits;
   {
-    base::ScopedProfile profile(state.profile.lm_head_ms);
+    base::ScopedProfile profile(forward_state_.profile.lm_head_ms);
     MatVec(model.weights.lm_head, norm, logits);
   }
   result.logits = CopyVectorToCpuTensor(logits);
   CHECK_EQ(static_cast<int32_t>(result.logits.size()), config.vocab_size);
   {
-    base::ScopedProfile profile(state.profile.argmax_ms);
+    base::ScopedProfile profile(forward_state_.profile.argmax_ms);
     result.next_token = ArgMaxToken(result.logits);
   }
 
@@ -342,10 +405,15 @@ absl::StatusOr<LlamaForwardResult> CpuLlamaBackend::ForwardToken(
   return result;
 }
 
+const LlamaForwardProfile &CpuLlamaBackend::profile() const {
+  return forward_state_.profile;
+}
+
 }  // namespace
 
-std::unique_ptr<LlamaBackend> CreateCpuLlamaBackend() {
-  return std::make_unique<CpuLlamaBackend>();
+std::unique_ptr<LlamaBackend> CreateCpuLlamaBackend(
+    const HfLlamaConfig &config) {
+  return std::make_unique<CpuLlamaBackend>(config);
 }
 
 }  // namespace model

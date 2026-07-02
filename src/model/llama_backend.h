@@ -40,8 +40,8 @@ struct LlamaForwardProfile {
 };
 
 struct LlamaLayerCache {
-  std::vector<float> key;
-  std::vector<float> value;
+  tensor::Tensor key;
+  tensor::Tensor value;
 };
 
 struct LlamaForwardState {
@@ -52,18 +52,19 @@ struct LlamaForwardState {
   LlamaForwardProfile profile;
 };
 
-LlamaForwardState CreateLlamaForwardState(const HfLlamaConfig &config);
-
 class LlamaBackend {
  public:
   virtual ~LlamaBackend() = default;
 
   virtual base::DeviceType device_type() const = 0;
+
   virtual absl::StatusOr<LlamaForwardResult> ForwardToken(
-      const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
-      int32_t position) const = 0;
+      const LlamaHfModel &model, int32_t token_id, int32_t position) = 0;
+
+  virtual const LlamaForwardProfile &profile() const = 0;
 };
 
-std::unique_ptr<LlamaBackend> CreateLlamaBackend(base::DeviceType device_type);
+std::unique_ptr<LlamaBackend> CreateLlamaBackend(const HfLlamaConfig &config,
+                                                 base::DeviceType device_type);
 
 }  // namespace model
