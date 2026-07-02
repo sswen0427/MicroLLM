@@ -229,6 +229,8 @@ int32_t ArgMaxToken(const tensor::Tensor &logits) {
 
 class CpuLlamaBackend final : public LlamaBackend {
  public:
+  explicit CpuLlamaBackend(const HfLlamaConfig &config);
+
   base::DeviceType device_type() const override;
 
  private:
@@ -236,6 +238,9 @@ class CpuLlamaBackend final : public LlamaBackend {
       const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
       int32_t position) override;
 };
+
+CpuLlamaBackend::CpuLlamaBackend(const HfLlamaConfig &config)
+    : LlamaBackend(config, base::DeviceType::kDeviceCPU) {}
 
 base::DeviceType CpuLlamaBackend::device_type() const {
   return base::DeviceType::kDeviceCPU;
@@ -367,8 +372,9 @@ absl::StatusOr<LlamaForwardResult> CpuLlamaBackend::ForwardTokenImpl(
 
 }  // namespace
 
-std::unique_ptr<LlamaBackend> CreateCpuLlamaBackend() {
-  return std::make_unique<CpuLlamaBackend>();
+std::unique_ptr<LlamaBackend> CreateCpuLlamaBackend(
+    const HfLlamaConfig &config) {
+  return std::make_unique<CpuLlamaBackend>(config);
 }
 
 }  // namespace model

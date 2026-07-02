@@ -65,7 +65,7 @@ model::LlamaHfModel MakeTinyForwardModel() {
 TEST(LlamaHfForwardTest, RunsOneTokenForward) {
   model::LlamaHfModel model = MakeTinyForwardModel();
   std::unique_ptr<model::LlamaBackend> backend =
-      model::CreateLlamaBackend(base::DeviceType::kDeviceCPU);
+      model::CreateLlamaBackend(model.config, base::DeviceType::kDeviceCPU);
 
   auto result = backend->ForwardToken(model, 0, 0);
 
@@ -79,7 +79,7 @@ TEST(LlamaHfForwardTest, RunsOneTokenForward) {
 TEST(LlamaHfForwardTest, BackendStateKeepsKvCacheAcrossTokens) {
   model::LlamaHfModel model = MakeTinyForwardModel();
   std::unique_ptr<model::LlamaBackend> backend =
-      model::CreateLlamaBackend(base::DeviceType::kDeviceCPU);
+      model::CreateLlamaBackend(model.config, base::DeviceType::kDeviceCPU);
 
   auto first = backend->ForwardToken(model, 0, 0);
   ASSERT_TRUE(first.ok()) << first.status();

@@ -166,6 +166,8 @@ int32_t ArgMaxToken(const tensor::Tensor &logits) {
 
 class CudaLlamaBackend final : public LlamaBackend {
  public:
+  explicit CudaLlamaBackend(const HfLlamaConfig &config);
+
   base::DeviceType device_type() const override;
 
  private:
@@ -178,8 +180,12 @@ class CudaLlamaBackend final : public LlamaBackend {
   std::unordered_map<const tensor::Tensor *, tensor::Tensor> fp32_cuda_weights_;
 };
 
-std::unique_ptr<LlamaBackend> CreateCudaLlamaBackend() {
-  return std::make_unique<CudaLlamaBackend>();
+CudaLlamaBackend::CudaLlamaBackend(const HfLlamaConfig &config)
+    : LlamaBackend(config, base::DeviceType::kDeviceCUDA) {}
+
+std::unique_ptr<LlamaBackend> CreateCudaLlamaBackend(
+    const HfLlamaConfig &config) {
+  return std::make_unique<CudaLlamaBackend>(config);
 }
 
 base::DeviceType CudaLlamaBackend::device_type() const {

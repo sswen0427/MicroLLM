@@ -6,8 +6,10 @@
 
 namespace model {
 
-std::unique_ptr<LlamaBackend> CreateCpuLlamaBackend();
-std::unique_ptr<LlamaBackend> CreateCudaLlamaBackend();
+std::unique_ptr<LlamaBackend> CreateCpuLlamaBackend(
+    const HfLlamaConfig &config);
+std::unique_ptr<LlamaBackend> CreateCudaLlamaBackend(
+    const HfLlamaConfig &config);
 
 namespace {
 
@@ -41,34 +43,30 @@ LlamaForwardState CreateForwardState(const HfLlamaConfig &config,
 
 }  // namespace
 
-std::unique_ptr<LlamaBackend> CreateLlamaBackend(base::DeviceType device_type) {
+std::unique_ptr<LlamaBackend> CreateLlamaBackend(const HfLlamaConfig &config,
+                                                 base::DeviceType device_type) {
   if (device_type == base::DeviceType::kDeviceCPU) {
-    return CreateCpuLlamaBackend();
+    return CreateCpuLlamaBackend(config);
   }
   if (device_type == base::DeviceType::kDeviceCUDA) {
-    return CreateCudaLlamaBackend();
+    return CreateCudaLlamaBackend(config);
   }
   LOG(FATAL) << "Unsupported LLaMA backend device type: "
              << static_cast<int>(device_type);
   return nullptr;
 }
 
+LlamaBackend::LlamaBackend(const HfLlamaConfig &config,
+                           base::DeviceType device_type)
+    : forward_state_(CreateForwardState(config, device_type)) {}
+
 absl::StatusOr<LlamaForwardResult> LlamaBackend::ForwardToken(
     const LlamaHfModel &model, int32_t token_id, int32_t position) {
-  EnsureForwardState(model.config);
   return ForwardTokenImpl(model, forward_state_, token_id, position);
 }
 
 const LlamaForwardProfile &LlamaBackend::profile() const {
   return forward_state_.profile;
-}
-
-void LlamaBackend::EnsureForwardState(const HfLlamaConfig &config) {
-  if (has_forward_state_) {
-    return;
-  }
-  forward_state_ = CreateForwardState(config, device_type());
-  has_forward_state_ = true;
 }
 
 void LlamaForwardProfile::Log() const {

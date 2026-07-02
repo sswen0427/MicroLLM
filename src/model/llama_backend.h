@@ -62,17 +62,18 @@ class LlamaBackend {
                                                   int32_t position);
   const LlamaForwardProfile &profile() const;
 
- private:
-  void EnsureForwardState(const HfLlamaConfig &config);
+ protected:
+  LlamaBackend(const HfLlamaConfig &config, base::DeviceType device_type);
 
+ private:
   virtual absl::StatusOr<LlamaForwardResult> ForwardTokenImpl(
       const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
       int32_t position) = 0;
 
-  bool has_forward_state_ = false;
   LlamaForwardState forward_state_;
 };
 
-std::unique_ptr<LlamaBackend> CreateLlamaBackend(base::DeviceType device_type);
+std::unique_ptr<LlamaBackend> CreateLlamaBackend(const HfLlamaConfig &config,
+                                                 base::DeviceType device_type);
 
 }  // namespace model
