@@ -9,8 +9,8 @@
 
 namespace {
 
-void SwiGluGolden(const tensor::Tensor &gate, const tensor::Tensor &up,
-                  tensor::Tensor &output) {
+void SwiGluGolden(const tensor::Tensor& gate, const tensor::Tensor& up,
+                  tensor::Tensor& output) {
   for (size_t i = 0; i < gate.size(); ++i) {
     const float value = gate.at<float>(i);
     output.at<float>(i) = value / (1.0f + std::exp(-value)) * up.at<float>(i);
@@ -82,6 +82,7 @@ TEST(SwiGLUTest, Stream) {
   cudaStreamCreate(&stream);
 
   kernel::SwiGluCuda(in_cu, wei_cu, out_cu, stream);
+  cudaStreamSynchronize(stream);
   out_cu.to_cpu();
 
   SwiGluGolden(in_cpu, wei_cpu, out_cpu);

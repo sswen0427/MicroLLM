@@ -3,6 +3,6 @@
 #include "tensor/tensor.h"
 
 namespace kernel {
-void SwiGluCuda(const tensor::Tensor &input1, const tensor::Tensor &input2,
-                const tensor::Tensor &output, void *stream = nullptr);
+void SwiGluCuda(const tensor::Tensor& gate, const tensor::Tensor& up,
+                const tensor::Tensor& output, void* stream = nullptr);
 }  // namespace kernel
