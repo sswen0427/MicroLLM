@@ -68,7 +68,7 @@ absl::StatusOr<GenerationResult> GenerateText(
   std::unique_ptr<model::LlamaBackend> backend =
       model::CreateLlamaBackend(config.device_type);
   model::LlamaForwardState forward_state =
-      model::CreateLlamaForwardState(model.config);
+      model::CreateLlamaForwardState(model.config, config.device_type);
   GenerationResult result;
   result.prompt_tokens = prompt_tokens;
   result.tokens.reserve(config.max_new_tokens);

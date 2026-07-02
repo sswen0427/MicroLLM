@@ -40,8 +40,8 @@ struct LlamaForwardProfile {
 };
 
 struct LlamaLayerCache {
-  std::vector<float> key;
-  std::vector<float> value;
+  tensor::Tensor key;
+  tensor::Tensor value;
 };
 
 struct LlamaForwardState {
@@ -52,7 +52,8 @@ struct LlamaForwardState {
   LlamaForwardProfile profile;
 };
 
-LlamaForwardState CreateLlamaForwardState(const HfLlamaConfig &config);
+LlamaForwardState CreateLlamaForwardState(const HfLlamaConfig &config,
+                                          base::DeviceType device_type);
 
 class LlamaBackend {
  public:

@@ -66,7 +66,8 @@ TEST(LlamaHfForwardTest, RunsOneTokenForward) {
   model::LlamaHfModel model = MakeTinyForwardModel();
   std::unique_ptr<model::LlamaBackend> backend =
       model::CreateLlamaBackend(base::DeviceType::kDeviceCPU);
-  model::LlamaForwardState state = model::CreateLlamaForwardState(model.config);
+  model::LlamaForwardState state = model::CreateLlamaForwardState(
+      model.config, base::DeviceType::kDeviceCPU);
 
   auto result = backend->ForwardToken(model, state, 0, 0);
 
@@ -81,7 +82,8 @@ TEST(LlamaHfForwardTest, BackendStateKeepsKvCacheAcrossTokens) {
   model::LlamaHfModel model = MakeTinyForwardModel();
   std::unique_ptr<model::LlamaBackend> backend =
       model::CreateLlamaBackend(base::DeviceType::kDeviceCPU);
-  model::LlamaForwardState state = model::CreateLlamaForwardState(model.config);
+  model::LlamaForwardState state = model::CreateLlamaForwardState(
+      model.config, base::DeviceType::kDeviceCPU);
 
   auto first = backend->ForwardToken(model, state, 0, 0);
   ASSERT_TRUE(first.ok()) << first.status();

@@ -2,7 +2,6 @@
 
 #include <glog/logging.h>
 
-#include <cstddef>
 #include <memory>
 
 namespace model {
@@ -22,7 +21,8 @@ std::unique_ptr<LlamaBackend> CreateLlamaBackend(base::DeviceType device_type) {
   return nullptr;
 }
 
-LlamaForwardState CreateLlamaForwardState(const HfLlamaConfig &config) {
+LlamaForwardState CreateLlamaForwardState(const HfLlamaConfig &config,
+                                          base::DeviceType device_type) {
   LlamaForwardState state;
   if (config.num_attention_heads > 0) {
     state.head_size = config.hidden_size / config.num_attention_heads;
@@ -38,11 +38,15 @@ LlamaForwardState CreateLlamaForwardState(const HfLlamaConfig &config) {
   }
 
   state.layer_caches.resize(config.num_hidden_layers);
-  const size_t cache_size =
-      static_cast<size_t>(config.max_position_embeddings) * state.kv_dim;
   for (LlamaLayerCache &cache : state.layer_caches) {
-    cache.key.assign(cache_size, 0.0f);
-    cache.value.assign(cache_size, 0.0f);
+    cache.key =
+        tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
+                                 {config.max_position_embeddings, state.kv_dim},
+                                 device_type);
+    cache.value =
+        tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
+                                 {config.max_position_embeddings, state.kv_dim},
+                                 device_type);
   }
   return state;
 }

@@ -200,8 +200,17 @@ void StoreKvCacheCuda(const tensor::Tensor &key, const tensor::Tensor &value,
   CHECK(value_cache.device_type() == base::DeviceType::kDeviceCUDA);
   CHECK(key.data_type() == base::DataType::kDataTypeFp32);
   CHECK(value.data_type() == base::DataType::kDataTypeFp32);
+  CHECK(key_cache.data_type() == base::DataType::kDataTypeFp32);
+  CHECK(value_cache.data_type() == base::DataType::kDataTypeFp32);
+  CHECK_EQ(key_cache.dims_size(), 2);
+  CHECK_EQ(value_cache.dims_size(), 2);
+  CHECK_EQ(key_cache.get_dim(1), kv_dim);
+  CHECK_EQ(value_cache.get_dim(1), kv_dim);
   CHECK_EQ(static_cast<int32_t>(key.size()), kv_dim);
   CHECK_EQ(static_cast<int32_t>(value.size()), kv_dim);
+  CHECK_GE(position, 0);
+  CHECK_LT(position, key_cache.get_dim(0));
+  CHECK_EQ(key_cache.get_dim(0), value_cache.get_dim(0));
 
   constexpr int32_t threads = 128;
   const int32_t blocks = (kv_dim + threads - 1) / threads;
@@ -229,9 +238,17 @@ void AttentionWithCacheCuda(const tensor::Tensor &query,
   CHECK(key_cache.data_type() == base::DataType::kDataTypeFp32);
   CHECK(value_cache.data_type() == base::DataType::kDataTypeFp32);
   CHECK(output.data_type() == base::DataType::kDataTypeFp32);
+  CHECK_EQ(key_cache.dims_size(), 2);
+  CHECK_EQ(value_cache.dims_size(), 2);
+  CHECK_EQ(key_cache.get_dim(1), kv_dim);
+  CHECK_EQ(value_cache.get_dim(1), kv_dim);
+  CHECK_EQ(key_cache.get_dim(0), value_cache.get_dim(0));
   CHECK_EQ(static_cast<int32_t>(query.size()), head_count * head_size);
   CHECK_EQ(static_cast<int32_t>(output.size()), head_count * head_size);
+  CHECK_GE(position, 0);
+  CHECK_LT(position, key_cache.get_dim(0));
   CHECK_GT(kv_mul, 0);
+  CHECK_LE(head_size, 1024);
 
   AttentionWithCacheKernel<<<head_count, head_size, 0, AsCudaStream(stream)>>>(
       query.data<float>(), key_cache.data<float>(), value_cache.data<float>(),

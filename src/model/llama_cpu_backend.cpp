@@ -93,15 +93,24 @@ void ApplyRopeToHeads(std::vector<float> &values, int32_t head_count,
 void StoreKvCache(const std::vector<float> &key,
                   const std::vector<float> &value, int32_t position,
                   int32_t max_position, int32_t kv_dim,
-                  std::vector<float> &key_cache,
-                  std::vector<float> &value_cache) {
+                  tensor::Tensor &key_cache, tensor::Tensor &value_cache) {
   CHECK_EQ(static_cast<int32_t>(key.size()), kv_dim);
   CHECK_EQ(static_cast<int32_t>(value.size()), kv_dim);
+  CHECK(key_cache.device_type() == base::DeviceType::kDeviceCPU);
+  CHECK(value_cache.device_type() == base::DeviceType::kDeviceCPU);
+  CHECK(key_cache.data_type() == base::DataType::kDataTypeFp32);
+  CHECK(value_cache.data_type() == base::DataType::kDataTypeFp32);
+  CHECK_EQ(key_cache.dims_size(), 2);
+  CHECK_EQ(value_cache.dims_size(), 2);
+  CHECK_EQ(key_cache.get_dim(1), kv_dim);
+  CHECK_EQ(value_cache.get_dim(1), kv_dim);
   CHECK_GE(position, 0);
   CHECK_LT(position, max_position);
+  CHECK_LT(position, key_cache.get_dim(0));
+  CHECK_EQ(key_cache.get_dim(0), value_cache.get_dim(0));
   const size_t offset = static_cast<size_t>(position) * kv_dim;
-  std::copy(key.begin(), key.end(), key_cache.begin() + offset);
-  std::copy(value.begin(), value.end(), value_cache.begin() + offset);
+  std::copy(key.begin(), key.end(), key_cache.data<float>() + offset);
+  std::copy(value.begin(), value.end(), value_cache.data<float>() + offset);
 }
 
 void SoftmaxInPlace(std::vector<float> &values) {
@@ -135,12 +144,24 @@ void SoftmaxInPlace(std::vector<float> &values) {
  * so multiple query heads may share the same K/V cache head.
  */
 void AttentionWithCache(const std::vector<float> &query,
-                        const std::vector<float> &key_cache,
-                        const std::vector<float> &value_cache, int32_t position,
+                        const tensor::Tensor &key_cache,
+                        const tensor::Tensor &value_cache, int32_t position,
                         int32_t head_count, int32_t head_size, int32_t kv_dim,
                         int32_t kv_mul, std::vector<float> &output) {
   CHECK_GE(position, 0);
   CHECK_EQ(static_cast<int32_t>(query.size()), head_count * head_size);
+  CHECK(key_cache.device_type() == base::DeviceType::kDeviceCPU);
+  CHECK(value_cache.device_type() == base::DeviceType::kDeviceCPU);
+  CHECK(key_cache.data_type() == base::DataType::kDataTypeFp32);
+  CHECK(value_cache.data_type() == base::DataType::kDataTypeFp32);
+  CHECK_EQ(key_cache.dims_size(), 2);
+  CHECK_EQ(value_cache.dims_size(), 2);
+  CHECK_EQ(key_cache.get_dim(1), kv_dim);
+  CHECK_EQ(value_cache.get_dim(1), kv_dim);
+  CHECK_EQ(key_cache.get_dim(0), value_cache.get_dim(0));
+  CHECK_LT(position, key_cache.get_dim(0));
+  const float *key_cache_data = key_cache.data<float>();
+  const float *value_cache_data = value_cache.data<float>();
   output.assign(static_cast<size_t>(head_count) * head_size, 0.0f);
 
   std::vector<float> scores(static_cast<size_t>(position) + 1);
@@ -154,7 +175,7 @@ void AttentionWithCache(const std::vector<float> &query,
       const int32_t cache_offset = token * kv_dim + kv_head * head_size;
       float score = 0.0f;
       for (int32_t i = 0; i < head_size; ++i) {
-        score += query[query_offset + i] * key_cache[cache_offset + i];
+        score += query[query_offset + i] * key_cache_data[cache_offset + i];
       }
       scores[token] = score * scale;
     }
@@ -164,7 +185,8 @@ void AttentionWithCache(const std::vector<float> &query,
       const int32_t cache_offset = token * kv_dim + kv_head * head_size;
       const float score = scores[token];
       for (int32_t i = 0; i < head_size; ++i) {
-        output[output_offset + i] += score * value_cache[cache_offset + i];
+        output[output_offset + i] +=
+            score * value_cache_data[cache_offset + i];
       }
     }
   }

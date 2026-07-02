@@ -13,6 +13,7 @@
 #include "base/profile.h"
 #include "cuda/add.cuh"
 #include "cuda/embedding.cuh"
+#include "cuda/llama.cuh"
 #include "cuda/matmul.cuh"
 #include "cuda/rmsnorm.cuh"
 #include "cuda/swiglu.cuh"
@@ -69,96 +70,6 @@ void RmsNormCpu(const std::vector<float> &input, const tensor::Tensor &weight,
   output.resize(input.size());
   for (size_t i = 0; i < input.size(); ++i) {
     output[i] = input[i] * scale * TensorElementAsFloat(weight, i);
-  }
-}
-
-void ApplyRopeToHeadsCpu(std::vector<float> &values, int32_t head_count,
-                         int32_t head_size, int32_t position,
-                         double rope_theta) {
-  CHECK_EQ(static_cast<int32_t>(values.size()), head_count * head_size);
-  CHECK_EQ(head_size % 2, 0);
-  const int32_t half_head_size = head_size / 2;
-  for (int32_t head = 0; head < head_count; ++head) {
-    const int32_t head_offset = head * head_size;
-    for (int32_t i = 0; i < half_head_size; ++i) {
-      const float freq = 1.0f / std::pow(static_cast<float>(rope_theta),
-                                         static_cast<float>(2 * i) /
-                                             static_cast<float>(head_size));
-      const float angle = static_cast<float>(position) * freq;
-      const float cos_value = std::cos(angle);
-      const float sin_value = std::sin(angle);
-
-      const int32_t first = head_offset + i;
-      const int32_t second = head_offset + i + half_head_size;
-      const float x0 = values[first];
-      const float x1 = values[second];
-      values[first] = x0 * cos_value - x1 * sin_value;
-      values[second] = x0 * sin_value + x1 * cos_value;
-    }
-  }
-}
-
-void StoreKvCacheCpu(const std::vector<float> &key,
-                     const std::vector<float> &value, int32_t position,
-                     int32_t max_position, int32_t kv_dim,
-                     std::vector<float> &key_cache,
-                     std::vector<float> &value_cache) {
-  CHECK_EQ(static_cast<int32_t>(key.size()), kv_dim);
-  CHECK_EQ(static_cast<int32_t>(value.size()), kv_dim);
-  CHECK_GE(position, 0);
-  CHECK_LT(position, max_position);
-  const size_t offset = static_cast<size_t>(position) * kv_dim;
-  std::copy(key.begin(), key.end(), key_cache.begin() + offset);
-  std::copy(value.begin(), value.end(), value_cache.begin() + offset);
-}
-
-void SoftmaxInPlace(std::vector<float> &values) {
-  CHECK(!values.empty());
-  const float max_value = *std::max_element(values.begin(), values.end());
-  float sum = 0.0f;
-  for (float &value : values) {
-    value = std::exp(value - max_value);
-    sum += value;
-  }
-  for (float &value : values) {
-    value /= sum;
-  }
-}
-
-void AttentionWithCacheCpu(const std::vector<float> &query,
-                           const std::vector<float> &key_cache,
-                           const std::vector<float> &value_cache,
-                           int32_t position, int32_t head_count,
-                           int32_t head_size, int32_t kv_dim, int32_t kv_mul,
-                           std::vector<float> &output) {
-  CHECK_GE(position, 0);
-  CHECK_EQ(static_cast<int32_t>(query.size()), head_count * head_size);
-  output.assign(static_cast<size_t>(head_count) * head_size, 0.0f);
-
-  std::vector<float> scores(static_cast<size_t>(position) + 1);
-  const float scale = 1.0f / std::sqrt(static_cast<float>(head_size));
-  for (int32_t head = 0; head < head_count; ++head) {
-    const int32_t kv_head = head / kv_mul;
-    const int32_t query_offset = head * head_size;
-    const int32_t output_offset = head * head_size;
-
-    for (int32_t token = 0; token <= position; ++token) {
-      const int32_t cache_offset = token * kv_dim + kv_head * head_size;
-      float score = 0.0f;
-      for (int32_t i = 0; i < head_size; ++i) {
-        score += query[query_offset + i] * key_cache[cache_offset + i];
-      }
-      scores[token] = score * scale;
-    }
-    SoftmaxInPlace(scores);
-
-    for (int32_t token = 0; token <= position; ++token) {
-      const int32_t cache_offset = token * kv_dim + kv_head * head_size;
-      const float score = scores[token];
-      for (int32_t i = 0; i < head_size; ++i) {
-        output[output_offset + i] += score * value_cache[cache_offset + i];
-      }
-    }
   }
 }
 
@@ -310,10 +221,7 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardToken(
   tensor::Tensor up;
   tensor::Tensor activated;
   tensor::Tensor projected_ffn;
-  std::vector<float> query;
-  std::vector<float> key;
-  std::vector<float> value;
-  std::vector<float> attention_output;
+  tensor::Tensor attention_output_tensor;
 
   for (int32_t layer = 0; layer < config.num_hidden_layers; ++layer) {
     const LlamaHfLayerWeights &weights = model.weights.layers[layer];
@@ -332,35 +240,38 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardToken(
           MatVecTensor(weights.k_proj, Fp32CudaWeight(weights.k_proj), norm);
       value_tensor =
           MatVecTensor(weights.v_proj, Fp32CudaWeight(weights.v_proj), norm);
-      query = CopyTensorToVector(query_tensor);
-      key = CopyTensorToVector(key_tensor);
-      value = CopyTensorToVector(value_tensor);
     }
     {
       base::ScopedProfile profile(state.profile.rope_ms);
-      ApplyRopeToHeadsCpu(query, config.num_attention_heads, state.head_size,
-                          position, config.rope_theta);
-      ApplyRopeToHeadsCpu(key, config.num_key_value_heads, state.head_size,
-                          position, config.rope_theta);
+      kernel::RopeInPlaceCuda(query_tensor, config.num_attention_heads,
+                              state.head_size, position, config.rope_theta);
+      kernel::RopeInPlaceCuda(key_tensor, config.num_key_value_heads,
+                              state.head_size, position, config.rope_theta);
     }
     {
       base::ScopedProfile profile(state.profile.kv_cache_ms);
-      StoreKvCacheCpu(key, value, position, config.max_position_embeddings,
-                      state.kv_dim, state.layer_caches[layer].key,
-                      state.layer_caches[layer].value);
+      kernel::StoreKvCacheCuda(key_tensor, value_tensor,
+                               state.layer_caches[layer].key,
+                               state.layer_caches[layer].value, position,
+                               state.kv_dim);
     }
     {
       base::ScopedProfile profile(state.profile.attention_ms);
-      AttentionWithCacheCpu(query, state.layer_caches[layer].key,
-                            state.layer_caches[layer].value, position,
-                            config.num_attention_heads, state.head_size,
-                            state.kv_dim, state.kv_mul, attention_output);
+      attention_output_tensor = tensor::Tensor::allocate(
+          base::DataType::kDataTypeFp32,
+          {config.num_attention_heads * state.head_size},
+          base::DeviceType::kDeviceCUDA);
+      kernel::AttentionWithCacheCuda(
+          query_tensor, state.layer_caches[layer].key,
+          state.layer_caches[layer].value, attention_output_tensor, position,
+          config.num_attention_heads, state.head_size, state.kv_dim,
+          state.kv_mul);
     }
     {
       base::ScopedProfile profile(state.profile.attention_output_proj_ms);
       projected_attention =
           MatVecTensor(weights.o_proj, Fp32CudaWeight(weights.o_proj),
-                       CopyVectorToCudaTensor(attention_output));
+                       attention_output_tensor);
     }
     {
       base::ScopedProfile profile(state.profile.attention_residual_ms);
