@@ -108,8 +108,8 @@ TEST(CudaMatmulTest, SupportsNonMultipleOfFourColumns) {
   for (int row = 0; row < kRows; ++row) {
     float expected = 0.0f;
     for (int col = 0; col < kCols; ++col) {
-      expected += weight_cpu.at<float>(row * kCols + col) *
-                  input_cpu.at<float>(col);
+      expected +=
+          weight_cpu.at<float>(row * kCols + col) * input_cpu.at<float>(col);
     }
     EXPECT_EQ(out_cu.at<float>(row), expected);
   }

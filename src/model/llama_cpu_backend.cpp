@@ -185,8 +185,7 @@ void AttentionWithCache(const std::vector<float> &query,
       const int32_t cache_offset = token * kv_dim + kv_head * head_size;
       const float score = scores[token];
       for (int32_t i = 0; i < head_size; ++i) {
-        output[output_offset + i] +=
-            score * value_cache_data[cache_offset + i];
+        output[output_offset + i] += score * value_cache_data[cache_offset + i];
       }
     }
   }

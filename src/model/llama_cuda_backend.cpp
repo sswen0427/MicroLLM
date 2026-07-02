@@ -250,10 +250,9 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardToken(
     }
     {
       base::ScopedProfile profile(state.profile.kv_cache_ms);
-      kernel::StoreKvCacheCuda(key_tensor, value_tensor,
-                               state.layer_caches[layer].key,
-                               state.layer_caches[layer].value, position,
-                               state.kv_dim);
+      kernel::StoreKvCacheCuda(
+          key_tensor, value_tensor, state.layer_caches[layer].key,
+          state.layer_caches[layer].value, position, state.kv_dim);
     }
     {
       base::ScopedProfile profile(state.profile.attention_ms);

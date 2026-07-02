@@ -39,14 +39,12 @@ LlamaForwardState CreateLlamaForwardState(const HfLlamaConfig &config,
 
   state.layer_caches.resize(config.num_hidden_layers);
   for (LlamaLayerCache &cache : state.layer_caches) {
-    cache.key =
-        tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
-                                 {config.max_position_embeddings, state.kv_dim},
-                                 device_type);
-    cache.value =
-        tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
-                                 {config.max_position_embeddings, state.kv_dim},
-                                 device_type);
+    cache.key = tensor::Tensor::allocate(
+        base::DataType::kDataTypeFp32,
+        {config.max_position_embeddings, state.kv_dim}, device_type);
+    cache.value = tensor::Tensor::allocate(
+        base::DataType::kDataTypeFp32,
+        {config.max_position_embeddings, state.kv_dim}, device_type);
   }
   return state;
 }
