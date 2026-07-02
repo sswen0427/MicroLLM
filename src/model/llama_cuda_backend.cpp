@@ -166,35 +166,33 @@ int32_t ArgMaxToken(const tensor::Tensor &logits) {
 
 class CudaLlamaBackend final : public LlamaBackend {
  public:
-  explicit CudaLlamaBackend(const HfLlamaConfig &config);
+  explicit CudaLlamaBackend(LlamaForwardState state);
 
   base::DeviceType device_type() const override;
+  absl::StatusOr<LlamaForwardResult> ForwardToken(
+      const LlamaHfModel &model, int32_t token_id, int32_t position) override;
+  const LlamaForwardProfile &profile() const override;
 
  private:
-  absl::StatusOr<LlamaForwardResult> ForwardTokenImpl(
-      const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
-      int32_t position) override;
-
   const tensor::Tensor &Fp32CudaWeight(const tensor::Tensor &weight);
 
+  LlamaForwardState forward_state_;
   std::unordered_map<const tensor::Tensor *, tensor::Tensor> fp32_cuda_weights_;
 };
 
-CudaLlamaBackend::CudaLlamaBackend(const HfLlamaConfig &config)
-    : LlamaBackend(config, base::DeviceType::kDeviceCUDA) {}
+CudaLlamaBackend::CudaLlamaBackend(LlamaForwardState state)
+    : forward_state_(std::move(state)) {}
 
-std::unique_ptr<LlamaBackend> CreateCudaLlamaBackend(
-    const HfLlamaConfig &config) {
-  return std::make_unique<CudaLlamaBackend>(config);
+std::unique_ptr<LlamaBackend> CreateCudaLlamaBackend(LlamaForwardState state) {
+  return std::make_unique<CudaLlamaBackend>(std::move(state));
 }
 
 base::DeviceType CudaLlamaBackend::device_type() const {
   return base::DeviceType::kDeviceCUDA;
 }
 
-absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardTokenImpl(
-    const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
-    int32_t position) {
+absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardToken(
+    const LlamaHfModel &model, int32_t token_id, int32_t position) {
   const HfLlamaConfig &config = model.config;
   if (token_id < 0 || token_id >= config.vocab_size) {
     return absl::InvalidArgumentError(
@@ -209,11 +207,11 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardTokenImpl(
 
   LOG(INFO) << "start LLaMA CUDA one-token forward: token_id=" << token_id
             << ", position=" << position;
-  state.profile.forward_calls += 1;
+  forward_state_.profile.forward_calls += 1;
 
   tensor::Tensor hidden_state;
   {
-    base::ScopedProfile profile(state.profile.embedding_ms);
+    base::ScopedProfile profile(forward_state_.profile.embedding_ms);
     hidden_state = EmbeddingTensor(
         Fp32CudaWeight(model.weights.token_embedding), token_id);
   }
@@ -233,13 +231,13 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardTokenImpl(
     const LlamaHfLayerWeights &weights = model.weights.layers[layer];
 
     {
-      base::ScopedProfile profile(state.profile.attention_norm_ms);
+      base::ScopedProfile profile(forward_state_.profile.attention_norm_ms);
       norm = RmsNormTensor(hidden_state, weights.input_layernorm,
                            Fp32CudaWeight(weights.input_layernorm),
                            config.rms_norm_eps);
     }
     {
-      base::ScopedProfile profile(state.profile.qkv_proj_ms);
+      base::ScopedProfile profile(forward_state_.profile.qkv_proj_ms);
       query_tensor =
           MatVecTensor(weights.q_proj, Fp32CudaWeight(weights.q_proj), norm);
       key_tensor =
@@ -248,69 +246,73 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardTokenImpl(
           MatVecTensor(weights.v_proj, Fp32CudaWeight(weights.v_proj), norm);
     }
     {
-      base::ScopedProfile profile(state.profile.rope_ms);
+      base::ScopedProfile profile(forward_state_.profile.rope_ms);
       kernel::RopeInPlaceCuda(query_tensor, config.num_attention_heads,
-                              state.head_size, position, config.rope_theta);
+                              forward_state_.head_size, position,
+                              config.rope_theta);
       kernel::RopeInPlaceCuda(key_tensor, config.num_key_value_heads,
-                              state.head_size, position, config.rope_theta);
+                              forward_state_.head_size, position,
+                              config.rope_theta);
     }
     {
-      base::ScopedProfile profile(state.profile.kv_cache_ms);
+      base::ScopedProfile profile(forward_state_.profile.kv_cache_ms);
       kernel::StoreKvCacheCuda(
-          key_tensor, value_tensor, state.layer_caches[layer].key,
-          state.layer_caches[layer].value, position, state.kv_dim);
+          key_tensor, value_tensor, forward_state_.layer_caches[layer].key,
+          forward_state_.layer_caches[layer].value, position,
+          forward_state_.kv_dim);
     }
     {
-      base::ScopedProfile profile(state.profile.attention_ms);
+      base::ScopedProfile profile(forward_state_.profile.attention_ms);
       attention_output_tensor = tensor::Tensor::allocate(
           base::DataType::kDataTypeFp32,
-          {config.num_attention_heads * state.head_size},
+          {config.num_attention_heads * forward_state_.head_size},
           base::DeviceType::kDeviceCUDA);
       kernel::AttentionWithCacheCuda(
-          query_tensor, state.layer_caches[layer].key,
-          state.layer_caches[layer].value, attention_output_tensor, position,
-          config.num_attention_heads, state.head_size, state.kv_dim,
-          state.kv_mul);
+          query_tensor, forward_state_.layer_caches[layer].key,
+          forward_state_.layer_caches[layer].value, attention_output_tensor,
+          position, config.num_attention_heads, forward_state_.head_size,
+          forward_state_.kv_dim, forward_state_.kv_mul);
     }
     {
-      base::ScopedProfile profile(state.profile.attention_output_proj_ms);
+      base::ScopedProfile profile(
+          forward_state_.profile.attention_output_proj_ms);
       projected_attention =
           MatVecTensor(weights.o_proj, Fp32CudaWeight(weights.o_proj),
                        attention_output_tensor);
     }
     {
-      base::ScopedProfile profile(state.profile.attention_residual_ms);
+      base::ScopedProfile profile(forward_state_.profile.attention_residual_ms);
       AddInPlaceTensor(hidden_state, projected_attention);
     }
     {
-      base::ScopedProfile profile(state.profile.ffn_norm_ms);
+      base::ScopedProfile profile(forward_state_.profile.ffn_norm_ms);
       norm = RmsNormTensor(hidden_state, weights.post_attention_layernorm,
                            Fp32CudaWeight(weights.post_attention_layernorm),
                            config.rms_norm_eps);
     }
     {
-      base::ScopedProfile profile(state.profile.ffn_up_gate_proj_ms);
+      base::ScopedProfile profile(forward_state_.profile.ffn_up_gate_proj_ms);
       gate = MatVecTensor(weights.gate_proj, Fp32CudaWeight(weights.gate_proj),
                           norm);
       up = MatVecTensor(weights.up_proj, Fp32CudaWeight(weights.up_proj), norm);
     }
     {
-      base::ScopedProfile profile(state.profile.swiglu_ms);
+      base::ScopedProfile profile(forward_state_.profile.swiglu_ms);
       activated = SwiGluTensor(gate, up);
     }
     {
-      base::ScopedProfile profile(state.profile.ffn_down_proj_ms);
+      base::ScopedProfile profile(forward_state_.profile.ffn_down_proj_ms);
       projected_ffn = MatVecTensor(
           weights.down_proj, Fp32CudaWeight(weights.down_proj), activated);
     }
     {
-      base::ScopedProfile profile(state.profile.ffn_residual_ms);
+      base::ScopedProfile profile(forward_state_.profile.ffn_residual_ms);
       AddInPlaceTensor(hidden_state, projected_ffn);
     }
   }
 
   {
-    base::ScopedProfile profile(state.profile.final_norm_ms);
+    base::ScopedProfile profile(forward_state_.profile.final_norm_ms);
     norm = RmsNormTensor(hidden_state, model.weights.final_norm,
                          Fp32CudaWeight(model.weights.final_norm),
                          config.rms_norm_eps);
@@ -318,20 +320,24 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardTokenImpl(
 
   LlamaForwardResult result;
   {
-    base::ScopedProfile profile(state.profile.lm_head_ms);
+    base::ScopedProfile profile(forward_state_.profile.lm_head_ms);
     result.logits = MatVecTensor(model.weights.lm_head,
                                  Fp32CudaWeight(model.weights.lm_head), norm);
   }
   result.logits.to_cpu();
   CHECK_EQ(static_cast<int32_t>(result.logits.size()), config.vocab_size);
   {
-    base::ScopedProfile profile(state.profile.argmax_ms);
+    base::ScopedProfile profile(forward_state_.profile.argmax_ms);
     result.next_token = ArgMaxToken(result.logits);
   }
 
   LOG(INFO) << "finish LLaMA CUDA one-token forward: next_token="
             << result.next_token;
   return result;
+}
+
+const LlamaForwardProfile &CudaLlamaBackend::profile() const {
+  return forward_state_.profile;
 }
 
 const tensor::Tensor &CudaLlamaBackend::Fp32CudaWeight(

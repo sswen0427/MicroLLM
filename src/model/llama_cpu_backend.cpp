@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "base/profile.h"
@@ -229,26 +230,26 @@ int32_t ArgMaxToken(const tensor::Tensor &logits) {
 
 class CpuLlamaBackend final : public LlamaBackend {
  public:
-  explicit CpuLlamaBackend(const HfLlamaConfig &config);
+  explicit CpuLlamaBackend(LlamaForwardState state);
 
   base::DeviceType device_type() const override;
+  absl::StatusOr<LlamaForwardResult> ForwardToken(
+      const LlamaHfModel &model, int32_t token_id, int32_t position) override;
+  const LlamaForwardProfile &profile() const override;
 
  private:
-  absl::StatusOr<LlamaForwardResult> ForwardTokenImpl(
-      const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
-      int32_t position) override;
+  LlamaForwardState forward_state_;
 };
 
-CpuLlamaBackend::CpuLlamaBackend(const HfLlamaConfig &config)
-    : LlamaBackend(config, base::DeviceType::kDeviceCPU) {}
+CpuLlamaBackend::CpuLlamaBackend(LlamaForwardState state)
+    : forward_state_(std::move(state)) {}
 
 base::DeviceType CpuLlamaBackend::device_type() const {
   return base::DeviceType::kDeviceCPU;
 }
 
-absl::StatusOr<LlamaForwardResult> CpuLlamaBackend::ForwardTokenImpl(
-    const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
-    int32_t position) {
+absl::StatusOr<LlamaForwardResult> CpuLlamaBackend::ForwardToken(
+    const LlamaHfModel &model, int32_t token_id, int32_t position) {
   const HfLlamaConfig &config = model.config;
   if (token_id < 0 || token_id >= config.vocab_size) {
     return absl::InvalidArgumentError(
@@ -263,11 +264,11 @@ absl::StatusOr<LlamaForwardResult> CpuLlamaBackend::ForwardTokenImpl(
 
   LOG(INFO) << "start LLaMA CPU one-token forward: token_id=" << token_id
             << ", position=" << position;
-  state.profile.forward_calls += 1;
+  forward_state_.profile.forward_calls += 1;
 
   std::vector<float> hidden_state;
   {
-    base::ScopedProfile profile(state.profile.embedding_ms);
+    base::ScopedProfile profile(forward_state_.profile.embedding_ms);
     Embedding(model.weights.token_embedding, token_id, hidden_state);
   }
 
@@ -286,82 +287,85 @@ absl::StatusOr<LlamaForwardResult> CpuLlamaBackend::ForwardTokenImpl(
     const LlamaHfLayerWeights &weights = model.weights.layers[layer];
 
     {
-      base::ScopedProfile profile(state.profile.attention_norm_ms);
+      base::ScopedProfile profile(forward_state_.profile.attention_norm_ms);
       RmsNorm(hidden_state, weights.input_layernorm, config.rms_norm_eps, norm);
     }
     {
-      base::ScopedProfile profile(state.profile.qkv_proj_ms);
+      base::ScopedProfile profile(forward_state_.profile.qkv_proj_ms);
       MatVec(weights.q_proj, norm, query);
       MatVec(weights.k_proj, norm, key);
       MatVec(weights.v_proj, norm, value);
     }
     {
-      base::ScopedProfile profile(state.profile.rope_ms);
-      ApplyRopeToHeads(query, config.num_attention_heads, state.head_size,
-                       position, config.rope_theta);
-      ApplyRopeToHeads(key, config.num_key_value_heads, state.head_size,
-                       position, config.rope_theta);
+      base::ScopedProfile profile(forward_state_.profile.rope_ms);
+      ApplyRopeToHeads(query, config.num_attention_heads,
+                       forward_state_.head_size, position, config.rope_theta);
+      ApplyRopeToHeads(key, config.num_key_value_heads,
+                       forward_state_.head_size, position, config.rope_theta);
     }
     {
-      base::ScopedProfile profile(state.profile.kv_cache_ms);
+      base::ScopedProfile profile(forward_state_.profile.kv_cache_ms);
       StoreKvCache(key, value, position, config.max_position_embeddings,
-                   state.kv_dim, state.layer_caches[layer].key,
-                   state.layer_caches[layer].value);
+                   forward_state_.kv_dim,
+                   forward_state_.layer_caches[layer].key,
+                   forward_state_.layer_caches[layer].value);
     }
     {
-      base::ScopedProfile profile(state.profile.attention_ms);
-      AttentionWithCache(query, state.layer_caches[layer].key,
-                         state.layer_caches[layer].value, position,
-                         config.num_attention_heads, state.head_size,
-                         state.kv_dim, state.kv_mul, attention_output);
+      base::ScopedProfile profile(forward_state_.profile.attention_ms);
+      AttentionWithCache(query, forward_state_.layer_caches[layer].key,
+                         forward_state_.layer_caches[layer].value, position,
+                         config.num_attention_heads, forward_state_.head_size,
+                         forward_state_.kv_dim, forward_state_.kv_mul,
+                         attention_output);
     }
     {
-      base::ScopedProfile profile(state.profile.attention_output_proj_ms);
+      base::ScopedProfile profile(
+          forward_state_.profile.attention_output_proj_ms);
       MatVec(weights.o_proj, attention_output, projected_attention);
     }
     {
-      base::ScopedProfile profile(state.profile.attention_residual_ms);
+      base::ScopedProfile profile(forward_state_.profile.attention_residual_ms);
       AddInPlace(hidden_state, projected_attention);
     }
     {
-      base::ScopedProfile profile(state.profile.ffn_norm_ms);
+      base::ScopedProfile profile(forward_state_.profile.ffn_norm_ms);
       RmsNorm(hidden_state, weights.post_attention_layernorm,
               config.rms_norm_eps, norm);
     }
     {
-      base::ScopedProfile profile(state.profile.ffn_up_gate_proj_ms);
+      base::ScopedProfile profile(forward_state_.profile.ffn_up_gate_proj_ms);
       MatVec(weights.gate_proj, norm, gate);
       MatVec(weights.up_proj, norm, up);
     }
     {
-      base::ScopedProfile profile(state.profile.swiglu_ms);
+      base::ScopedProfile profile(forward_state_.profile.swiglu_ms);
       SwiGlu(gate, up, activated);
     }
     {
-      base::ScopedProfile profile(state.profile.ffn_down_proj_ms);
+      base::ScopedProfile profile(forward_state_.profile.ffn_down_proj_ms);
       MatVec(weights.down_proj, activated, projected_ffn);
     }
     {
-      base::ScopedProfile profile(state.profile.ffn_residual_ms);
+      base::ScopedProfile profile(forward_state_.profile.ffn_residual_ms);
       AddInPlace(hidden_state, projected_ffn);
     }
   }
 
   {
-    base::ScopedProfile profile(state.profile.final_norm_ms);
+    base::ScopedProfile profile(forward_state_.profile.final_norm_ms);
     RmsNorm(hidden_state, model.weights.final_norm, config.rms_norm_eps, norm);
   }
 
   LlamaForwardResult result;
   std::vector<float> logits;
   {
-    base::ScopedProfile profile(state.profile.lm_head_ms);
+    base::ScopedProfile profile(forward_state_.profile.lm_head_ms);
     MatVec(model.weights.lm_head, norm, logits);
   }
   result.logits = CopyVectorToCpuTensor(logits);
   CHECK_EQ(static_cast<int32_t>(result.logits.size()), config.vocab_size);
   {
-    base::ScopedProfile profile(state.profile.argmax_ms);
+    base::ScopedProfile profile(forward_state_.profile.argmax_ms);
     result.next_token = ArgMaxToken(result.logits);
   }
 
@@ -370,11 +374,14 @@ absl::StatusOr<LlamaForwardResult> CpuLlamaBackend::ForwardTokenImpl(
   return result;
 }
 
+const LlamaForwardProfile &CpuLlamaBackend::profile() const {
+  return forward_state_.profile;
+}
+
 }  // namespace
 
-std::unique_ptr<LlamaBackend> CreateCpuLlamaBackend(
-    const HfLlamaConfig &config) {
-  return std::make_unique<CpuLlamaBackend>(config);
+std::unique_ptr<LlamaBackend> CreateCpuLlamaBackend(LlamaForwardState state) {
+  return std::make_unique<CpuLlamaBackend>(std::move(state));
 }
 
 }  // namespace model

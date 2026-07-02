@@ -57,20 +57,9 @@ class LlamaBackend {
   virtual ~LlamaBackend() = default;
 
   virtual base::DeviceType device_type() const = 0;
-  absl::StatusOr<LlamaForwardResult> ForwardToken(const LlamaHfModel &model,
-                                                  int32_t token_id,
-                                                  int32_t position);
-  const LlamaForwardProfile &profile() const;
-
- protected:
-  LlamaBackend(const HfLlamaConfig &config, base::DeviceType device_type);
-
- private:
-  virtual absl::StatusOr<LlamaForwardResult> ForwardTokenImpl(
-      const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
-      int32_t position) = 0;
-
-  LlamaForwardState forward_state_;
+  virtual absl::StatusOr<LlamaForwardResult> ForwardToken(
+      const LlamaHfModel &model, int32_t token_id, int32_t position) = 0;
+  virtual const LlamaForwardProfile &profile() const = 0;
 };
 
 std::unique_ptr<LlamaBackend> CreateLlamaBackend(const HfLlamaConfig &config,
