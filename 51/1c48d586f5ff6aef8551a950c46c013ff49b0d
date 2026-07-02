@@ -1,0 +1,16 @@
+src/cuda/rmsnorm.cu
+  h_d17bb99b4329f0 12-15,17-21,23-24,32,56,82-89,92-93,95-97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "511c48d586f5ff6aef8551a950c46c013ff49b0d",
+  "prompts": {},
+  "humans": {
+    "h_d17bb99b4329f0": {
+      "author": "sswen0427 <799438891@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
