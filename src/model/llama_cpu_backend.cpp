@@ -33,14 +33,14 @@ LlamaForwardState CreateCpuForwardState(const HfLlamaConfig &config) {
 
   state.layer_caches.resize(config.num_hidden_layers);
   for (LlamaLayerCache &cache : state.layer_caches) {
-    cache.key = tensor::Tensor::allocate(
-        base::DataType::kDataTypeFp32,
-        {config.max_position_embeddings, state.kv_dim},
-        base::DeviceType::kDeviceCPU);
-    cache.value = tensor::Tensor::allocate(
-        base::DataType::kDataTypeFp32,
-        {config.max_position_embeddings, state.kv_dim},
-        base::DeviceType::kDeviceCPU);
+    cache.key =
+        tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
+                                 {config.max_position_embeddings, state.kv_dim},
+                                 base::DeviceType::kDeviceCPU);
+    cache.value =
+        tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
+                                 {config.max_position_embeddings, state.kv_dim},
+                                 base::DeviceType::kDeviceCPU);
   }
   return state;
 }
@@ -261,8 +261,9 @@ class CpuLlamaBackend final : public LlamaBackend {
   explicit CpuLlamaBackend(const HfLlamaConfig &config);
 
   base::DeviceType device_type() const override;
-  absl::StatusOr<LlamaForwardResult> ForwardToken(
-      const LlamaHfModel &model, int32_t token_id, int32_t position) override;
+  absl::StatusOr<LlamaForwardResult> ForwardToken(const LlamaHfModel &model,
+                                                  int32_t token_id,
+                                                  int32_t position) override;
   const LlamaForwardProfile &profile() const override;
 
  private:

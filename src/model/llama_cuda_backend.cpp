@@ -40,14 +40,14 @@ LlamaForwardState CreateCudaForwardState(const HfLlamaConfig &config) {
 
   state.layer_caches.resize(config.num_hidden_layers);
   for (LlamaLayerCache &cache : state.layer_caches) {
-    cache.key = tensor::Tensor::allocate(
-        base::DataType::kDataTypeFp32,
-        {config.max_position_embeddings, state.kv_dim},
-        base::DeviceType::kDeviceCUDA);
-    cache.value = tensor::Tensor::allocate(
-        base::DataType::kDataTypeFp32,
-        {config.max_position_embeddings, state.kv_dim},
-        base::DeviceType::kDeviceCUDA);
+    cache.key =
+        tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
+                                 {config.max_position_embeddings, state.kv_dim},
+                                 base::DeviceType::kDeviceCUDA);
+    cache.value =
+        tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
+                                 {config.max_position_embeddings, state.kv_dim},
+                                 base::DeviceType::kDeviceCUDA);
   }
   return state;
 }
@@ -198,8 +198,9 @@ class CudaLlamaBackend final : public LlamaBackend {
   explicit CudaLlamaBackend(const HfLlamaConfig &config);
 
   base::DeviceType device_type() const override;
-  absl::StatusOr<LlamaForwardResult> ForwardToken(
-      const LlamaHfModel &model, int32_t token_id, int32_t position) override;
+  absl::StatusOr<LlamaForwardResult> ForwardToken(const LlamaHfModel &model,
+                                                  int32_t token_id,
+                                                  int32_t position) override;
   const LlamaForwardProfile &profile() const override;
 
  private:
@@ -286,10 +287,10 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardToken(
     }
     {
       base::ScopedProfile profile(forward_state_.profile.kv_cache_ms);
-      kernel::StoreKvCacheCuda(
-          key_tensor, value_tensor, forward_state_.layer_caches[layer].key,
-          forward_state_.layer_caches[layer].value, position,
-          forward_state_.kv_dim);
+      kernel::StoreKvCacheCuda(key_tensor, value_tensor,
+                               forward_state_.layer_caches[layer].key,
+                               forward_state_.layer_caches[layer].value,
+                               position, forward_state_.kv_dim);
     }
     {
       base::ScopedProfile profile(forward_state_.profile.attention_ms);
