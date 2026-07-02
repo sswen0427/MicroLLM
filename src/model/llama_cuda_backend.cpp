@@ -23,6 +23,35 @@
 namespace model {
 namespace {
 
+LlamaForwardState CreateCudaForwardState(const HfLlamaConfig &config) {
+  LlamaForwardState state;
+  if (config.num_attention_heads > 0) {
+    state.head_size = config.hidden_size / config.num_attention_heads;
+  }
+  state.kv_dim = config.num_key_value_heads * state.head_size;
+  if (config.num_key_value_heads > 0) {
+    state.kv_mul = config.num_attention_heads / config.num_key_value_heads;
+  }
+
+  if (config.num_hidden_layers <= 0 || config.max_position_embeddings <= 0 ||
+      state.kv_dim <= 0) {
+    return state;
+  }
+
+  state.layer_caches.resize(config.num_hidden_layers);
+  for (LlamaLayerCache &cache : state.layer_caches) {
+    cache.key = tensor::Tensor::allocate(
+        base::DataType::kDataTypeFp32,
+        {config.max_position_embeddings, state.kv_dim},
+        base::DeviceType::kDeviceCUDA);
+    cache.value = tensor::Tensor::allocate(
+        base::DataType::kDataTypeFp32,
+        {config.max_position_embeddings, state.kv_dim},
+        base::DeviceType::kDeviceCUDA);
+  }
+  return state;
+}
+
 std::vector<int32_t> TensorDims(const tensor::Tensor &tensor) {
   std::vector<int32_t> dims;
   dims.reserve(tensor.dims_size());
@@ -166,7 +195,7 @@ int32_t ArgMaxToken(const tensor::Tensor &logits) {
 
 class CudaLlamaBackend final : public LlamaBackend {
  public:
-  explicit CudaLlamaBackend(LlamaForwardState state);
+  explicit CudaLlamaBackend(const HfLlamaConfig &config);
 
   base::DeviceType device_type() const override;
   absl::StatusOr<LlamaForwardResult> ForwardToken(
@@ -180,11 +209,12 @@ class CudaLlamaBackend final : public LlamaBackend {
   std::unordered_map<const tensor::Tensor *, tensor::Tensor> fp32_cuda_weights_;
 };
 
-CudaLlamaBackend::CudaLlamaBackend(LlamaForwardState state)
-    : forward_state_(std::move(state)) {}
+CudaLlamaBackend::CudaLlamaBackend(const HfLlamaConfig &config)
+    : forward_state_(CreateCudaForwardState(config)) {}
 
-std::unique_ptr<LlamaBackend> CreateCudaLlamaBackend(LlamaForwardState state) {
-  return std::make_unique<CudaLlamaBackend>(std::move(state));
+std::unique_ptr<LlamaBackend> CreateCudaLlamaBackend(
+    const HfLlamaConfig &config) {
+  return std::make_unique<CudaLlamaBackend>(config);
 }
 
 base::DeviceType CudaLlamaBackend::device_type() const {

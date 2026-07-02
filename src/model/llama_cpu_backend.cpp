@@ -7,7 +7,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
-#include <utility>
 #include <vector>
 
 #include "base/profile.h"
@@ -16,6 +15,35 @@
 
 namespace model {
 namespace {
+
+LlamaForwardState CreateCpuForwardState(const HfLlamaConfig &config) {
+  LlamaForwardState state;
+  if (config.num_attention_heads > 0) {
+    state.head_size = config.hidden_size / config.num_attention_heads;
+  }
+  state.kv_dim = config.num_key_value_heads * state.head_size;
+  if (config.num_key_value_heads > 0) {
+    state.kv_mul = config.num_attention_heads / config.num_key_value_heads;
+  }
+
+  if (config.num_hidden_layers <= 0 || config.max_position_embeddings <= 0 ||
+      state.kv_dim <= 0) {
+    return state;
+  }
+
+  state.layer_caches.resize(config.num_hidden_layers);
+  for (LlamaLayerCache &cache : state.layer_caches) {
+    cache.key = tensor::Tensor::allocate(
+        base::DataType::kDataTypeFp32,
+        {config.max_position_embeddings, state.kv_dim},
+        base::DeviceType::kDeviceCPU);
+    cache.value = tensor::Tensor::allocate(
+        base::DataType::kDataTypeFp32,
+        {config.max_position_embeddings, state.kv_dim},
+        base::DeviceType::kDeviceCPU);
+  }
+  return state;
+}
 
 tensor::Tensor CopyVectorToCpuTensor(const std::vector<float> &values) {
   tensor::Tensor tensor = tensor::Tensor::allocate(
@@ -230,7 +258,7 @@ int32_t ArgMaxToken(const tensor::Tensor &logits) {
 
 class CpuLlamaBackend final : public LlamaBackend {
  public:
-  explicit CpuLlamaBackend(LlamaForwardState state);
+  explicit CpuLlamaBackend(const HfLlamaConfig &config);
 
   base::DeviceType device_type() const override;
   absl::StatusOr<LlamaForwardResult> ForwardToken(
@@ -241,8 +269,8 @@ class CpuLlamaBackend final : public LlamaBackend {
   LlamaForwardState forward_state_;
 };
 
-CpuLlamaBackend::CpuLlamaBackend(LlamaForwardState state)
-    : forward_state_(std::move(state)) {}
+CpuLlamaBackend::CpuLlamaBackend(const HfLlamaConfig &config)
+    : forward_state_(CreateCpuForwardState(config)) {}
 
 base::DeviceType CpuLlamaBackend::device_type() const {
   return base::DeviceType::kDeviceCPU;
@@ -380,8 +408,9 @@ const LlamaForwardProfile &CpuLlamaBackend::profile() const {
 
 }  // namespace
 
-std::unique_ptr<LlamaBackend> CreateCpuLlamaBackend(LlamaForwardState state) {
-  return std::make_unique<CpuLlamaBackend>(std::move(state));
+std::unique_ptr<LlamaBackend> CreateCpuLlamaBackend(
+    const HfLlamaConfig &config) {
+  return std::make_unique<CpuLlamaBackend>(config);
 }
 
 }  // namespace model

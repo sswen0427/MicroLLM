@@ -6,50 +6,18 @@
 
 namespace model {
 
-std::unique_ptr<LlamaBackend> CreateCpuLlamaBackend(LlamaForwardState state);
-std::unique_ptr<LlamaBackend> CreateCudaLlamaBackend(LlamaForwardState state);
-
-namespace {
-
-LlamaForwardState CreateForwardState(const HfLlamaConfig &config,
-                                     base::DeviceType device_type) {
-  LlamaForwardState state;
-  if (config.num_attention_heads > 0) {
-    state.head_size = config.hidden_size / config.num_attention_heads;
-  }
-  state.kv_dim = config.num_key_value_heads * state.head_size;
-  if (config.num_key_value_heads > 0) {
-    state.kv_mul = config.num_attention_heads / config.num_key_value_heads;
-  }
-
-  if (config.num_hidden_layers <= 0 || config.max_position_embeddings <= 0 ||
-      state.kv_dim <= 0) {
-    return state;
-  }
-
-  state.layer_caches.resize(config.num_hidden_layers);
-  for (LlamaLayerCache &cache : state.layer_caches) {
-    cache.key = tensor::Tensor::allocate(
-        base::DataType::kDataTypeFp32,
-        {config.max_position_embeddings, state.kv_dim}, device_type);
-    cache.value = tensor::Tensor::allocate(
-        base::DataType::kDataTypeFp32,
-        {config.max_position_embeddings, state.kv_dim}, device_type);
-  }
-  return state;
-}
-
-}  // namespace
+std::unique_ptr<LlamaBackend> CreateCpuLlamaBackend(
+    const HfLlamaConfig &config);
+std::unique_ptr<LlamaBackend> CreateCudaLlamaBackend(
+    const HfLlamaConfig &config);
 
 std::unique_ptr<LlamaBackend> CreateLlamaBackend(const HfLlamaConfig &config,
                                                  base::DeviceType device_type) {
   if (device_type == base::DeviceType::kDeviceCPU) {
-    return CreateCpuLlamaBackend(
-        CreateForwardState(config, base::DeviceType::kDeviceCPU));
+    return CreateCpuLlamaBackend(config);
   }
   if (device_type == base::DeviceType::kDeviceCUDA) {
-    return CreateCudaLlamaBackend(
-        CreateForwardState(config, base::DeviceType::kDeviceCUDA));
+    return CreateCudaLlamaBackend(config);
   }
   LOG(FATAL) << "Unsupported LLaMA backend device type: "
              << static_cast<int>(device_type);
