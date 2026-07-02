@@ -42,6 +42,8 @@ struct LlamaForwardProfile {
 struct LlamaLayerCache {
   std::vector<float> key;
   std::vector<float> value;
+  tensor::Tensor cuda_key;
+  tensor::Tensor cuda_value;
 };
 
 struct LlamaForwardState {
