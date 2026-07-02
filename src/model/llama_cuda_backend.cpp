@@ -191,8 +191,6 @@ int32_t ArgMaxToken(const tensor::Tensor &logits) {
   return best;
 }
 
-}  // namespace
-
 class CudaLlamaBackend final : public LlamaBackend {
  public:
   explicit CudaLlamaBackend(const HfLlamaConfig &config);
@@ -215,11 +213,6 @@ class CudaLlamaBackend final : public LlamaBackend {
 
 CudaLlamaBackend::CudaLlamaBackend(const HfLlamaConfig &config)
     : forward_state_(CreateCudaForwardState(config)) {}
-
-std::unique_ptr<LlamaBackend> CreateCudaLlamaBackend(
-    const HfLlamaConfig &config) {
-  return std::make_unique<CudaLlamaBackend>(config);
-}
 
 base::DeviceType CudaLlamaBackend::device_type() const {
   return base::DeviceType::kDeviceCUDA;
@@ -400,6 +393,13 @@ const tensor::Tensor &CudaLlamaBackend::Fp32CudaWeight(
   auto insert_result =
       fp32_cuda_weights_.emplace(&weight, std::move(fp32_weight));
   return insert_result.first->second;
+}
+
+}  // namespace
+
+std::unique_ptr<LlamaBackend> CreateCudaLlamaBackend(
+    const HfLlamaConfig &config) {
+  return std::make_unique<CudaLlamaBackend>(config);
 }
 
 }  // namespace model
