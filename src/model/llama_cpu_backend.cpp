@@ -230,18 +230,20 @@ int32_t ArgMaxToken(const tensor::Tensor &logits) {
 class CpuLlamaBackend final : public LlamaBackend {
  public:
   base::DeviceType device_type() const override;
-  absl::StatusOr<LlamaForwardResult> ForwardToken(
+
+ private:
+  absl::StatusOr<LlamaForwardResult> ForwardTokenImpl(
       const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
-      int32_t position) const override;
+      int32_t position) override;
 };
 
 base::DeviceType CpuLlamaBackend::device_type() const {
   return base::DeviceType::kDeviceCPU;
 }
 
-absl::StatusOr<LlamaForwardResult> CpuLlamaBackend::ForwardToken(
+absl::StatusOr<LlamaForwardResult> CpuLlamaBackend::ForwardTokenImpl(
     const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
-    int32_t position) const {
+    int32_t position) {
   const HfLlamaConfig &config = model.config;
   if (token_id < 0 || token_id >= config.vocab_size) {
     return absl::InvalidArgumentError(

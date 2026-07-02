@@ -52,17 +52,25 @@ struct LlamaForwardState {
   LlamaForwardProfile profile;
 };
 
-LlamaForwardState CreateLlamaForwardState(const HfLlamaConfig &config,
-                                          base::DeviceType device_type);
-
 class LlamaBackend {
  public:
   virtual ~LlamaBackend() = default;
 
   virtual base::DeviceType device_type() const = 0;
-  virtual absl::StatusOr<LlamaForwardResult> ForwardToken(
+  absl::StatusOr<LlamaForwardResult> ForwardToken(const LlamaHfModel &model,
+                                                  int32_t token_id,
+                                                  int32_t position);
+  const LlamaForwardProfile &profile() const;
+
+ private:
+  void EnsureForwardState(const HfLlamaConfig &config);
+
+  virtual absl::StatusOr<LlamaForwardResult> ForwardTokenImpl(
       const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
-      int32_t position) const = 0;
+      int32_t position) = 0;
+
+  bool has_forward_state_ = false;
+  LlamaForwardState forward_state_;
 };
 
 std::unique_ptr<LlamaBackend> CreateLlamaBackend(base::DeviceType device_type);

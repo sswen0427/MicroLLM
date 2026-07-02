@@ -9,20 +9,10 @@ namespace model {
 std::unique_ptr<LlamaBackend> CreateCpuLlamaBackend();
 std::unique_ptr<LlamaBackend> CreateCudaLlamaBackend();
 
-std::unique_ptr<LlamaBackend> CreateLlamaBackend(base::DeviceType device_type) {
-  if (device_type == base::DeviceType::kDeviceCPU) {
-    return CreateCpuLlamaBackend();
-  }
-  if (device_type == base::DeviceType::kDeviceCUDA) {
-    return CreateCudaLlamaBackend();
-  }
-  LOG(FATAL) << "Unsupported LLaMA backend device type: "
-             << static_cast<int>(device_type);
-  return nullptr;
-}
+namespace {
 
-LlamaForwardState CreateLlamaForwardState(const HfLlamaConfig &config,
-                                          base::DeviceType device_type) {
+LlamaForwardState CreateForwardState(const HfLlamaConfig &config,
+                                     base::DeviceType device_type) {
   LlamaForwardState state;
   if (config.num_attention_heads > 0) {
     state.head_size = config.hidden_size / config.num_attention_heads;
@@ -47,6 +37,38 @@ LlamaForwardState CreateLlamaForwardState(const HfLlamaConfig &config,
         {config.max_position_embeddings, state.kv_dim}, device_type);
   }
   return state;
+}
+
+}  // namespace
+
+std::unique_ptr<LlamaBackend> CreateLlamaBackend(base::DeviceType device_type) {
+  if (device_type == base::DeviceType::kDeviceCPU) {
+    return CreateCpuLlamaBackend();
+  }
+  if (device_type == base::DeviceType::kDeviceCUDA) {
+    return CreateCudaLlamaBackend();
+  }
+  LOG(FATAL) << "Unsupported LLaMA backend device type: "
+             << static_cast<int>(device_type);
+  return nullptr;
+}
+
+absl::StatusOr<LlamaForwardResult> LlamaBackend::ForwardToken(
+    const LlamaHfModel &model, int32_t token_id, int32_t position) {
+  EnsureForwardState(model.config);
+  return ForwardTokenImpl(model, forward_state_, token_id, position);
+}
+
+const LlamaForwardProfile &LlamaBackend::profile() const {
+  return forward_state_.profile;
+}
+
+void LlamaBackend::EnsureForwardState(const HfLlamaConfig &config) {
+  if (has_forward_state_) {
+    return;
+  }
+  forward_state_ = CreateForwardState(config, device_type());
+  has_forward_state_ = true;
 }
 
 void LlamaForwardProfile::Log() const {

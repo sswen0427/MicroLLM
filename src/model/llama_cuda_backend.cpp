@@ -167,15 +167,15 @@ int32_t ArgMaxToken(const tensor::Tensor &logits) {
 class CudaLlamaBackend final : public LlamaBackend {
  public:
   base::DeviceType device_type() const override;
-  absl::StatusOr<LlamaForwardResult> ForwardToken(
-      const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
-      int32_t position) const override;
 
  private:
-  const tensor::Tensor &Fp32CudaWeight(const tensor::Tensor &weight) const;
+  absl::StatusOr<LlamaForwardResult> ForwardTokenImpl(
+      const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
+      int32_t position) override;
 
-  mutable std::unordered_map<const tensor::Tensor *, tensor::Tensor>
-      fp32_cuda_weights_;
+  const tensor::Tensor &Fp32CudaWeight(const tensor::Tensor &weight);
+
+  std::unordered_map<const tensor::Tensor *, tensor::Tensor> fp32_cuda_weights_;
 };
 
 std::unique_ptr<LlamaBackend> CreateCudaLlamaBackend() {
@@ -186,9 +186,9 @@ base::DeviceType CudaLlamaBackend::device_type() const {
   return base::DeviceType::kDeviceCUDA;
 }
 
-absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardToken(
+absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardTokenImpl(
     const LlamaHfModel &model, LlamaForwardState &state, int32_t token_id,
-    int32_t position) const {
+    int32_t position) {
   const HfLlamaConfig &config = model.config;
   if (token_id < 0 || token_id >= config.vocab_size) {
     return absl::InvalidArgumentError(
@@ -329,7 +329,7 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardToken(
 }
 
 const tensor::Tensor &CudaLlamaBackend::Fp32CudaWeight(
-    const tensor::Tensor &weight) const {
+    const tensor::Tensor &weight) {
   const auto cached = fp32_cuda_weights_.find(&weight);
   if (cached != fp32_cuda_weights_.end()) {
     return cached->second;

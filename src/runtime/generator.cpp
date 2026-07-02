@@ -67,8 +67,6 @@ absl::StatusOr<GenerationResult> GenerateText(
 
   std::unique_ptr<model::LlamaBackend> backend =
       model::CreateLlamaBackend(config.device_type);
-  model::LlamaForwardState forward_state =
-      model::CreateLlamaForwardState(model.config, config.device_type);
   GenerationResult result;
   result.prompt_tokens = prompt_tokens;
   result.tokens.reserve(config.max_new_tokens);
@@ -81,8 +79,7 @@ absl::StatusOr<GenerationResult> GenerateText(
   model::LlamaForwardResult last_forward;
   for (int32_t pos = 0; pos < static_cast<int32_t>(prompt_tokens.size());
        ++pos) {
-    auto forward_or =
-        backend->ForwardToken(model, forward_state, prompt_tokens[pos], pos);
+    auto forward_or = backend->ForwardToken(model, prompt_tokens[pos], pos);
     if (!forward_or.ok()) {
       return forward_or.status();
     }
@@ -107,8 +104,7 @@ absl::StatusOr<GenerationResult> GenerateText(
     }
     result.tokens.push_back(next_token);
 
-    auto forward_or =
-        backend->ForwardToken(model, forward_state, next_token, pos);
+    auto forward_or = backend->ForwardToken(model, next_token, pos);
     if (!forward_or.ok()) {
       return forward_or.status();
     }
@@ -118,7 +114,7 @@ absl::StatusOr<GenerationResult> GenerateText(
 
   result.text = tokenizer.Decode(result.tokens);
   result.profile.generated_tokens = result.tokens.size();
-  result.profile.forward = forward_state.profile;
+  result.profile.forward = backend->profile();
   LOG(INFO) << "Generated tokens: " << result.tokens.size();
   return result;
 }
