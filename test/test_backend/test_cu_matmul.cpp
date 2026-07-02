@@ -1,7 +1,7 @@
 #include <cuda_runtime_api.h>
 #include <gtest/gtest.h>
 
-#include "cuda/matmul_kernel.cuh"
+#include "cuda/matmul.cuh"
 
 TEST(CudaMatmulTest, RunCUDA) {
   tensor::Tensor input = tensor::Tensor::allocate(
@@ -24,7 +24,7 @@ TEST(CudaMatmulTest, RunCUDA) {
   tensor::Tensor out_cu = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {4}, base::DeviceType::kDeviceCUDA);
 
-  kernel::matmul_kernel_cu(input, weight, out_cu, 1.f, nullptr);
+  kernel::MatmulCuda(input, weight, out_cu, 1.f, nullptr);
 
   tensor::Tensor out_cpu = out_cu.clone();
   out_cpu.to_cpu();
@@ -61,7 +61,7 @@ TEST(CudaMatmulTest, Stream) {
 
   cudaStream_t stream;
   cudaStreamCreate(&stream);
-  kernel::matmul_kernel_cu(input, weight, out_cu, 1.f, stream);
+  kernel::MatmulCuda(input, weight, out_cu, 1.f, stream);
 
   for (int row = 0; row < 4; ++row) {
     float sum = 0.0f;
@@ -76,4 +76,41 @@ TEST(CudaMatmulTest, Stream) {
     EXPECT_EQ(out_cu.at<float>(i), out_cpu.at<float>(i));
   }
   cudaStreamDestroy(stream);
+}
+
+TEST(CudaMatmulTest, SupportsNonMultipleOfFourColumns) {
+  constexpr int kRows = 3;
+  constexpr int kCols = 5;
+  tensor::Tensor input = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {kCols}, base::DeviceType::kDeviceCPU);
+  tensor::Tensor weight =
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {kRows, kCols},
+                               base::DeviceType::kDeviceCPU);
+
+  for (int i = 0; i < kCols; ++i) {
+    input.at<float>(i) = static_cast<float>(i + 1);
+  }
+  for (int i = 0; i < kRows * kCols; ++i) {
+    weight.at<float>(i) = static_cast<float>(i + 1);
+  }
+
+  tensor::Tensor input_cpu = input.clone();
+  tensor::Tensor weight_cpu = weight.clone();
+  input.to_cuda();
+  weight.to_cuda();
+
+  tensor::Tensor out_cu = tensor::Tensor::allocate(
+      base::DataType::kDataTypeFp32, {kRows}, base::DeviceType::kDeviceCUDA);
+
+  kernel::MatmulCuda(input, weight, out_cu, 1.f, nullptr);
+
+  out_cu.to_cpu();
+  for (int row = 0; row < kRows; ++row) {
+    float expected = 0.0f;
+    for (int col = 0; col < kCols; ++col) {
+      expected += weight_cpu.at<float>(row * kCols + col) *
+                  input_cpu.at<float>(col);
+    }
+    EXPECT_EQ(out_cu.at<float>(row), expected);
+  }
 }

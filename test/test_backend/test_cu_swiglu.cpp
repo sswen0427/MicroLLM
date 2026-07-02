@@ -5,12 +5,12 @@
 #include <cstddef>
 #include <random>
 
-#include "cuda/swiglu_kernel.cuh"
+#include "cuda/swiglu.cuh"
 
 namespace {
 
-void SwiGluGolden(const tensor::Tensor &gate, const tensor::Tensor &up,
-                  tensor::Tensor &output) {
+void SwiGluGolden(const tensor::Tensor& gate, const tensor::Tensor& up,
+                  tensor::Tensor& output) {
   for (size_t i = 0; i < gate.size(); ++i) {
     const float value = gate.at<float>(i);
     output.at<float>(i) = value / (1.0f + std::exp(-value)) * up.at<float>(i);
@@ -44,7 +44,7 @@ TEST(SwiGLUTest, NoStream) {
   wei_cu.to_cuda(nullptr);
   out_cu.to_cuda(nullptr);
 
-  kernel::swiglu_kernel_cu(in_cu, wei_cu, out_cu, nullptr);
+  kernel::SwiGluCuda(in_cu, wei_cu, out_cu, nullptr);
   out_cu.to_cpu();
 
   SwiGluGolden(in_cpu, wei_cpu, out_cpu);
@@ -81,7 +81,8 @@ TEST(SwiGLUTest, Stream) {
   cudaStream_t stream;
   cudaStreamCreate(&stream);
 
-  kernel::swiglu_kernel_cu(in_cu, wei_cu, out_cu, stream);
+  kernel::SwiGluCuda(in_cu, wei_cu, out_cu, stream);
+  cudaStreamSynchronize(stream);
   out_cu.to_cpu();
 
   SwiGluGolden(in_cpu, wei_cpu, out_cpu);

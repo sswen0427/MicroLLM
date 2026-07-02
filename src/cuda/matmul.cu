@@ -1,10 +1,12 @@
 #include <cub/block/block_reduce.cuh>
 
 #include "cuda/cuda_check.h"
-#include "matmul_kernel.cuh"
+#include "matmul.cuh"
 #include "tensor/tensor.h"
 
 namespace kernel {
+namespace {
+
 /**
  * @brief Highly optimized FP32 GEMV (Matrix-Vector Multiplication) kernel.
  *        Computes Y = W * X, specifically optimized for Batch Size = 1
@@ -21,8 +23,8 @@ namespace kernel {
  * @param K      Number of rows in the weight matrix (length of output vector).
  */
 template <int THREAD_PER_BLOCK, int ROW_PER_BLOCK>
-__global__ void matmul_kernel_cu_fp32(const float *input, const float *weight,
-                                      float *output, int M, int K) {
+__global__ void MatmulKernel(const float *input, const float *weight,
+                             float *output, int M, int K) {
   __shared__ float sdata[THREAD_PER_BLOCK];
   unsigned int tid = threadIdx.x;
 
@@ -35,25 +37,34 @@ __global__ void matmul_kernel_cu_fp32(const float *input, const float *weight,
   constexpr int pack_size = 4;
   const int pack_num = M / pack_size;
   const int pack_off = pack_size * pack_num;
+  // Only use float4 when every row starts at a 16-byte aligned offset. If M is
+  // not divisible by 4, later rows start at unaligned addresses, so use the
+  // scalar path for the whole row instead of mixing vector and tail loads.
+  const bool use_float4 = (M % pack_size) == 0;
 
 #pragma unroll
   for (int p = start_row; p < end_row; ++p) {
     sdata[tid] = 0;
     int row_offset = p * M;
-    float4 *input_float4_ptr = (float4 *)input;
-    float4 *weight_float4_ptr = (float4 *)(weight + row_offset);
+    if (use_float4) {
+      const float4 *input_float4_ptr = reinterpret_cast<const float4 *>(input);
+      const float4 *weight_float4_ptr =
+          reinterpret_cast<const float4 *>(weight + row_offset);
 
 #pragma unroll
-    for (int i = tid; i < pack_num; i += blockDim.x) {
-      float4 input_float4 = *(input_float4_ptr + i);
-      float4 weight_float4 = *(weight_float4_ptr + i);
-      float part_sum =
-          input_float4.x * weight_float4.x + input_float4.y * weight_float4.y +
-          input_float4.z * weight_float4.z + input_float4.w * weight_float4.w;
-      sdata[tid] += part_sum;
+      for (int i = tid; i < pack_num; i += blockDim.x) {
+        float4 input_float4 = *(input_float4_ptr + i);
+        float4 weight_float4 = *(weight_float4_ptr + i);
+        float part_sum = input_float4.x * weight_float4.x +
+                         input_float4.y * weight_float4.y +
+                         input_float4.z * weight_float4.z +
+                         input_float4.w * weight_float4.w;
+        sdata[tid] += part_sum;
+      }
     }
 
-    for (int i = pack_off + tid; i < M; i += blockDim.x) {
+    const int scalar_start = use_float4 ? pack_off : 0;
+    for (int i = scalar_start + tid; i < M; i += blockDim.x) {
       sdata[tid] += input[i] * weight[row_offset + i];
     }
 
@@ -71,29 +82,39 @@ __global__ void matmul_kernel_cu_fp32(const float *input, const float *weight,
   }
 }
 
-void matmul_kernel_cu(const tensor::Tensor &input, const tensor::Tensor &weight,
-                      const tensor::Tensor &output, const float scale,
-                      void *stream) {
-  CHECK(input.is_empty() == false && input.dims_size() <= 2);
-  CHECK(input.device_type() == base::DeviceType::kDeviceCUDA);
+}  // namespace
 
-  CHECK(weight.is_empty() == false && weight.dims_size() == 2);
+void MatmulCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
+                const tensor::Tensor &output, const float scale, void *stream) {
+  CHECK(!input.is_empty());
+  CHECK_EQ(input.dims_size(), 1);
+  CHECK(input.device_type() == base::DeviceType::kDeviceCUDA);
+  CHECK(input.data_type() == base::DataType::kDataTypeFp32);
+
+  CHECK(!weight.is_empty());
+  CHECK_EQ(weight.dims_size(), 2);
   CHECK(weight.device_type() == base::DeviceType::kDeviceCUDA);
+  CHECK(weight.data_type() == base::DataType::kDataTypeFp32);
+
+  CHECK(!output.is_empty());
+  CHECK_EQ(output.dims_size(), 1);
+  CHECK(output.device_type() == base::DeviceType::kDeviceCUDA);
+  CHECK(output.data_type() == base::DataType::kDataTypeFp32);
+
   const int32_t K = weight.get_dim(0);  // row
   const int32_t M = weight.get_dim(1);  // col
-  int packet_size = 4;
-  CHECK_EQ(M % packet_size, 0);
 
   CHECK_EQ(M, input.get_dim(0));
+  CHECK_EQ(K, output.get_dim(0));
   cudaStream_t cuda_stream = static_cast<cudaStream_t>(stream);
   if (cuda_stream != nullptr) {
-    matmul_kernel_cu_fp32<128, 1><<<K, 128, 0, cuda_stream>>>(
+    MatmulKernel<128, 1><<<K, 128, 0, cuda_stream>>>(
         input.data<float>(), weight.data<float>(),
         const_cast<float *>(output.data<float>()), M, K);
   } else {
-    matmul_kernel_cu_fp32<128, 1>
-        <<<K, 128>>>(input.data<float>(), weight.data<float>(),
-                     const_cast<float *>(output.data<float>()), M, K);
+    MatmulKernel<128, 1><<<K, 128>>>(input.data<float>(), weight.data<float>(),
+                                     const_cast<float *>(output.data<float>()),
+                                     M, K);
   }
   CHECK_CUDA(cudaGetLastError());
 }

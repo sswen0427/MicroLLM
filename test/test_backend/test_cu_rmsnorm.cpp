@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <random>
 
-#include "cuda/rmsnorm_kernel.cuh"
+#include "cuda/rmsnorm.cuh"
 
 namespace {
 
@@ -49,7 +49,7 @@ TEST(RMSNormTest, NoStream) {
   wei_cu.to_cuda(nullptr);
   out_cu.to_cuda(nullptr);
 
-  kernel::rmsnorm_kernel_cu(in_cu, wei_cu, out_cu, nullptr);
+  kernel::RmsNormCuda(in_cu, wei_cu, out_cu, nullptr);
   out_cu.to_cpu();
   RmsNormGolden(in_cpu, wei_cpu, out_cpu);
 
@@ -84,7 +84,7 @@ TEST(RMSNormTest, Stream2) {
   out_cu.to_cuda(nullptr);
   cudaStream_t stream;
   cudaStreamCreate(&stream);
-  kernel::rmsnorm_kernel_cu(in_cu, wei_cu, out_cu, stream);
+  kernel::RmsNormCuda(in_cu, wei_cu, out_cu, stream);
   out_cu.to_cpu();
 
   RmsNormGolden(in_cpu, wei_cpu, out_cpu);
@@ -121,7 +121,7 @@ TEST(RMSNormTest, Stream3) {
   out_cu.to_cuda(nullptr);
   cudaStream_t stream;
   cudaStreamCreate(&stream);
-  kernel::rmsnorm_kernel_cu(in_cu, wei_cu, out_cu, stream);
+  kernel::RmsNormCuda(in_cu, wei_cu, out_cu, stream);
   out_cu.to_cpu();
 
   RmsNormGolden(in_cpu, wei_cpu, out_cpu);
