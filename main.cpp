@@ -4,16 +4,19 @@
 #include <filesystem>
 #include <iostream>
 #include <string>
+#include <vector>
 
 #include "base/types.h"
 #include "model/llama_hf_model_loader.h"
+#include "runtime/chat_template.h"
 #include "runtime/generator.h"
 #include "tokenizer/tokenizer.h"
 
 DEFINE_string(model_dir, "", "HuggingFace model directory.");
-DEFINE_string(prompt, "", "Prompt text to generate from.");
+DEFINE_string(prompt, "", "Optional first user message.");
 DEFINE_int32(max_new_tokens, 32, "Maximum number of tokens to generate.");
 DEFINE_string(device, "cpu", "Inference device: cpu or cuda.");
+DEFINE_string(system_prompt, "", "Optional system prompt used in chat mode.");
 
 namespace {
 
@@ -33,7 +36,7 @@ int main(int argc, char* argv[]) {
   gflags::SetUsageMessage(
       "MicroLLM inference runtime.\n\n"
       "Usage:\n"
-      "  MicroLLM --model_dir <hf_model_dir> --prompt <text> "
+      "  MicroLLM --model_dir <hf_model_dir> [--prompt <text>] "
       "[--device cpu|cuda]");
 
   int parsed_argc = argc;
@@ -50,11 +53,6 @@ int main(int argc, char* argv[]) {
               << "Use --help to see available flags.\n";
     return 1;
   }
-  if (FLAGS_prompt.empty()) {
-    std::cerr << "Error: --prompt is required.\n"
-              << "Use --help to see available flags.\n";
-    return 1;
-  }
   if (FLAGS_max_new_tokens <= 0) {
     std::cerr << "Error: --max_new_tokens must be greater than 0.\n";
     return 1;
@@ -64,7 +62,6 @@ int main(int argc, char* argv[]) {
     std::cerr << "Error: --device must be cpu or cuda.\n";
     return 1;
   }
-
   const std::filesystem::path log_dir =
       std::filesystem::absolute(std::filesystem::path(FLAGS_model_dir)) /
       "logs";
@@ -99,14 +96,43 @@ int main(int argc, char* argv[]) {
   runtime::GenerationConfig generation_config;
   generation_config.max_new_tokens = FLAGS_max_new_tokens;
   generation_config.device_type = device_type;
-  auto result_or = runtime::GenerateText(**model_or, **tokenizer_or,
-                                         FLAGS_prompt, generation_config);
-  if (!result_or.ok()) {
-    std::cerr << "Error: " << result_or.status().message() << "\n";
-    return 1;
+
+  std::vector<runtime::ChatMessage> messages;
+  if (!FLAGS_system_prompt.empty()) {
+    messages.push_back(
+        {.role = runtime::ChatRole::kSystem, .content = FLAGS_system_prompt});
   }
 
-  result_or->profile.Log();
-  std::cout << result_or->text << "\n";
+  std::string pending_user_message = FLAGS_prompt;
+  while (true) {
+    if (pending_user_message.empty()) {
+      std::cout << "User> ";
+      if (!std::getline(std::cin, pending_user_message)) {
+        break;
+      }
+    }
+    if (pending_user_message == "exit" || pending_user_message == "quit") {
+      break;
+    }
+    if (pending_user_message.empty()) {
+      continue;
+    }
+
+    messages.push_back(
+        {.role = runtime::ChatRole::kUser, .content = pending_user_message});
+    const std::string prompt = runtime::FormatTinyLlamaChatPrompt(messages);
+    auto result_or = runtime::GenerateText(**model_or, **tokenizer_or, prompt,
+                                           generation_config);
+    if (!result_or.ok()) {
+      std::cerr << "Error: " << result_or.status().message() << "\n";
+      return 1;
+    }
+
+    result_or->profile.Log();
+    std::cout << "Assistant> " << result_or->text << "\n";
+    messages.push_back(
+        {.role = runtime::ChatRole::kAssistant, .content = result_or->text});
+    pending_user_message.clear();
+  }
   return 0;
 }
