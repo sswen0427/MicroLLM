@@ -1,6 +1,7 @@
 #include "runtime/generator.h"
 
 #include <absl/status/status.h>
+#include <absl/strings/ascii.h>
 #include <absl/strings/str_cat.h>
 #include <glog/logging.h>
 
@@ -111,7 +112,8 @@ absl::StatusOr<GenerationResult> GenerateText(
     next_token = last_forward.next_token;
   }
 
-  result.text = tokenizer.Decode(result.tokens);
+  const std::string decoded_text = tokenizer.Decode(result.tokens);
+  result.text = std::string(absl::StripLeadingAsciiWhitespace(decoded_text));
   result.profile.generated_tokens = result.tokens.size();
   result.profile.forward = backend->profile();
   LOG(INFO) << "Generated tokens: " << result.tokens.size();
