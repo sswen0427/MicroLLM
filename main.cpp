@@ -13,10 +13,8 @@
 #include "tokenizer/tokenizer.h"
 
 DEFINE_string(model_dir, "", "HuggingFace model directory.");
-DEFINE_string(prompt, "", "Optional first user message.");
 DEFINE_int32(max_new_tokens, 32, "Maximum number of tokens to generate.");
 DEFINE_string(device, "cpu", "Inference device: cpu or cuda.");
-DEFINE_string(system_prompt, "", "Optional system prompt used in chat mode.");
 
 namespace {
 
@@ -36,8 +34,7 @@ int main(int argc, char* argv[]) {
   gflags::SetUsageMessage(
       "MicroLLM inference runtime.\n\n"
       "Usage:\n"
-      "  MicroLLM --model_dir <hf_model_dir> [--prompt <text>] "
-      "[--device cpu|cuda]");
+      "  MicroLLM --model_dir <hf_model_dir> [--device cpu|cuda]");
 
   int parsed_argc = argc;
   char** parsed_argv = argv;
@@ -98,12 +95,8 @@ int main(int argc, char* argv[]) {
   generation_config.device_type = device_type;
 
   std::vector<runtime::ChatMessage> messages;
-  if (!FLAGS_system_prompt.empty()) {
-    messages.push_back(
-        {.role = runtime::ChatRole::kSystem, .content = FLAGS_system_prompt});
-  }
 
-  std::string pending_user_message = FLAGS_prompt;
+  std::string pending_user_message;
   while (true) {
     if (pending_user_message.empty()) {
       std::cout << "User> ";
