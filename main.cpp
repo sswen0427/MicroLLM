@@ -13,7 +13,7 @@
 #include "tokenizer/tokenizer.h"
 
 DEFINE_string(model_dir, "", "HuggingFace model directory.");
-DEFINE_int32(max_new_tokens, 32, "Maximum number of tokens to generate.");
+DEFINE_int32(max_new_tokens, 256, "Maximum number of tokens to generate.");
 DEFINE_string(device, "cpu", "Inference device: cpu or cuda.");
 
 namespace {

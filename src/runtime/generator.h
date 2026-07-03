@@ -16,7 +16,7 @@
 namespace runtime {
 
 struct GenerationConfig {
-  int32_t max_new_tokens = 32;
+  int32_t max_new_tokens = 256;
   base::DeviceType device_type = base::DeviceType::kDeviceCPU;
   bool trace_steps = false;
   int32_t trace_top_k = 5;
