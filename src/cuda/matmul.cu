@@ -82,6 +82,34 @@ __global__ void MatmulKernel(const float *input, const float *weight,
   }
 }
 
+template <int THREAD_PER_BLOCK>
+__global__ void MatmulBatchKernel(const float *input, const float *weight,
+                                  float *output, int batch, int M, int K) {
+  __shared__ float sdata[THREAD_PER_BLOCK];
+  const int tid = threadIdx.x;
+  const int row = blockIdx.x;
+  const int batch_idx = blockIdx.y;
+  if (row >= K || batch_idx >= batch) {
+    return;
+  }
+
+  const float *input_row = input + batch_idx * M;
+  const float *weight_row = weight + row * M;
+  float sum = 0.0f;
+  for (int col = tid; col < M; col += blockDim.x) {
+    sum += input_row[col] * weight_row[col];
+  }
+  sdata[tid] = sum;
+  __syncthreads();
+
+  using BlockReduce = cub::BlockReduce<float, THREAD_PER_BLOCK>;
+  __shared__ typename BlockReduce::TempStorage temp;
+  sum = BlockReduce(temp).Sum(sdata[tid]);
+  if (tid == 0) {
+    output[batch_idx * K + row] = sum;
+  }
+}
+
 }  // namespace
 
 void MatmulCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
@@ -115,6 +143,46 @@ void MatmulCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
     MatmulKernel<128, 1><<<K, 128>>>(input.data<float>(), weight.data<float>(),
                                      const_cast<float *>(output.data<float>()),
                                      M, K);
+  }
+  CHECK_CUDA(cudaGetLastError());
+}
+
+void MatmulBatchCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
+                     const tensor::Tensor &output, const float scale,
+                     void *stream) {
+  CHECK(!input.is_empty());
+  CHECK_EQ(input.dims_size(), 2);
+  CHECK(input.device_type() == base::DeviceType::kDeviceCUDA);
+  CHECK(input.data_type() == base::DataType::kDataTypeFp32);
+
+  CHECK(!weight.is_empty());
+  CHECK_EQ(weight.dims_size(), 2);
+  CHECK(weight.device_type() == base::DeviceType::kDeviceCUDA);
+  CHECK(weight.data_type() == base::DataType::kDataTypeFp32);
+
+  CHECK(!output.is_empty());
+  CHECK_EQ(output.dims_size(), 2);
+  CHECK(output.device_type() == base::DeviceType::kDeviceCUDA);
+  CHECK(output.data_type() == base::DataType::kDataTypeFp32);
+
+  const int32_t batch = input.get_dim(0);
+  const int32_t M = input.get_dim(1);
+  const int32_t K = weight.get_dim(0);
+  CHECK_EQ(weight.get_dim(1), M);
+  CHECK_EQ(output.get_dim(0), batch);
+  CHECK_EQ(output.get_dim(1), K);
+
+  constexpr int threads = 128;
+  const dim3 grid(K, batch);
+  cudaStream_t cuda_stream = static_cast<cudaStream_t>(stream);
+  if (cuda_stream != nullptr) {
+    MatmulBatchKernel<threads><<<grid, threads, 0, cuda_stream>>>(
+        input.data<float>(), weight.data<float>(),
+        const_cast<float *>(output.data<float>()), batch, M, K);
+  } else {
+    MatmulBatchKernel<threads><<<grid, threads>>>(
+        input.data<float>(), weight.data<float>(),
+        const_cast<float *>(output.data<float>()), batch, M, K);
   }
   CHECK_CUDA(cudaGetLastError());
 }

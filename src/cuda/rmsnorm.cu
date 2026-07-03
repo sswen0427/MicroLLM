@@ -68,6 +68,39 @@ __global__ void RmsNormKernel(const float *in, const float *wei, float *out,
   }
 }
 
+template <int32_t BLOCK_DIM>
+__global__ void RmsNormBatchKernel(const float *in, const float *wei,
+                                   float *out, int batch, int hidden_size,
+                                   float eps) {
+  const int row = blockIdx.x;
+  const int tid = threadIdx.x;
+  if (row >= batch) {
+    return;
+  }
+
+  const float *in_row = in + row * hidden_size;
+  float *out_row = out + row * hidden_size;
+  float sum = 0.0f;
+  for (int i = tid; i < hidden_size; i += blockDim.x) {
+    sum += in_row[i] * in_row[i];
+  }
+
+  using BlockReduce = cub::BlockReduce<float, BLOCK_DIM>;
+  __shared__ typename BlockReduce::TempStorage temp;
+  __shared__ float shared_sum;
+  sum = BlockReduce(temp).Sum(sum);
+  if (tid == 0) {
+    shared_sum = sum;
+  }
+  __syncthreads();
+
+  const float scale =
+      rsqrtf(shared_sum / static_cast<float>(hidden_size) + eps);
+  for (int i = tid; i < hidden_size; i += blockDim.x) {
+    out_row[i] = in_row[i] * wei[i] * scale;
+  }
+}
+
 }  // namespace
 
 void RmsNormCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
@@ -102,6 +135,40 @@ void RmsNormCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
         <<<1, threads_num, 0, stream_>>>(in_ptr, wei_ptr, out_ptr, size, eps);
   } else {
     RmsNormKernel<128><<<1, threads_num>>>(in_ptr, wei_ptr, out_ptr, size, eps);
+  }
+  CHECK_CUDA(cudaGetLastError());
+}
+
+void RmsNormBatchCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
+                      const tensor::Tensor &output, void *stream, float eps) {
+  CHECK(!input.is_empty());
+  CHECK(!weight.is_empty());
+  CHECK(!output.is_empty());
+  CHECK(input.device_type() == base::DeviceType::kDeviceCUDA);
+  CHECK(weight.device_type() == base::DeviceType::kDeviceCUDA);
+  CHECK(output.device_type() == base::DeviceType::kDeviceCUDA);
+  CHECK(input.data_type() == base::DataType::kDataTypeFp32);
+  CHECK(weight.data_type() == base::DataType::kDataTypeFp32);
+  CHECK(output.data_type() == base::DataType::kDataTypeFp32);
+  CHECK_EQ(input.dims_size(), 2);
+  CHECK_EQ(weight.dims_size(), 1);
+  CHECK_EQ(output.dims_size(), 2);
+  CHECK_EQ(input.get_dim(0), output.get_dim(0));
+  CHECK_EQ(input.get_dim(1), output.get_dim(1));
+  CHECK_EQ(input.get_dim(1), weight.get_dim(0));
+
+  constexpr int threads_num = 128;
+  const int32_t batch = input.get_dim(0);
+  const int32_t hidden_size = input.get_dim(1);
+  cudaStream_t stream_ = static_cast<cudaStream_t>(stream);
+  if (stream_) {
+    RmsNormBatchKernel<128><<<batch, threads_num, 0, stream_>>>(
+        input.data<float>(), weight.data<float>(),
+        const_cast<float *>(output.data<float>()), batch, hidden_size, eps);
+  } else {
+    RmsNormBatchKernel<128><<<batch, threads_num>>>(
+        input.data<float>(), weight.data<float>(),
+        const_cast<float *>(output.data<float>()), batch, hidden_size, eps);
   }
   CHECK_CUDA(cudaGetLastError());
 }

@@ -58,8 +58,9 @@ class LlamaBackend {
 
   virtual base::DeviceType device_type() const = 0;
 
-  virtual absl::StatusOr<LlamaForwardResult> ForwardToken(
-      const LlamaHfModel &model, int32_t token_id, int32_t position) = 0;
+  virtual absl::StatusOr<LlamaForwardResult> Forward(
+      const LlamaHfModel &model, const std::vector<int32_t> &token_ids,
+      int32_t start_position) = 0;
 
   virtual const LlamaForwardProfile &profile() const = 0;
 };

@@ -77,9 +77,8 @@ absl::StatusOr<GenerationResult> GenerateText(
 
   int32_t next_token = -1;
   model::LlamaForwardResult last_forward;
-  for (int32_t pos = 0; pos < static_cast<int32_t>(prompt_tokens.size());
-       ++pos) {
-    auto forward_or = backend->ForwardToken(model, prompt_tokens[pos], pos);
+  {
+    auto forward_or = backend->Forward(model, prompt_tokens, 0);
     if (!forward_or.ok()) {
       return forward_or.status();
     }
@@ -104,7 +103,7 @@ absl::StatusOr<GenerationResult> GenerateText(
     }
     result.tokens.push_back(next_token);
 
-    auto forward_or = backend->ForwardToken(model, next_token, pos);
+    auto forward_or = backend->Forward(model, {next_token}, pos);
     if (!forward_or.ok()) {
       return forward_or.status();
     }

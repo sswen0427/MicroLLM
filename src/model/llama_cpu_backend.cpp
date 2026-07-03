@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "base/profile.h"
@@ -262,13 +263,17 @@ class CpuLlamaBackend final : public LlamaBackend {
 
   base::DeviceType device_type() const override;
 
-  absl::StatusOr<LlamaForwardResult> ForwardToken(const LlamaHfModel &model,
-                                                  int32_t token_id,
-                                                  int32_t position) override;
+  absl::StatusOr<LlamaForwardResult> Forward(
+      const LlamaHfModel &model, const std::vector<int32_t> &token_ids,
+      int32_t start_position) override;
 
   const LlamaForwardProfile &profile() const override;
 
  private:
+  absl::StatusOr<LlamaForwardResult> ForwardToken(const LlamaHfModel &model,
+                                                  int32_t token_id,
+                                                  int32_t position);
+
   LlamaForwardState forward_state_;
 };
 
@@ -407,6 +412,24 @@ absl::StatusOr<LlamaForwardResult> CpuLlamaBackend::ForwardToken(
 
 const LlamaForwardProfile &CpuLlamaBackend::profile() const {
   return forward_state_.profile;
+}
+
+absl::StatusOr<LlamaForwardResult> CpuLlamaBackend::Forward(
+    const LlamaHfModel &model, const std::vector<int32_t> &token_ids,
+    int32_t start_position) {
+  if (token_ids.empty()) {
+    return absl::InvalidArgumentError("forward token_ids must not be empty.");
+  }
+
+  LlamaForwardResult result;
+  for (int32_t i = 0; i < static_cast<int32_t>(token_ids.size()); ++i) {
+    auto forward_or = ForwardToken(model, token_ids[i], start_position + i);
+    if (!forward_or.ok()) {
+      return forward_or.status();
+    }
+    result = std::move(*forward_or);
+  }
+  return result;
 }
 
 }  // namespace

@@ -44,9 +44,6 @@ void SwiGluCuda(const tensor::Tensor& gate, const tensor::Tensor& up,
   CHECK(up.data_type() == base::DataType::kDataTypeFp32);
   CHECK(output.data_type() == base::DataType::kDataTypeFp32);
 
-  CHECK_EQ(gate.dims_size(), 1);
-  CHECK_EQ(up.dims_size(), 1);
-  CHECK_EQ(output.dims_size(), 1);
   CHECK_EQ(gate.size(), up.size());
   CHECK_EQ(gate.size(), output.size());
 
