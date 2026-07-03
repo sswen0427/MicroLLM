@@ -1,6 +1,6 @@
-#include "runtime/chat_template.h"
-
 #include <gtest/gtest.h>
+
+#include "runtime/chat_template.h"
 
 TEST(ChatTemplateTest, FormatsTinyLlamaUserMessage) {
   EXPECT_EQ(runtime::FormatTinyLlamaChatPrompt({
@@ -10,14 +10,14 @@ TEST(ChatTemplateTest, FormatsTinyLlamaUserMessage) {
 }
 
 TEST(ChatTemplateTest, FormatsTinyLlamaSystemAndUserMessage) {
-  EXPECT_EQ(runtime::FormatTinyLlamaChatPrompt({
-                {.role = runtime::ChatRole::kSystem,
-                 .content = "You are helpful."},
-                {.role = runtime::ChatRole::kUser, .content = "Hello"},
-            }),
-            "<|system|>\nYou are helpful.</s>\n"
-            "<|user|>\nHello</s>\n"
-            "<|assistant|>");
+  EXPECT_EQ(
+      runtime::FormatTinyLlamaChatPrompt({
+          {.role = runtime::ChatRole::kSystem, .content = "You are helpful."},
+          {.role = runtime::ChatRole::kUser, .content = "Hello"},
+      }),
+      "<|system|>\nYou are helpful.</s>\n"
+      "<|user|>\nHello</s>\n"
+      "<|assistant|>");
 }
 
 TEST(ChatTemplateTest, FormatsTinyLlamaMultiTurnMessages) {

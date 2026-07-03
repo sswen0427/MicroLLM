@@ -16,7 +16,6 @@ struct ChatMessage {
   std::string content;
 };
 
-std::string FormatTinyLlamaChatPrompt(
-    const std::vector<ChatMessage>& messages);
+std::string FormatTinyLlamaChatPrompt(const std::vector<ChatMessage>& messages);
 
 }  // namespace runtime
