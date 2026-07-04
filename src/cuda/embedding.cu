@@ -54,13 +54,8 @@ void EmbeddingCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
   auto *in_ptr = input.data<int32_t>();
   auto *wei_ptr = const_cast<float *>(weight.data<float>());
   auto *out_ptr = const_cast<float *>(output.data<float>());
-  if (stream) {
-    EmbeddingKernel<<<input_num, thread_num, 0, cuda_stream>>>(
-        vocab_size, input_num, weight_dim, in_ptr, wei_ptr, out_ptr);
-  } else {
-    EmbeddingKernel<<<input_num, thread_num>>>(
-        vocab_size, input_num, weight_dim, in_ptr, wei_ptr, out_ptr);
-  }
+  EmbeddingKernel<<<input_num, thread_num, 0, cuda_stream>>>(
+      vocab_size, input_num, weight_dim, in_ptr, wei_ptr, out_ptr);
   CHECK_CUDA(cudaGetLastError());
 }
 }  // namespace kernel

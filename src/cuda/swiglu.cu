@@ -50,16 +50,10 @@ void SwiGluCuda(const tensor::Tensor& gate, const tensor::Tensor& up,
   int size = static_cast<int32_t>(gate.size());
   int threads = 128;
   int blocks = (size + threads - 1) / threads;
-  if (!stream) {
-    SwiGluKernel<<<blocks, threads>>>(size, gate.data<float>(),
-                                      up.data<float>(),
-                                      const_cast<float*>(output.data<float>()));
-  } else {
-    cudaStream_t stream_ = static_cast<cudaStream_t>(stream);
-    SwiGluKernel<<<blocks, threads, 0, stream_>>>(
-        size, gate.data<float>(), up.data<float>(),
-        const_cast<float*>(output.data<float>()));
-  }
+  cudaStream_t cuda_stream = static_cast<cudaStream_t>(stream);
+  SwiGluKernel<<<blocks, threads, 0, cuda_stream>>>(
+      size, gate.data<float>(), up.data<float>(),
+      const_cast<float*>(output.data<float>()));
   CHECK_CUDA(cudaGetLastError());
 }
 }  // namespace kernel

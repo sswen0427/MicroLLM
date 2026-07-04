@@ -12,44 +12,16 @@ namespace {
  * @brief Applies RoPE rotation to query/key vectors in place.
  *
  * Tensor shapes in logical row-major layout:
- *   values: [head_count, head_size]
+ *   values: [seq_len, head_count * head_size]
  *
  * Each thread rotates one pair in one attention head:
  *   [x0, x1] -> [x0 * cos(theta) - x1 * sin(theta),
  *                x0 * sin(theta) + x1 * cos(theta)]
- * where theta = position * rope_theta^(-2i / head_size).
+ * where theta = (start_position + token_idx) *
+ *               rope_theta^(-2i / head_size).
+ *
+ * Single-token decode uses this same kernel with seq_len = 1.
  */
-__global__ void RopeInPlaceKernel(float *values, int32_t head_count,
-                                  int32_t head_size, int32_t position,
-                                  float rope_theta) {
-  const int32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-  const int32_t half_head_size = head_size / 2;
-  const int32_t total_pairs = head_count * half_head_size;
-  if (idx >= total_pairs) {
-    return;
-  }
-
-  // Map the flat pair index to (head, pair_index). RoPE rotates the i-th value
-  // in the first half of a head with the i-th value in the second half.
-  const int32_t head = idx / half_head_size;
-  const int32_t i = idx % half_head_size;
-  const int32_t head_offset = head * head_size;
-  const int32_t first = head_offset + i;
-  const int32_t second = first + half_head_size;
-
-  const float freq = powf(
-      rope_theta, -static_cast<float>(2 * i) / static_cast<float>(head_size));
-  const float angle = static_cast<float>(position) * freq;
-  float sin_value;
-  float cos_value;
-  sincosf(angle, &sin_value, &cos_value);
-
-  const float x0 = values[first];
-  const float x1 = values[second];
-  values[first] = x0 * cos_value - x1 * sin_value;
-  values[second] = x0 * sin_value + x1 * cos_value;
-}
-
 __global__ void RopeInPlaceBatchKernel(float *values, int32_t seq_len,
                                        int32_t head_count, int32_t head_size,
                                        int32_t start_position,
@@ -85,30 +57,20 @@ __global__ void RopeInPlaceBatchKernel(float *values, int32_t seq_len,
 }
 
 /**
- * @brief Stores the current token's key/value vectors into the KV cache.
+ * @brief Stores key/value vectors into the KV cache.
  *
  * Tensor shapes in logical row-major layout:
- *   key:         [kv_dim]
- *   value:       [kv_dim]
+ *   key:         [seq_len, kv_dim]
+ *   value:       [seq_len, kv_dim]
  *   key_cache:   [max_seq_len, kv_dim]
  *   value_cache: [max_seq_len, kv_dim]
  *
  * Each thread copies one element:
- *   key_cache[position, idx] = key[idx]
- *   value_cache[position, idx] = value[idx]
+ *   key_cache[start_position + token_idx, col] = key[token_idx, col]
+ *   value_cache[start_position + token_idx, col] = value[token_idx, col]
+ *
+ * Single-token decode uses this same kernel with seq_len = 1.
  */
-__global__ void StoreKvCacheKernel(const float *key, const float *value,
-                                   float *key_cache, float *value_cache,
-                                   int32_t position, int32_t kv_dim) {
-  const int32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx >= kv_dim) {
-    return;
-  }
-  const int32_t cache_offset = position * kv_dim + idx;
-  key_cache[cache_offset] = key[idx];
-  value_cache[cache_offset] = value[idx];
-}
-
 __global__ void StoreKvCacheBatchKernel(const float *key, const float *value,
                                         float *key_cache, float *value_cache,
                                         int32_t start_position, int32_t seq_len,
@@ -159,60 +121,25 @@ __device__ float AttentionScore(const float *query, const float *key_cache,
 }
 
 /**
- * @brief Computes single-token attention using cached keys and values.
+ * @brief Computes causal attention using cached keys and values.
  *
  * Tensor shapes in logical row-major layout:
- *   query:       [head_count, head_size]
+ *   query:       [seq_len, head_count * head_size]
  *   key_cache:   [max_seq_len, kv_dim], kv_dim = kv_head_count * head_size
  *   value_cache: [max_seq_len, kv_dim], kv_dim = kv_head_count * head_size
- *   output:      [head_count, head_size]
+ *   output:      [seq_len, head_count * head_size]
  *
- * Each block handles one query head, and each thread writes one output
- * dimension in that head. For the current position, the kernel attends over
- * all cached tokens in [0, position]:
- *   score_t = dot(query_head, key_cache[t, kv_head]) / sqrt(head_size)
+ * Each block handles one (query token, query head), and each thread writes one
+ * output dimension in that head. Query token `token_idx` attends over cached
+ * positions [0, start_position + token_idx]:
+ *   score_t = dot(query[token_idx, head], key_cache[t, kv_head]) /
+ *             sqrt(head_size)
  *   prob_t = softmax(score_t)
- *   output[head, dim] = sum_t prob_t * value_cache[t, kv_head, dim]
+ *   output[token_idx, head, dim] =
+ *       sum_t prob_t * value_cache[t, kv_head, dim]
+ *
+ * Single-token decode uses this same kernel with seq_len = 1.
  */
-__global__ void AttentionWithCacheKernel(const float *query,
-                                         const float *key_cache,
-                                         const float *value_cache,
-                                         float *output, int32_t position,
-                                         int32_t head_count, int32_t head_size,
-                                         int32_t kv_dim, int32_t kv_mul) {
-  const int32_t head = blockIdx.x;
-  const int32_t dim = threadIdx.x;
-  if (head >= head_count || dim >= head_size) {
-    return;
-  }
-
-  float max_score = -INFINITY;
-  for (int32_t token = 0; token <= position; ++token) {
-    const float score = AttentionScore(query, key_cache, token, head, head_size,
-                                       kv_dim, kv_mul);
-    max_score = fmaxf(max_score, score);
-  }
-
-  float denom = 0.0f;
-  for (int32_t token = 0; token <= position; ++token) {
-    const float score = AttentionScore(query, key_cache, token, head, head_size,
-                                       kv_dim, kv_mul);
-    denom += expf(score - max_score);
-  }
-
-  const int32_t kv_head = head / kv_mul;
-  float sum = 0.0f;
-  for (int32_t token = 0; token <= position; ++token) {
-    const float score = AttentionScore(query, key_cache, token, head, head_size,
-                                       kv_dim, kv_mul);
-    const float prob = expf(score - max_score) / denom;
-    const int32_t cache_offset = token * kv_dim + kv_head * head_size + dim;
-    sum += prob * value_cache[cache_offset];
-  }
-
-  output[head * head_size + dim] = sum;
-}
-
 __global__ void AttentionWithCacheBatchKernel(
     const float *query, const float *key_cache, const float *value_cache,
     float *output, int32_t start_position, int32_t seq_len, int32_t head_count,
@@ -272,10 +199,11 @@ void RopeInPlaceCuda(tensor::Tensor &values, int32_t head_count,
   CHECK_EQ(head_size % 2, 0);
 
   constexpr int32_t threads = 128;
-  const int32_t total_pairs = head_count * (head_size / 2);
+  constexpr int32_t seq_len = 1;
+  const int32_t total_pairs = seq_len * head_count * (head_size / 2);
   const int32_t blocks = (total_pairs + threads - 1) / threads;
-  RopeInPlaceKernel<<<blocks, threads, 0, AsCudaStream(stream)>>>(
-      values.data<float>(), head_count, head_size, position,
+  RopeInPlaceBatchKernel<<<blocks, threads, 0, AsCudaStream(stream)>>>(
+      values.data<float>(), seq_len, head_count, head_size, position,
       static_cast<float>(rope_theta));
   CHECK_CUDA(cudaGetLastError());
 }
@@ -327,10 +255,12 @@ void StoreKvCacheCuda(const tensor::Tensor &key, const tensor::Tensor &value,
   CHECK_EQ(key_cache.get_dim(0), value_cache.get_dim(0));
 
   constexpr int32_t threads = 128;
-  const int32_t blocks = (kv_dim + threads - 1) / threads;
-  StoreKvCacheKernel<<<blocks, threads, 0, AsCudaStream(stream)>>>(
+  constexpr int32_t seq_len = 1;
+  const int32_t total = seq_len * kv_dim;
+  const int32_t blocks = (total + threads - 1) / threads;
+  StoreKvCacheBatchKernel<<<blocks, threads, 0, AsCudaStream(stream)>>>(
       key.data<float>(), value.data<float>(), key_cache.data<float>(),
-      value_cache.data<float>(), position, kv_dim);
+      value_cache.data<float>(), position, seq_len, kv_dim);
   CHECK_CUDA(cudaGetLastError());
 }
 
@@ -404,9 +334,11 @@ void AttentionWithCacheCuda(const tensor::Tensor &query,
   CHECK_GT(kv_mul, 0);
   CHECK_LE(head_size, 1024);
 
-  AttentionWithCacheKernel<<<head_count, head_size, 0, AsCudaStream(stream)>>>(
+  constexpr int32_t seq_len = 1;
+  const dim3 grid(head_count, seq_len);
+  AttentionWithCacheBatchKernel<<<grid, head_size, 0, AsCudaStream(stream)>>>(
       query.data<float>(), key_cache.data<float>(), value_cache.data<float>(),
-      const_cast<float *>(output.data<float>()), position, head_count,
+      const_cast<float *>(output.data<float>()), position, seq_len, head_count,
       head_size, kv_dim, kv_mul);
   CHECK_CUDA(cudaGetLastError());
 }
