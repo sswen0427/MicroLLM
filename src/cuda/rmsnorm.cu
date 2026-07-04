@@ -61,11 +61,10 @@ __global__ void RmsNormBatchKernel(const float *in, const float *wei,
     for (int i = tid; i < pack_num; i += blockDim.x) {
       const float4 in_float4 = *(in_pack + i);
       const float4 wei_float4 = *(wei_pack + i);
-      *(out_pack + i) =
-          make_float4(scale * in_float4.x * wei_float4.x,
-                      scale * in_float4.y * wei_float4.y,
-                      scale * in_float4.z * wei_float4.z,
-                      scale * in_float4.w * wei_float4.w);
+      *(out_pack + i) = make_float4(scale * in_float4.x * wei_float4.x,
+                                    scale * in_float4.y * wei_float4.y,
+                                    scale * in_float4.z * wei_float4.z,
+                                    scale * in_float4.w * wei_float4.w);
     }
   }
 

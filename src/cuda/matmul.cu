@@ -48,10 +48,9 @@ __global__ void MatmulBatchKernel(const float *input, const float *weight,
     for (int i = tid; i < pack_num; i += blockDim.x) {
       const float4 input_float4 = *(input_float4_ptr + i);
       const float4 weight_float4 = *(weight_float4_ptr + i);
-      sum += input_float4.x * weight_float4.x +
-             input_float4.y * weight_float4.y +
-             input_float4.z * weight_float4.z +
-             input_float4.w * weight_float4.w;
+      sum +=
+          input_float4.x * weight_float4.x + input_float4.y * weight_float4.y +
+          input_float4.z * weight_float4.z + input_float4.w * weight_float4.w;
     }
   }
 
