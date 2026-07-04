@@ -33,22 +33,8 @@ LlamaForwardState CreateCudaForwardState(const HfLlamaConfig &config) {
     state.kv_mul = config.num_attention_heads / config.num_key_value_heads;
   }
 
-  if (config.num_hidden_layers <= 0 || config.max_position_embeddings <= 0 ||
-      state.kv_dim <= 0) {
-    return state;
-  }
-
-  state.layer_caches.resize(config.num_hidden_layers);
-  for (LlamaLayerCache &cache : state.layer_caches) {
-    cache.key =
-        tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
-                                 {config.max_position_embeddings, state.kv_dim},
-                                 base::DeviceType::kDeviceCUDA);
-    cache.value =
-        tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
-                                 {config.max_position_embeddings, state.kv_dim},
-                                 base::DeviceType::kDeviceCUDA);
-  }
+  state.kv_cache = LlamaKvCache::Allocate(config, state.kv_dim,
+                                          base::DeviceType::kDeviceCUDA);
   return state;
 }
 
@@ -261,10 +247,10 @@ class CudaLlamaBackend final : public LlamaBackend {
   const LlamaForwardProfile &profile() const override;
 
  private:
-  absl::StatusOr<LlamaForwardResult> ForwardToken(const LlamaHfModel &model,
-                                                  int32_t token_id,
-                                                  int32_t position);
-  absl::StatusOr<LlamaForwardResult> PrefillBatch(
+  absl::StatusOr<LlamaForwardResult> Decode(const LlamaHfModel &model,
+                                            int32_t token_id,
+                                            int32_t position);
+  absl::StatusOr<LlamaForwardResult> Prefill(
       const LlamaHfModel &model, const std::vector<int32_t> &token_ids,
       int32_t start_position);
 
@@ -288,13 +274,21 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::Forward(
   if (token_ids.empty()) {
     return absl::InvalidArgumentError("forward token_ids must not be empty.");
   }
-  if (token_ids.size() == 1) {
-    return ForwardToken(model, token_ids.front(), start_position);
+  forward_state_.profile.forward_calls += 1;
+  const bool is_decode = token_ids.size() == 1 && start_position > 0;
+  if (is_decode) {
+    forward_state_.profile.decode_calls += 1;
+    forward_state_.profile.decode_tokens += 1;
+    return Decode(model, token_ids.front(), start_position);
   }
-  return PrefillBatch(model, token_ids, start_position);
+
+  forward_state_.profile.prefill_calls += 1;
+  forward_state_.profile.prefill_tokens +=
+      static_cast<int64_t>(token_ids.size());
+  return Prefill(model, token_ids, start_position);
 }
 
-absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardToken(
+absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::Decode(
     const LlamaHfModel &model, int32_t token_id, int32_t position) {
   const HfLlamaConfig &config = model.config;
   if (token_id < 0 || token_id >= config.vocab_size) {
@@ -310,7 +304,7 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardToken(
 
   LOG(INFO) << "start LLaMA CUDA one-token forward: token_id=" << token_id
             << ", position=" << position;
-  forward_state_.profile.forward_calls += 1;
+  forward_state_.kv_cache.ValidateWritePosition(position);
 
   tensor::Tensor hidden_state;
   {
@@ -359,10 +353,10 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardToken(
     }
     {
       base::ScopedProfile profile(forward_state_.profile.kv_cache_ms);
-      kernel::StoreKvCacheCuda(key_tensor, value_tensor,
-                               forward_state_.layer_caches[layer].key,
-                               forward_state_.layer_caches[layer].value,
-                               position, forward_state_.kv_dim);
+      kernel::StoreKvCacheCuda(
+          key_tensor, value_tensor, forward_state_.kv_cache.key(layer),
+          forward_state_.kv_cache.value(layer), position,
+          forward_state_.kv_dim);
     }
     {
       base::ScopedProfile profile(forward_state_.profile.attention_ms);
@@ -371,8 +365,8 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardToken(
           {config.num_attention_heads * forward_state_.head_size},
           base::DeviceType::kDeviceCUDA);
       kernel::AttentionWithCacheCuda(
-          query_tensor, forward_state_.layer_caches[layer].key,
-          forward_state_.layer_caches[layer].value, attention_output_tensor,
+          query_tensor, forward_state_.kv_cache.key(layer),
+          forward_state_.kv_cache.value(layer), attention_output_tensor,
           position, config.num_attention_heads, forward_state_.head_size,
           forward_state_.kv_dim, forward_state_.kv_mul);
     }
@@ -413,6 +407,7 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardToken(
       AddInPlaceTensor(hidden_state, projected_ffn);
     }
   }
+  forward_state_.kv_cache.CommitToken(position);
 
   {
     base::ScopedProfile profile(forward_state_.profile.final_norm_ms);
@@ -439,7 +434,7 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardToken(
   return result;
 }
 
-absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::PrefillBatch(
+absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::Prefill(
     const LlamaHfModel &model, const std::vector<int32_t> &token_ids,
     int32_t start_position) {
   const HfLlamaConfig &config = model.config;
@@ -464,7 +459,8 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::PrefillBatch(
 
   LOG(INFO) << "start LLaMA CUDA prefill: token_count=" << token_ids.size()
             << ", start_position=" << start_position;
-  forward_state_.profile.forward_calls += 1;
+  forward_state_.kv_cache.ValidateWriteRange(
+      start_position, static_cast<int32_t>(token_ids.size()));
 
   tensor::Tensor hidden_state;
   {
@@ -514,8 +510,8 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::PrefillBatch(
     {
       base::ScopedProfile profile(forward_state_.profile.kv_cache_ms);
       kernel::StoreKvCacheBatchCuda(
-          key_tensor, value_tensor, forward_state_.layer_caches[layer].key,
-          forward_state_.layer_caches[layer].value, start_position,
+          key_tensor, value_tensor, forward_state_.kv_cache.key(layer),
+          forward_state_.kv_cache.value(layer), start_position,
           forward_state_.kv_dim);
     }
     {
@@ -526,8 +522,8 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::PrefillBatch(
            config.num_attention_heads * forward_state_.head_size},
           base::DeviceType::kDeviceCUDA);
       kernel::AttentionWithCacheBatchCuda(
-          query_tensor, forward_state_.layer_caches[layer].key,
-          forward_state_.layer_caches[layer].value, attention_output_tensor,
+          query_tensor, forward_state_.kv_cache.key(layer),
+          forward_state_.kv_cache.value(layer), attention_output_tensor,
           start_position, config.num_attention_heads, forward_state_.head_size,
           forward_state_.kv_dim, forward_state_.kv_mul);
     }
@@ -568,6 +564,8 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::PrefillBatch(
       AddInPlaceTensor(hidden_state, projected_ffn);
     }
   }
+  forward_state_.kv_cache.CommitTokens(
+      start_position, static_cast<int32_t>(token_ids.size()));
 
   {
     base::ScopedProfile profile(forward_state_.profile.final_norm_ms);

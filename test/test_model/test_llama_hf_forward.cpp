@@ -88,3 +88,22 @@ TEST(LlamaHfForwardTest, BackendStateKeepsKvCacheAcrossTokens) {
   ASSERT_TRUE(second.ok()) << second.status();
   EXPECT_EQ(second->next_token, 2);
 }
+
+TEST(LlamaHfForwardTest, TracksPrefillAndDecodeForwardPaths) {
+  model::LlamaHfModel model = MakeTinyForwardModel();
+  std::unique_ptr<model::LlamaBackend> backend =
+      model::CreateLlamaBackend(model.config, base::DeviceType::kDeviceCPU);
+
+  auto prefill = backend->Forward(model, {0, 1}, 0);
+  ASSERT_TRUE(prefill.ok()) << prefill.status();
+
+  auto decode = backend->Forward(model, {2}, 2);
+  ASSERT_TRUE(decode.ok()) << decode.status();
+
+  const model::LlamaForwardProfile& profile = backend->profile();
+  EXPECT_EQ(profile.forward_calls, 2);
+  EXPECT_EQ(profile.prefill_calls, 1);
+  EXPECT_EQ(profile.decode_calls, 1);
+  EXPECT_EQ(profile.prefill_tokens, 2);
+  EXPECT_EQ(profile.decode_tokens, 1);
+}

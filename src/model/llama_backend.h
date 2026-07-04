@@ -8,6 +8,7 @@
 
 #include "base/types.h"
 #include "model/llama_hf_model_loader.h"
+#include "model/llama_kv_cache.h"
 #include "tensor/tensor.h"
 
 namespace model {
@@ -19,6 +20,10 @@ struct LlamaForwardResult {
 
 struct LlamaForwardProfile {
   int64_t forward_calls = 0;
+  int64_t prefill_calls = 0;
+  int64_t decode_calls = 0;
+  int64_t prefill_tokens = 0;
+  int64_t decode_tokens = 0;
   double embedding_ms = 0.0;
   double attention_norm_ms = 0.0;
   double qkv_proj_ms = 0.0;
@@ -39,16 +44,11 @@ struct LlamaForwardProfile {
   void Log() const;
 };
 
-struct LlamaLayerCache {
-  tensor::Tensor key;
-  tensor::Tensor value;
-};
-
 struct LlamaForwardState {
   int32_t head_size = 0;
   int32_t kv_dim = 0;
   int32_t kv_mul = 0;
-  std::vector<LlamaLayerCache> layer_caches;
+  LlamaKvCache kv_cache;
   LlamaForwardProfile profile;
 };
 
