@@ -154,10 +154,10 @@ tensor::Tensor MatVecTensor(const tensor::Tensor &weight,
                             const tensor::Tensor &input) {
   tensor::Tensor input_tensor = EnsureCudaTensor(input);
   if (input_tensor.dims_size() == 2) {
-    tensor::Tensor output_tensor = tensor::Tensor::allocate(
-        base::DataType::kDataTypeFp32,
-        {input_tensor.get_dim(0), weight.get_dim(0)},
-        base::DeviceType::kDeviceCUDA);
+    tensor::Tensor output_tensor =
+        tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
+                                 {input_tensor.get_dim(0), weight.get_dim(0)},
+                                 base::DeviceType::kDeviceCUDA);
     kernel::MatmulBatchCuda(input_tensor, fp32_cuda_weight, output_tensor, 1.0f,
                             nullptr);
     return output_tensor;
@@ -226,8 +226,9 @@ tensor::Tensor LastLogitsToCpu(tensor::Tensor logits) {
   const int32_t seq_len = logits.get_dim(0);
   const int32_t vocab_size = logits.get_dim(1);
   logits.to_cpu();
-  tensor::Tensor last_logits = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {vocab_size}, base::DeviceType::kDeviceCPU);
+  tensor::Tensor last_logits =
+      tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {vocab_size},
+                               base::DeviceType::kDeviceCPU);
   const float *src =
       logits.data<float>() + static_cast<size_t>(seq_len - 1) * vocab_size;
   std::copy(src, src + vocab_size, last_logits.data<float>());
@@ -248,8 +249,7 @@ class CudaLlamaBackend final : public LlamaBackend {
 
  private:
   absl::StatusOr<LlamaForwardResult> Decode(const LlamaHfModel &model,
-                                            int32_t token_id,
-                                            int32_t position);
+                                            int32_t token_id, int32_t position);
   absl::StatusOr<LlamaForwardResult> Prefill(
       const LlamaHfModel &model, const std::vector<int32_t> &token_ids,
       int32_t start_position);
@@ -353,10 +353,10 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::Decode(
     }
     {
       base::ScopedProfile profile(forward_state_.profile.kv_cache_ms);
-      kernel::StoreKvCacheCuda(
-          key_tensor, value_tensor, forward_state_.kv_cache.key(layer),
-          forward_state_.kv_cache.value(layer), position,
-          forward_state_.kv_dim);
+      kernel::StoreKvCacheCuda(key_tensor, value_tensor,
+                               forward_state_.kv_cache.key(layer),
+                               forward_state_.kv_cache.value(layer), position,
+                               forward_state_.kv_dim);
     }
     {
       base::ScopedProfile profile(forward_state_.profile.attention_ms);
@@ -509,10 +509,10 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::Prefill(
     }
     {
       base::ScopedProfile profile(forward_state_.profile.kv_cache_ms);
-      kernel::StoreKvCacheBatchCuda(
-          key_tensor, value_tensor, forward_state_.kv_cache.key(layer),
-          forward_state_.kv_cache.value(layer), start_position,
-          forward_state_.kv_dim);
+      kernel::StoreKvCacheBatchCuda(key_tensor, value_tensor,
+                                    forward_state_.kv_cache.key(layer),
+                                    forward_state_.kv_cache.value(layer),
+                                    start_position, forward_state_.kv_dim);
     }
     {
       base::ScopedProfile profile(forward_state_.profile.attention_ms);
@@ -564,8 +564,8 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::Prefill(
       AddInPlaceTensor(hidden_state, projected_ffn);
     }
   }
-  forward_state_.kv_cache.CommitTokens(
-      start_position, static_cast<int32_t>(token_ids.size()));
+  forward_state_.kv_cache.CommitTokens(start_position,
+                                       static_cast<int32_t>(token_ids.size()));
 
   {
     base::ScopedProfile profile(forward_state_.profile.final_norm_ms);

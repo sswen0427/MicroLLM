@@ -257,8 +257,7 @@ class CpuLlamaBackend final : public LlamaBackend {
 
  private:
   absl::StatusOr<LlamaForwardResult> Decode(const LlamaHfModel &model,
-                                            int32_t token_id,
-                                            int32_t position);
+                                            int32_t token_id, int32_t position);
 
   absl::StatusOr<LlamaForwardResult> Prefill(
       const LlamaHfModel &model, const std::vector<int32_t> &token_ids,

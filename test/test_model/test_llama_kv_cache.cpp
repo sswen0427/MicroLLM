@@ -9,9 +9,8 @@ TEST(LlamaKvCacheTest, AllocatesLayerCachesWithExpectedShape) {
   config.num_hidden_layers = 2;
   config.max_position_embeddings = 16;
 
-  model::LlamaKvCache cache =
-      model::LlamaKvCache::Allocate(config, /*kv_dim=*/8,
-                                    base::DeviceType::kDeviceCPU);
+  model::LlamaKvCache cache = model::LlamaKvCache::Allocate(
+      config, /*kv_dim=*/8, base::DeviceType::kDeviceCPU);
 
   EXPECT_FALSE(cache.empty());
   EXPECT_EQ(cache.layer_count(), 2);
@@ -39,9 +38,8 @@ TEST(LlamaKvCacheTest, TracksWrittenSequenceLength) {
   config.num_hidden_layers = 1;
   config.max_position_embeddings = 16;
 
-  model::LlamaKvCache cache =
-      model::LlamaKvCache::Allocate(config, /*kv_dim=*/8,
-                                    base::DeviceType::kDeviceCPU);
+  model::LlamaKvCache cache = model::LlamaKvCache::Allocate(
+      config, /*kv_dim=*/8, base::DeviceType::kDeviceCPU);
 
   cache.CommitToken(0);
   EXPECT_EQ(cache.seq_len(), 1);
@@ -64,9 +62,8 @@ TEST(LlamaKvCacheTest, TracksPrefillCommit) {
   config.num_hidden_layers = 1;
   config.max_position_embeddings = 16;
 
-  model::LlamaKvCache cache =
-      model::LlamaKvCache::Allocate(config, /*kv_dim=*/8,
-                                    base::DeviceType::kDeviceCPU);
+  model::LlamaKvCache cache = model::LlamaKvCache::Allocate(
+      config, /*kv_dim=*/8, base::DeviceType::kDeviceCPU);
 
   cache.CommitTokens(/*start_position=*/0, /*token_count=*/4);
   EXPECT_EQ(cache.seq_len(), 4);

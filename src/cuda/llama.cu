@@ -111,8 +111,8 @@ __global__ void StoreKvCacheKernel(const float *key, const float *value,
 
 __global__ void StoreKvCacheBatchKernel(const float *key, const float *value,
                                         float *key_cache, float *value_cache,
-                                        int32_t start_position,
-                                        int32_t seq_len, int32_t kv_dim) {
+                                        int32_t start_position, int32_t seq_len,
+                                        int32_t kv_dim) {
   const int32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
   const int32_t total = seq_len * kv_dim;
   if (idx >= total) {
@@ -215,8 +215,8 @@ __global__ void AttentionWithCacheKernel(const float *query,
 
 __global__ void AttentionWithCacheBatchKernel(
     const float *query, const float *key_cache, const float *value_cache,
-    float *output, int32_t start_position, int32_t seq_len,
-    int32_t head_count, int32_t head_size, int32_t kv_dim, int32_t kv_mul) {
+    float *output, int32_t start_position, int32_t seq_len, int32_t head_count,
+    int32_t head_size, int32_t kv_dim, int32_t kv_mul) {
   const int32_t head = blockIdx.x;
   const int32_t token_idx = blockIdx.y;
   const int32_t dim = threadIdx.x;
@@ -225,8 +225,7 @@ __global__ void AttentionWithCacheBatchKernel(
   }
 
   const int32_t position = start_position + token_idx;
-  const float *query_token =
-      query + token_idx * head_count * head_size;
+  const float *query_token = query + token_idx * head_count * head_size;
 
   float max_score = -INFINITY;
   for (int32_t token = 0; token <= position; ++token) {
@@ -335,7 +334,8 @@ void StoreKvCacheCuda(const tensor::Tensor &key, const tensor::Tensor &value,
   CHECK_CUDA(cudaGetLastError());
 }
 
-void StoreKvCacheBatchCuda(const tensor::Tensor &key, const tensor::Tensor &value,
+void StoreKvCacheBatchCuda(const tensor::Tensor &key,
+                           const tensor::Tensor &value,
                            tensor::Tensor &key_cache,
                            tensor::Tensor &value_cache, int32_t start_position,
                            int32_t kv_dim, void *stream) {

@@ -6,8 +6,7 @@
 
 namespace model {
 
-LlamaKvCache LlamaKvCache::Allocate(const HfLlamaConfig& config,
-                                    int32_t kv_dim,
+LlamaKvCache LlamaKvCache::Allocate(const HfLlamaConfig& config, int32_t kv_dim,
                                     base::DeviceType device_type) {
   LlamaKvCache cache;
   cache.max_seq_len_ = config.max_position_embeddings;
@@ -21,12 +20,12 @@ LlamaKvCache LlamaKvCache::Allocate(const HfLlamaConfig& config,
 
   cache.layers_.resize(config.num_hidden_layers);
   for (LayerCache& layer : cache.layers_) {
-    layer.key = tensor::Tensor::allocate(
-        base::DataType::kDataTypeFp32, {cache.max_seq_len_, cache.kv_dim_},
-        device_type);
-    layer.value = tensor::Tensor::allocate(
-        base::DataType::kDataTypeFp32, {cache.max_seq_len_, cache.kv_dim_},
-        device_type);
+    layer.key = tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
+                                         {cache.max_seq_len_, cache.kv_dim_},
+                                         device_type);
+    layer.value = tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
+                                           {cache.max_seq_len_, cache.kv_dim_},
+                                           device_type);
   }
   return cache;
 }

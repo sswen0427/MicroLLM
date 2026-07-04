@@ -18,7 +18,8 @@ void StoreKvCacheCuda(const tensor::Tensor &key, const tensor::Tensor &value,
                       tensor::Tensor &key_cache, tensor::Tensor &value_cache,
                       int32_t position, int32_t kv_dim, void *stream = nullptr);
 
-void StoreKvCacheBatchCuda(const tensor::Tensor &key, const tensor::Tensor &value,
+void StoreKvCacheBatchCuda(const tensor::Tensor &key,
+                           const tensor::Tensor &value,
                            tensor::Tensor &key_cache,
                            tensor::Tensor &value_cache, int32_t start_position,
                            int32_t kv_dim, void *stream = nullptr);

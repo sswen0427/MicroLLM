@@ -100,7 +100,7 @@ TEST(LlamaHfForwardTest, TracksPrefillAndDecodeForwardPaths) {
   auto decode = backend->Forward(model, {2}, 2);
   ASSERT_TRUE(decode.ok()) << decode.status();
 
-  const model::LlamaForwardProfile& profile = backend->profile();
+  const model::LlamaForwardProfile &profile = backend->profile();
   EXPECT_EQ(profile.forward_calls, 2);
   EXPECT_EQ(profile.prefill_calls, 1);
   EXPECT_EQ(profile.decode_calls, 1);
