@@ -1,0 +1,25 @@
+src/cuda/llama.cu
+  s_5311729d00f5aa::t_ff4f6c1c8bb38b 234-235,251,285-286
+src/cuda/llama.cuh
+  s_5311729d00f5aa::t_4fde46d3aba17f 10-11,15-16,21-23
+src/model/llama_cuda_backend.cpp
+  s_5311729d00f5aa::t_27f436e03ba8b6 274-279,283-286,295
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4bc1d301de1a6a7721af079e0d3aef4f8b8d739e",
+  "prompts": {},
+  "sessions": {
+    "s_5311729d00f5aa": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4656-fa00-7663-a226-488922f1bdd9",
+        "model": "unknown"
+      },
+      "human_author": "sswen0427 <799438891@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
