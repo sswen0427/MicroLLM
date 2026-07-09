@@ -1,0 +1,25 @@
+src/model/llama_cuda_backend.cpp
+  s_5311729d00f5aa::t_f87a7440bd77ca 86-87,100-101
+test/test_backend/test_cu_matmul.cpp
+  s_5311729d00f5aa::t_10af1b6cd4ea04 8,25,40,58,60,85-86,104-105
+test/test_backend/test_cu_rmsnorm.cpp
+  s_5311729d00f5aa::t_0f368004b39c11 32,36,65,69,102,106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f2036052adb3d0a8bc595a07ba7bd25d370084d2",
+  "prompts": {},
+  "sessions": {
+    "s_5311729d00f5aa": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4656-fa00-7663-a226-488922f1bdd9",
+        "model": "unknown"
+      },
+      "human_author": "sswen0427 <799438891@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
