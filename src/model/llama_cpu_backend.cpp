@@ -27,8 +27,10 @@ LlamaForwardState CreateCpuForwardState(const HfLlamaConfig &config) {
     state.kv_mul = config.num_attention_heads / config.num_key_value_heads;
   }
 
-  state.kv_cache = LlamaKvCache::Allocate(config, state.kv_dim,
-                                          base::DeviceType::kDeviceCPU);
+  state.kv_cache =
+      KvCache::Allocate(config.num_hidden_layers,
+                        config.max_position_embeddings, state.kv_dim,
+                        base::DeviceType::kDeviceCPU);
   return state;
 }
 

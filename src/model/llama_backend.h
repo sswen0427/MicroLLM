@@ -8,7 +8,7 @@
 
 #include "base/types.h"
 #include "model/llama_hf_model_loader.h"
-#include "model/llama_kv_cache.h"
+#include "model/kv_cache.h"
 #include "tensor/tensor.h"
 
 namespace model {
@@ -48,7 +48,7 @@ struct LlamaForwardState {
   int32_t head_size = 0;
   int32_t kv_dim = 0;
   int32_t kv_mul = 0;
-  LlamaKvCache kv_cache;
+  KvCache kv_cache;
   LlamaForwardProfile profile;
 };
 

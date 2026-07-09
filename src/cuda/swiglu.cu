@@ -13,8 +13,9 @@ namespace {
  *   out  = SiLU(gate) * up
  *        = gate / (1 + exp(-gate)) * up
  *
- * This kernel assumes gate and up already have the same 1D shape and computes
- * the element-wise activation output.
+ * This kernel treats tensors as a flat contiguous buffer, so it works for both
+ * decode [hidden] tensors and prefill [seq_len, hidden] tensors as long as
+ * gate, up, and output have the same element count.
  */
 __global__ void SwiGluKernel(int size, const float* gate, const float* up,
                              float* out) {

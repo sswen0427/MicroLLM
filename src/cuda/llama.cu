@@ -187,6 +187,47 @@ cudaStream_t AsCudaStream(void *stream) {
   return static_cast<cudaStream_t>(stream);
 }
 
+void LaunchRopeInPlace(tensor::Tensor &values, int32_t seq_len,
+                       int32_t head_count, int32_t head_size,
+                       int32_t start_position, double rope_theta,
+                       void *stream) {
+  constexpr int32_t threads = 128;
+  const int32_t total_pairs = seq_len * head_count * (head_size / 2);
+  const int32_t blocks = (total_pairs + threads - 1) / threads;
+  RopeInPlaceBatchKernel<<<blocks, threads, 0, AsCudaStream(stream)>>>(
+      values.data<float>(), seq_len, head_count, head_size, start_position,
+      static_cast<float>(rope_theta));
+  CHECK_CUDA(cudaGetLastError());
+}
+
+void LaunchStoreKvCache(const tensor::Tensor &key, const tensor::Tensor &value,
+                        tensor::Tensor &key_cache,
+                        tensor::Tensor &value_cache, int32_t start_position,
+                        int32_t seq_len, int32_t kv_dim, void *stream) {
+  constexpr int32_t threads = 128;
+  const int32_t total = seq_len * kv_dim;
+  const int32_t blocks = (total + threads - 1) / threads;
+  StoreKvCacheBatchKernel<<<blocks, threads, 0, AsCudaStream(stream)>>>(
+      key.data<float>(), value.data<float>(), key_cache.data<float>(),
+      value_cache.data<float>(), start_position, seq_len, kv_dim);
+  CHECK_CUDA(cudaGetLastError());
+}
+
+void LaunchAttentionWithCache(const tensor::Tensor &query,
+                              const tensor::Tensor &key_cache,
+                              const tensor::Tensor &value_cache,
+                              const tensor::Tensor &output,
+                              int32_t start_position, int32_t seq_len,
+                              int32_t head_count, int32_t head_size,
+                              int32_t kv_dim, int32_t kv_mul, void *stream) {
+  const dim3 grid(head_count, seq_len);
+  AttentionWithCacheBatchKernel<<<grid, head_size, 0, AsCudaStream(stream)>>>(
+      query.data<float>(), key_cache.data<float>(), value_cache.data<float>(),
+      const_cast<float *>(output.data<float>()), start_position, seq_len,
+      head_count, head_size, kv_dim, kv_mul);
+  CHECK_CUDA(cudaGetLastError());
+}
+
 }  // namespace
 
 void RopeInPlaceCuda(tensor::Tensor &values, int32_t head_count,
@@ -198,14 +239,9 @@ void RopeInPlaceCuda(tensor::Tensor &values, int32_t head_count,
   CHECK_EQ(static_cast<int32_t>(values.size()), head_count * head_size);
   CHECK_EQ(head_size % 2, 0);
 
-  constexpr int32_t threads = 128;
   constexpr int32_t seq_len = 1;
-  const int32_t total_pairs = seq_len * head_count * (head_size / 2);
-  const int32_t blocks = (total_pairs + threads - 1) / threads;
-  RopeInPlaceBatchKernel<<<blocks, threads, 0, AsCudaStream(stream)>>>(
-      values.data<float>(), seq_len, head_count, head_size, position,
-      static_cast<float>(rope_theta));
-  CHECK_CUDA(cudaGetLastError());
+  LaunchRopeInPlace(values, seq_len, head_count, head_size, position,
+                    rope_theta, stream);
 }
 
 void RopeInPlaceBatchCuda(tensor::Tensor &values, int32_t head_count,
@@ -219,14 +255,9 @@ void RopeInPlaceBatchCuda(tensor::Tensor &values, int32_t head_count,
   CHECK_EQ(head_size % 2, 0);
   CHECK_GE(start_position, 0);
 
-  constexpr int32_t threads = 128;
   const int32_t seq_len = values.get_dim(0);
-  const int32_t total_pairs = seq_len * head_count * (head_size / 2);
-  const int32_t blocks = (total_pairs + threads - 1) / threads;
-  RopeInPlaceBatchKernel<<<blocks, threads, 0, AsCudaStream(stream)>>>(
-      values.data<float>(), seq_len, head_count, head_size, start_position,
-      static_cast<float>(rope_theta));
-  CHECK_CUDA(cudaGetLastError());
+  LaunchRopeInPlace(values, seq_len, head_count, head_size, start_position,
+                    rope_theta, stream);
 }
 
 void StoreKvCacheCuda(const tensor::Tensor &key, const tensor::Tensor &value,
@@ -254,14 +285,9 @@ void StoreKvCacheCuda(const tensor::Tensor &key, const tensor::Tensor &value,
   CHECK_LT(position, key_cache.get_dim(0));
   CHECK_EQ(key_cache.get_dim(0), value_cache.get_dim(0));
 
-  constexpr int32_t threads = 128;
   constexpr int32_t seq_len = 1;
-  const int32_t total = seq_len * kv_dim;
-  const int32_t blocks = (total + threads - 1) / threads;
-  StoreKvCacheBatchKernel<<<blocks, threads, 0, AsCudaStream(stream)>>>(
-      key.data<float>(), value.data<float>(), key_cache.data<float>(),
-      value_cache.data<float>(), position, seq_len, kv_dim);
-  CHECK_CUDA(cudaGetLastError());
+  LaunchStoreKvCache(key, value, key_cache, value_cache, position, seq_len,
+                     kv_dim, stream);
 }
 
 void StoreKvCacheBatchCuda(const tensor::Tensor &key,
@@ -294,14 +320,9 @@ void StoreKvCacheBatchCuda(const tensor::Tensor &key,
   CHECK_LE(start_position + key.get_dim(0), key_cache.get_dim(0));
   CHECK_EQ(key_cache.get_dim(0), value_cache.get_dim(0));
 
-  constexpr int32_t threads = 128;
   const int32_t seq_len = key.get_dim(0);
-  const int32_t total = seq_len * kv_dim;
-  const int32_t blocks = (total + threads - 1) / threads;
-  StoreKvCacheBatchKernel<<<blocks, threads, 0, AsCudaStream(stream)>>>(
-      key.data<float>(), value.data<float>(), key_cache.data<float>(),
-      value_cache.data<float>(), start_position, seq_len, kv_dim);
-  CHECK_CUDA(cudaGetLastError());
+  LaunchStoreKvCache(key, value, key_cache, value_cache, start_position,
+                     seq_len, kv_dim, stream);
 }
 
 void AttentionWithCacheCuda(const tensor::Tensor &query,
@@ -335,12 +356,9 @@ void AttentionWithCacheCuda(const tensor::Tensor &query,
   CHECK_LE(head_size, 1024);
 
   constexpr int32_t seq_len = 1;
-  const dim3 grid(head_count, seq_len);
-  AttentionWithCacheBatchKernel<<<grid, head_size, 0, AsCudaStream(stream)>>>(
-      query.data<float>(), key_cache.data<float>(), value_cache.data<float>(),
-      const_cast<float *>(output.data<float>()), position, seq_len, head_count,
-      head_size, kv_dim, kv_mul);
-  CHECK_CUDA(cudaGetLastError());
+  LaunchAttentionWithCache(query, key_cache, value_cache, output, position,
+                           seq_len, head_count, head_size, kv_dim, kv_mul,
+                           stream);
 }
 
 void AttentionWithCacheBatchCuda(const tensor::Tensor &query,
@@ -377,12 +395,9 @@ void AttentionWithCacheBatchCuda(const tensor::Tensor &query,
   CHECK_GT(kv_mul, 0);
   CHECK_LE(head_size, 1024);
 
-  const dim3 grid(head_count, query.get_dim(0));
-  AttentionWithCacheBatchKernel<<<grid, head_size, 0, AsCudaStream(stream)>>>(
-      query.data<float>(), key_cache.data<float>(), value_cache.data<float>(),
-      const_cast<float *>(output.data<float>()), start_position,
-      query.get_dim(0), head_count, head_size, kv_dim, kv_mul);
-  CHECK_CUDA(cudaGetLastError());
+  LaunchAttentionWithCache(query, key_cache, value_cache, output,
+                           start_position, query.get_dim(0), head_count,
+                           head_size, kv_dim, kv_mul, stream);
 }
 
 }  // namespace kernel

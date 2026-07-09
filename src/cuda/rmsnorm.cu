@@ -73,6 +73,18 @@ __global__ void RmsNormBatchKernel(const float *in, const float *wei,
   }
 }
 
+void LaunchRmsNormBatch(const tensor::Tensor &input,
+                        const tensor::Tensor &weight,
+                        const tensor::Tensor &output, int32_t batch,
+                        int32_t hidden_size, void *stream, float eps) {
+  constexpr int threads_num = 128;
+  cudaStream_t stream_ = static_cast<cudaStream_t>(stream);
+  RmsNormBatchKernel<128><<<batch, threads_num, 0, stream_>>>(
+      input.data<float>(), weight.data<float>(),
+      const_cast<float *>(output.data<float>()), batch, hidden_size, eps);
+  CHECK_CUDA(cudaGetLastError());
+}
+
 }  // namespace
 
 void RmsNormCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
@@ -93,14 +105,9 @@ void RmsNormCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
   CHECK_EQ(input.size(), weight.size());
   CHECK_EQ(input.size(), output.size());
 
-  constexpr int threads_num = 128;
   constexpr int32_t batch = 1;
   const int32_t hidden_size = static_cast<int32_t>(input.size());
-  cudaStream_t stream_ = static_cast<cudaStream_t>(stream);
-  RmsNormBatchKernel<128><<<batch, threads_num, 0, stream_>>>(
-      input.data<float>(), weight.data<float>(),
-      const_cast<float *>(output.data<float>()), batch, hidden_size, eps);
-  CHECK_CUDA(cudaGetLastError());
+  LaunchRmsNormBatch(input, weight, output, batch, hidden_size, stream, eps);
 }
 
 void RmsNormBatchCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
@@ -121,13 +128,8 @@ void RmsNormBatchCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
   CHECK_EQ(input.get_dim(1), output.get_dim(1));
   CHECK_EQ(input.get_dim(1), weight.get_dim(0));
 
-  constexpr int threads_num = 128;
   const int32_t batch = input.get_dim(0);
   const int32_t hidden_size = input.get_dim(1);
-  cudaStream_t stream_ = static_cast<cudaStream_t>(stream);
-  RmsNormBatchKernel<128><<<batch, threads_num, 0, stream_>>>(
-      input.data<float>(), weight.data<float>(),
-      const_cast<float *>(output.data<float>()), batch, hidden_size, eps);
-  CHECK_CUDA(cudaGetLastError());
+  LaunchRmsNormBatch(input, weight, output, batch, hidden_size, stream, eps);
 }
 }  // namespace kernel

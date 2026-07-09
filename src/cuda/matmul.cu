@@ -69,10 +69,23 @@ __global__ void MatmulBatchKernel(const float *input, const float *weight,
   }
 }
 
+void LaunchMatmulBatch(const tensor::Tensor &input, const tensor::Tensor &weight,
+                       const tensor::Tensor &output, int32_t batch, int32_t M,
+                       int32_t K, void *stream) {
+  constexpr int threads = 128;
+  const dim3 grid(K, batch);
+  cudaStream_t cuda_stream = static_cast<cudaStream_t>(stream);
+  MatmulBatchKernel<threads><<<grid, threads, 0, cuda_stream>>>(
+      input.data<float>(), weight.data<float>(),
+      const_cast<float *>(output.data<float>()), batch, M, K);
+  CHECK_CUDA(cudaGetLastError());
+}
+
 }  // namespace
 
 void MatmulCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
                 const tensor::Tensor &output, const float scale, void *stream) {
+  (void)scale;
   CHECK(!input.is_empty());
   CHECK_EQ(input.dims_size(), 1);
   CHECK(input.device_type() == base::DeviceType::kDeviceCUDA);
@@ -93,19 +106,14 @@ void MatmulCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
 
   CHECK_EQ(M, input.get_dim(0));
   CHECK_EQ(K, output.get_dim(0));
-  constexpr int threads = 128;
   constexpr int32_t batch = 1;
-  const dim3 grid(K, batch);
-  cudaStream_t cuda_stream = static_cast<cudaStream_t>(stream);
-  MatmulBatchKernel<threads><<<grid, threads, 0, cuda_stream>>>(
-      input.data<float>(), weight.data<float>(),
-      const_cast<float *>(output.data<float>()), batch, M, K);
-  CHECK_CUDA(cudaGetLastError());
+  LaunchMatmulBatch(input, weight, output, batch, M, K, stream);
 }
 
 void MatmulBatchCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
                      const tensor::Tensor &output, const float scale,
                      void *stream) {
+  (void)scale;
   CHECK(!input.is_empty());
   CHECK_EQ(input.dims_size(), 2);
   CHECK(input.device_type() == base::DeviceType::kDeviceCUDA);
@@ -128,12 +136,6 @@ void MatmulBatchCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
   CHECK_EQ(output.get_dim(0), batch);
   CHECK_EQ(output.get_dim(1), K);
 
-  constexpr int threads = 128;
-  const dim3 grid(K, batch);
-  cudaStream_t cuda_stream = static_cast<cudaStream_t>(stream);
-  MatmulBatchKernel<threads><<<grid, threads, 0, cuda_stream>>>(
-      input.data<float>(), weight.data<float>(),
-      const_cast<float *>(output.data<float>()), batch, M, K);
-  CHECK_CUDA(cudaGetLastError());
+  LaunchMatmulBatch(input, weight, output, batch, M, K, stream);
 }
 }  // namespace kernel

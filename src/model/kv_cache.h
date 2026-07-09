@@ -4,17 +4,16 @@
 #include <vector>
 
 #include "base/types.h"
-#include "model/hf_config.h"
 #include "tensor/tensor.h"
 
 namespace model {
 
-class LlamaKvCache {
+class KvCache {
  public:
-  LlamaKvCache() = default;
+  KvCache() = default;
 
-  static LlamaKvCache Allocate(const HfLlamaConfig& config, int32_t kv_dim,
-                               base::DeviceType device_type);
+  static KvCache Allocate(int32_t layer_count, int32_t max_seq_len,
+                          int32_t kv_dim, base::DeviceType device_type);
 
   [[nodiscard]] bool empty() const;
   [[nodiscard]] int32_t layer_count() const;
