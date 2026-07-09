@@ -1,0 +1,39 @@
+src/cuda/llama.cu
+  s_5311729d00f5aa::t_28c2ddc991b94c 190-230,243-244,259-260,289-290,324-325,359-361,398-400
+src/cuda/matmul.cu
+  s_5311729d00f5aa::t_ddcfae20a28c1e 72-83,88,110,116,139
+src/cuda/rmsnorm.cu
+  s_5311729d00f5aa::t_6cb0ca029756e4 76-87,110,133
+src/cuda/swiglu.cu
+  s_5311729d00f5aa::t_c98a469bd60335 16-18
+src/model/kv_cache.cpp
+  s_5311729d00f5aa::t_0916f801f2d15b 1,9-12,16,20,32,34,38,40,42,44,46,52,58,64,70,78-79,88,93,98
+src/model/kv_cache.h
+  s_5311729d00f5aa::t_34ecde22fd0519 11,13,15-16
+src/model/llama_backend.h
+  s_5311729d00f5aa::t_581d0f26faf3bb 11,51
+src/model/llama_cpu_backend.cpp
+  s_5311729d00f5aa::t_a81f0bc3518da4 30-33
+src/model/llama_cuda_backend.cpp
+  s_5311729d00f5aa::t_34adcf3fb889ba 35-38,80,82-87,91,95-101,110,117-119,169,171,198,204,207,209,218,230-231,252,259,266,268,270,305,314,320,322,330,343,351,361-362
+test/test_model/test_kv_cache.cpp
+  s_5311729d00f5aa::t_cc28368c62b409 4,6-9,32-35,53-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ce8c753e59cd52342e569bc11aebc100921ab21d",
+  "prompts": {},
+  "sessions": {
+    "s_5311729d00f5aa": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4656-fa00-7663-a226-488922f1bdd9",
+        "model": "unknown"
+      },
+      "human_author": "sswen0427 <799438891@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
