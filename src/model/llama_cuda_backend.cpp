@@ -83,8 +83,8 @@ tensor::Tensor RmsNormTensor(const tensor::Tensor &input,
       base::DataType::kDataTypeFp32,
       {input_tensor.get_dim(0), input_tensor.get_dim(1)},
       base::DeviceType::kDeviceCUDA);
-  kernel::RmsNormBatchCuda(input_tensor, fp32_cuda_weight, output_tensor,
-                           nullptr, static_cast<float>(eps));
+  kernel::RmsNormCuda(input_tensor, fp32_cuda_weight, output_tensor, nullptr,
+                      static_cast<float>(eps));
   return output_tensor;
 }
 
@@ -97,8 +97,8 @@ tensor::Tensor MatmulTensor(const tensor::Tensor &weight,
       tensor::Tensor::allocate(base::DataType::kDataTypeFp32,
                                {input_tensor.get_dim(0), weight.get_dim(0)},
                                base::DeviceType::kDeviceCUDA);
-  kernel::MatmulBatchCuda(input_tensor, fp32_cuda_weight, output_tensor, 1.0f,
-                          nullptr);
+  kernel::MatmulCuda(input_tensor, fp32_cuda_weight, output_tensor, 1.0f,
+                     nullptr);
   return output_tensor;
 }
 

@@ -92,29 +92,6 @@ void RmsNormCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
   CHECK(!input.is_empty());
   CHECK(!weight.is_empty());
   CHECK(!output.is_empty());
-
-  CHECK(input.device_type() == base::DeviceType::kDeviceCUDA &&
-        weight.device_type() == base::DeviceType::kDeviceCUDA &&
-        output.device_type() == base::DeviceType::kDeviceCUDA);
-  CHECK(input.data_type() == base::DataType::kDataTypeFp32);
-  CHECK(weight.data_type() == base::DataType::kDataTypeFp32);
-  CHECK(output.data_type() == base::DataType::kDataTypeFp32);
-  CHECK_EQ(input.dims_size(), 1);
-  CHECK_EQ(weight.dims_size(), 1);
-  CHECK_EQ(output.dims_size(), 1);
-  CHECK_EQ(input.size(), weight.size());
-  CHECK_EQ(input.size(), output.size());
-
-  constexpr int32_t batch = 1;
-  const int32_t hidden_size = static_cast<int32_t>(input.size());
-  LaunchRmsNormBatch(input, weight, output, batch, hidden_size, stream, eps);
-}
-
-void RmsNormBatchCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
-                      const tensor::Tensor &output, void *stream, float eps) {
-  CHECK(!input.is_empty());
-  CHECK(!weight.is_empty());
-  CHECK(!output.is_empty());
   CHECK(input.device_type() == base::DeviceType::kDeviceCUDA);
   CHECK(weight.device_type() == base::DeviceType::kDeviceCUDA);
   CHECK(output.device_type() == base::DeviceType::kDeviceCUDA);

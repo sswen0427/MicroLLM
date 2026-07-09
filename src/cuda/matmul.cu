@@ -87,34 +87,6 @@ void MatmulCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
                 const tensor::Tensor &output, const float scale, void *stream) {
   (void)scale;
   CHECK(!input.is_empty());
-  CHECK_EQ(input.dims_size(), 1);
-  CHECK(input.device_type() == base::DeviceType::kDeviceCUDA);
-  CHECK(input.data_type() == base::DataType::kDataTypeFp32);
-
-  CHECK(!weight.is_empty());
-  CHECK_EQ(weight.dims_size(), 2);
-  CHECK(weight.device_type() == base::DeviceType::kDeviceCUDA);
-  CHECK(weight.data_type() == base::DataType::kDataTypeFp32);
-
-  CHECK(!output.is_empty());
-  CHECK_EQ(output.dims_size(), 1);
-  CHECK(output.device_type() == base::DeviceType::kDeviceCUDA);
-  CHECK(output.data_type() == base::DataType::kDataTypeFp32);
-
-  const int32_t K = weight.get_dim(0);  // row
-  const int32_t M = weight.get_dim(1);  // col
-
-  CHECK_EQ(M, input.get_dim(0));
-  CHECK_EQ(K, output.get_dim(0));
-  constexpr int32_t batch = 1;
-  LaunchMatmulBatch(input, weight, output, batch, M, K, stream);
-}
-
-void MatmulBatchCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
-                     const tensor::Tensor &output, const float scale,
-                     void *stream) {
-  (void)scale;
-  CHECK(!input.is_empty());
   CHECK_EQ(input.dims_size(), 2);
   CHECK(input.device_type() == base::DeviceType::kDeviceCUDA);
   CHECK(input.data_type() == base::DataType::kDataTypeFp32);
