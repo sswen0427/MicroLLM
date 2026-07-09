@@ -231,22 +231,8 @@ void LaunchAttentionWithCache(const tensor::Tensor &query,
 }  // namespace
 
 void RopeInPlaceCuda(tensor::Tensor &values, int32_t head_count,
-                     int32_t head_size, int32_t position, double rope_theta,
-                     void *stream) {
-  CHECK(!values.is_empty());
-  CHECK(values.device_type() == base::DeviceType::kDeviceCUDA);
-  CHECK(values.data_type() == base::DataType::kDataTypeFp32);
-  CHECK_EQ(static_cast<int32_t>(values.size()), head_count * head_size);
-  CHECK_EQ(head_size % 2, 0);
-
-  constexpr int32_t seq_len = 1;
-  LaunchRopeInPlace(values, seq_len, head_count, head_size, position,
-                    rope_theta, stream);
-}
-
-void RopeInPlaceBatchCuda(tensor::Tensor &values, int32_t head_count,
-                          int32_t head_size, int32_t start_position,
-                          double rope_theta, void *stream) {
+                     int32_t head_size, int32_t start_position,
+                     double rope_theta, void *stream) {
   CHECK(!values.is_empty());
   CHECK(values.device_type() == base::DeviceType::kDeviceCUDA);
   CHECK(values.data_type() == base::DataType::kDataTypeFp32);
@@ -262,39 +248,7 @@ void RopeInPlaceBatchCuda(tensor::Tensor &values, int32_t head_count,
 
 void StoreKvCacheCuda(const tensor::Tensor &key, const tensor::Tensor &value,
                       tensor::Tensor &key_cache, tensor::Tensor &value_cache,
-                      int32_t position, int32_t kv_dim, void *stream) {
-  CHECK(!key.is_empty());
-  CHECK(!value.is_empty());
-  CHECK(!key_cache.is_empty());
-  CHECK(!value_cache.is_empty());
-  CHECK(key.device_type() == base::DeviceType::kDeviceCUDA);
-  CHECK(value.device_type() == base::DeviceType::kDeviceCUDA);
-  CHECK(key_cache.device_type() == base::DeviceType::kDeviceCUDA);
-  CHECK(value_cache.device_type() == base::DeviceType::kDeviceCUDA);
-  CHECK(key.data_type() == base::DataType::kDataTypeFp32);
-  CHECK(value.data_type() == base::DataType::kDataTypeFp32);
-  CHECK(key_cache.data_type() == base::DataType::kDataTypeFp32);
-  CHECK(value_cache.data_type() == base::DataType::kDataTypeFp32);
-  CHECK_EQ(key_cache.dims_size(), 2);
-  CHECK_EQ(value_cache.dims_size(), 2);
-  CHECK_EQ(key_cache.get_dim(1), kv_dim);
-  CHECK_EQ(value_cache.get_dim(1), kv_dim);
-  CHECK_EQ(static_cast<int32_t>(key.size()), kv_dim);
-  CHECK_EQ(static_cast<int32_t>(value.size()), kv_dim);
-  CHECK_GE(position, 0);
-  CHECK_LT(position, key_cache.get_dim(0));
-  CHECK_EQ(key_cache.get_dim(0), value_cache.get_dim(0));
-
-  constexpr int32_t seq_len = 1;
-  LaunchStoreKvCache(key, value, key_cache, value_cache, position, seq_len,
-                     kv_dim, stream);
-}
-
-void StoreKvCacheBatchCuda(const tensor::Tensor &key,
-                           const tensor::Tensor &value,
-                           tensor::Tensor &key_cache,
-                           tensor::Tensor &value_cache, int32_t start_position,
-                           int32_t kv_dim, void *stream) {
+                      int32_t start_position, int32_t kv_dim, void *stream) {
   CHECK(!key.is_empty());
   CHECK(!value.is_empty());
   CHECK(!key_cache.is_empty());
@@ -328,46 +282,10 @@ void StoreKvCacheBatchCuda(const tensor::Tensor &key,
 void AttentionWithCacheCuda(const tensor::Tensor &query,
                             const tensor::Tensor &key_cache,
                             const tensor::Tensor &value_cache,
-                            const tensor::Tensor &output, int32_t position,
+                            const tensor::Tensor &output,
+                            int32_t start_position,
                             int32_t head_count, int32_t head_size,
                             int32_t kv_dim, int32_t kv_mul, void *stream) {
-  CHECK(!query.is_empty());
-  CHECK(!key_cache.is_empty());
-  CHECK(!value_cache.is_empty());
-  CHECK(!output.is_empty());
-  CHECK(query.device_type() == base::DeviceType::kDeviceCUDA);
-  CHECK(key_cache.device_type() == base::DeviceType::kDeviceCUDA);
-  CHECK(value_cache.device_type() == base::DeviceType::kDeviceCUDA);
-  CHECK(output.device_type() == base::DeviceType::kDeviceCUDA);
-  CHECK(query.data_type() == base::DataType::kDataTypeFp32);
-  CHECK(key_cache.data_type() == base::DataType::kDataTypeFp32);
-  CHECK(value_cache.data_type() == base::DataType::kDataTypeFp32);
-  CHECK(output.data_type() == base::DataType::kDataTypeFp32);
-  CHECK_EQ(key_cache.dims_size(), 2);
-  CHECK_EQ(value_cache.dims_size(), 2);
-  CHECK_EQ(key_cache.get_dim(1), kv_dim);
-  CHECK_EQ(value_cache.get_dim(1), kv_dim);
-  CHECK_EQ(key_cache.get_dim(0), value_cache.get_dim(0));
-  CHECK_EQ(static_cast<int32_t>(query.size()), head_count * head_size);
-  CHECK_EQ(static_cast<int32_t>(output.size()), head_count * head_size);
-  CHECK_GE(position, 0);
-  CHECK_LT(position, key_cache.get_dim(0));
-  CHECK_GT(kv_mul, 0);
-  CHECK_LE(head_size, 1024);
-
-  constexpr int32_t seq_len = 1;
-  LaunchAttentionWithCache(query, key_cache, value_cache, output, position,
-                           seq_len, head_count, head_size, kv_dim, kv_mul,
-                           stream);
-}
-
-void AttentionWithCacheBatchCuda(const tensor::Tensor &query,
-                                 const tensor::Tensor &key_cache,
-                                 const tensor::Tensor &value_cache,
-                                 const tensor::Tensor &output,
-                                 int32_t start_position, int32_t head_count,
-                                 int32_t head_size, int32_t kv_dim,
-                                 int32_t kv_mul, void *stream) {
   CHECK(!query.is_empty());
   CHECK(!key_cache.is_empty());
   CHECK(!value_cache.is_empty());

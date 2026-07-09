@@ -271,19 +271,19 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardTokens(
     }
     {
       base::ScopedProfile profile(forward_state_.profile.rope_ms);
-      kernel::RopeInPlaceBatchCuda(query_tensor, config.num_attention_heads,
-                                   forward_state_.head_size, start_position,
-                                   config.rope_theta);
-      kernel::RopeInPlaceBatchCuda(key_tensor, config.num_key_value_heads,
-                                   forward_state_.head_size, start_position,
-                                   config.rope_theta);
+      kernel::RopeInPlaceCuda(query_tensor, config.num_attention_heads,
+                              forward_state_.head_size, start_position,
+                              config.rope_theta);
+      kernel::RopeInPlaceCuda(key_tensor, config.num_key_value_heads,
+                              forward_state_.head_size, start_position,
+                              config.rope_theta);
     }
     {
       base::ScopedProfile profile(forward_state_.profile.kv_cache_ms);
-      kernel::StoreKvCacheBatchCuda(key_tensor, value_tensor,
-                                    forward_state_.kv_cache.key(layer),
-                                    forward_state_.kv_cache.value(layer),
-                                    start_position, forward_state_.kv_dim);
+      kernel::StoreKvCacheCuda(key_tensor, value_tensor,
+                               forward_state_.kv_cache.key(layer),
+                               forward_state_.kv_cache.value(layer),
+                               start_position, forward_state_.kv_dim);
     }
     {
       base::ScopedProfile profile(forward_state_.profile.attention_ms);
@@ -292,7 +292,7 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardTokens(
           {static_cast<int32_t>(token_ids.size()),
            config.num_attention_heads * forward_state_.head_size},
           base::DeviceType::kDeviceCUDA);
-      kernel::AttentionWithCacheBatchCuda(
+      kernel::AttentionWithCacheCuda(
           query_tensor, forward_state_.kv_cache.key(layer),
           forward_state_.kv_cache.value(layer), attention_output_tensor,
           start_position, config.num_attention_heads, forward_state_.head_size,
