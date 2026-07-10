@@ -20,6 +20,10 @@ namespace {
  * where theta = (start_position + token_idx) *
  *               rope_theta^(-2i / head_size).
  *
+ * @param start_position Absolute sequence position of values[0]. Decode passes
+ * the current token position with seq_len = 1; prefill passes the first token
+ * position of the prompt/chunk with seq_len > 1.
+ *
  * Single-token decode uses this same kernel with seq_len = 1.
  */
 __global__ void RopeInPlaceBatchKernel(float *values, int32_t seq_len,
@@ -68,6 +72,9 @@ __global__ void RopeInPlaceBatchKernel(float *values, int32_t seq_len,
  * Each thread copies one element:
  *   key_cache[start_position + token_idx, col] = key[token_idx, col]
  *   value_cache[start_position + token_idx, col] = value[token_idx, col]
+ *
+ * @param start_position Absolute sequence position where this contiguous
+ * key/value batch begins in the KV cache.
  *
  * Single-token decode uses this same kernel with seq_len = 1.
  */
@@ -137,6 +144,9 @@ __device__ float AttentionScore(const float *query, const float *key_cache,
  *   prob_t = softmax(score_t)
  *   output[token_idx, head, dim] =
  *       sum_t prob_t * value_cache[t, kv_head, dim]
+ *
+ * @param start_position Absolute position of query[0] in the sequence, so
+ * start_position + token_idx is the real causal-attention position.
  *
  * Single-token decode uses this same kernel with seq_len = 1.
  */
