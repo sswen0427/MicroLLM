@@ -13,8 +13,9 @@ namespace {
  *   out  = SiLU(gate) * up
  *        = gate / (1 + exp(-gate)) * up
  *
- * This kernel assumes gate and up already have the same 1D shape and computes
- * the element-wise activation output.
+ * This kernel treats tensors as a flat contiguous buffer, so it works for both
+ * decode [hidden] tensors and prefill [seq_len, hidden] tensors as long as
+ * gate, up, and output have the same element count.
  */
 __global__ void SwiGluKernel(int size, const float* gate, const float* up,
                              float* out) {
@@ -44,25 +45,16 @@ void SwiGluCuda(const tensor::Tensor& gate, const tensor::Tensor& up,
   CHECK(up.data_type() == base::DataType::kDataTypeFp32);
   CHECK(output.data_type() == base::DataType::kDataTypeFp32);
 
-  CHECK_EQ(gate.dims_size(), 1);
-  CHECK_EQ(up.dims_size(), 1);
-  CHECK_EQ(output.dims_size(), 1);
   CHECK_EQ(gate.size(), up.size());
   CHECK_EQ(gate.size(), output.size());
 
   int size = static_cast<int32_t>(gate.size());
   int threads = 128;
   int blocks = (size + threads - 1) / threads;
-  if (!stream) {
-    SwiGluKernel<<<blocks, threads>>>(size, gate.data<float>(),
-                                      up.data<float>(),
-                                      const_cast<float*>(output.data<float>()));
-  } else {
-    cudaStream_t stream_ = static_cast<cudaStream_t>(stream);
-    SwiGluKernel<<<blocks, threads, 0, stream_>>>(
-        size, gate.data<float>(), up.data<float>(),
-        const_cast<float*>(output.data<float>()));
-  }
+  cudaStream_t cuda_stream = static_cast<cudaStream_t>(stream);
+  SwiGluKernel<<<blocks, threads, 0, cuda_stream>>>(
+      size, gate.data<float>(), up.data<float>(),
+      const_cast<float*>(output.data<float>()));
   CHECK_CUDA(cudaGetLastError());
 }
 }  // namespace kernel

@@ -5,7 +5,7 @@
 
 TEST(CudaMatmulTest, RunCUDA) {
   tensor::Tensor input = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {4}, base::DeviceType::kDeviceCPU);
+      base::DataType::kDataTypeFp32, {1, 4}, base::DeviceType::kDeviceCPU);
   tensor::Tensor weight = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {4, 4}, base::DeviceType::kDeviceCPU);
 
@@ -22,7 +22,7 @@ TEST(CudaMatmulTest, RunCUDA) {
   weight.to_cuda();
 
   tensor::Tensor out_cu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {4}, base::DeviceType::kDeviceCUDA);
+      base::DataType::kDataTypeFp32, {1, 4}, base::DeviceType::kDeviceCUDA);
 
   kernel::MatmulCuda(input, weight, out_cu, 1.f, nullptr);
 
@@ -37,7 +37,7 @@ TEST(CudaMatmulTest, RunCUDA) {
 
 TEST(CudaMatmulTest, Stream) {
   tensor::Tensor input = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {4}, base::DeviceType::kDeviceCPU);
+      base::DataType::kDataTypeFp32, {1, 4}, base::DeviceType::kDeviceCPU);
   tensor::Tensor weight = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {4, 4}, base::DeviceType::kDeviceCPU);
 
@@ -55,9 +55,9 @@ TEST(CudaMatmulTest, Stream) {
   weight.to_cuda(nullptr);
 
   tensor::Tensor out_cu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {4}, base::DeviceType::kDeviceCUDA);
+      base::DataType::kDataTypeFp32, {1, 4}, base::DeviceType::kDeviceCUDA);
   tensor::Tensor out_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {4}, base::DeviceType::kDeviceCPU);
+      base::DataType::kDataTypeFp32, {1, 4}, base::DeviceType::kDeviceCPU);
 
   cudaStream_t stream;
   cudaStreamCreate(&stream);
@@ -82,7 +82,7 @@ TEST(CudaMatmulTest, SupportsNonMultipleOfFourColumns) {
   constexpr int kRows = 3;
   constexpr int kCols = 5;
   tensor::Tensor input = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {kCols}, base::DeviceType::kDeviceCPU);
+      base::DataType::kDataTypeFp32, {1, kCols}, base::DeviceType::kDeviceCPU);
   tensor::Tensor weight =
       tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {kRows, kCols},
                                base::DeviceType::kDeviceCPU);
@@ -100,7 +100,7 @@ TEST(CudaMatmulTest, SupportsNonMultipleOfFourColumns) {
   weight.to_cuda();
 
   tensor::Tensor out_cu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {kRows}, base::DeviceType::kDeviceCUDA);
+      base::DataType::kDataTypeFp32, {1, kRows}, base::DeviceType::kDeviceCUDA);
 
   kernel::MatmulCuda(input, weight, out_cu, 1.f, nullptr);
 

@@ -8,31 +8,28 @@ namespace kernel {
 namespace {
 
 /**
- * @brief Highly optimized FP32 GEMV (Matrix-Vector Multiplication) kernel.
- *        Computes Y = W * X, specifically optimized for Batch Size = 1
- * (Inference).
+ * @brief Computes output[batch, row] = dot(input[batch], weight[row]).
  *
- * @tparam THREAD_PER_BLOCK Number of threads per block (typically 128 or 256).
- * @tparam ROW_PER_BLOCK    Number of rows processed by a single block
- * (typically 1 for max occupancy).
- * @param input  Pointer to the input vector X (size M).
- * @param weight Pointer to the weight matrix W (size K x M, row-major).
- * @param output Pointer to the output vector Y (size K).
- * @param M      Number of columns in the weight matrix (length of input
- * vector).
- * @param K      Number of rows in the weight matrix (length of output vector).
+ * Tensor shapes in logical row-major layout:
+ *   input:  [batch, M]
+ *   weight: [K, M]
+ *   output: [batch, K]
+ *
+ * Single-token GEMV uses this same kernel with batch = 1.
  */
-template <int THREAD_PER_BLOCK, int ROW_PER_BLOCK>
-__global__ void MatmulKernel(const float *input, const float *weight,
-                             float *output, int M, int K) {
+template <int THREAD_PER_BLOCK>
+__global__ void MatmulBatchKernel(const float *input, const float *weight,
+                                  float *output, int batch, int M, int K) {
   __shared__ float sdata[THREAD_PER_BLOCK];
-  unsigned int tid = threadIdx.x;
-
-  int start_row = blockIdx.x * ROW_PER_BLOCK;
-  int end_row = start_row + ROW_PER_BLOCK;
-  if (start_row >= K) {
+  const int tid = threadIdx.x;
+  const int row = blockIdx.x;
+  const int batch_idx = blockIdx.y;
+  if (row >= K || batch_idx >= batch) {
     return;
   }
+
+  const float *input_row = input + batch_idx * M;
+  const float *weight_row = weight + row * M;
 
   constexpr int pack_size = 4;
   const int pack_num = M / pack_size;
@@ -42,52 +39,56 @@ __global__ void MatmulKernel(const float *input, const float *weight,
   // scalar path for the whole row instead of mixing vector and tail loads.
   const bool use_float4 = (M % pack_size) == 0;
 
-#pragma unroll
-  for (int p = start_row; p < end_row; ++p) {
-    sdata[tid] = 0;
-    int row_offset = p * M;
-    if (use_float4) {
-      const float4 *input_float4_ptr = reinterpret_cast<const float4 *>(input);
-      const float4 *weight_float4_ptr =
-          reinterpret_cast<const float4 *>(weight + row_offset);
-
-#pragma unroll
-      for (int i = tid; i < pack_num; i += blockDim.x) {
-        float4 input_float4 = *(input_float4_ptr + i);
-        float4 weight_float4 = *(weight_float4_ptr + i);
-        float part_sum = input_float4.x * weight_float4.x +
-                         input_float4.y * weight_float4.y +
-                         input_float4.z * weight_float4.z +
-                         input_float4.w * weight_float4.w;
-        sdata[tid] += part_sum;
-      }
+  float sum = 0.0f;
+  if (use_float4) {
+    const float4 *input_float4_ptr =
+        reinterpret_cast<const float4 *>(input_row);
+    const float4 *weight_float4_ptr =
+        reinterpret_cast<const float4 *>(weight_row);
+    for (int i = tid; i < pack_num; i += blockDim.x) {
+      const float4 input_float4 = *(input_float4_ptr + i);
+      const float4 weight_float4 = *(weight_float4_ptr + i);
+      sum +=
+          input_float4.x * weight_float4.x + input_float4.y * weight_float4.y +
+          input_float4.z * weight_float4.z + input_float4.w * weight_float4.w;
     }
-
-    const int scalar_start = use_float4 ? pack_off : 0;
-    for (int i = scalar_start + tid; i < M; i += blockDim.x) {
-      sdata[tid] += input[i] * weight[row_offset + i];
-    }
-
-    __syncthreads();
-
-    using BlockReduce = cub::BlockReduce<float, THREAD_PER_BLOCK>;
-    __shared__ typename BlockReduce::TempStorage temp;
-    float part_sum = BlockReduce(temp).Sum(sdata[tid]);
-    __syncthreads();
-
-    if (tid == 0) {
-      output[p] = part_sum;
-    }
-    __syncthreads();
   }
+
+  const int scalar_start = use_float4 ? pack_off : 0;
+  for (int col = scalar_start + tid; col < M; col += blockDim.x) {
+    sum += input_row[col] * weight_row[col];
+  }
+  sdata[tid] = sum;
+  __syncthreads();
+
+  using BlockReduce = cub::BlockReduce<float, THREAD_PER_BLOCK>;
+  __shared__ typename BlockReduce::TempStorage temp;
+  sum = BlockReduce(temp).Sum(sdata[tid]);
+  if (tid == 0) {
+    output[batch_idx * K + row] = sum;
+  }
+}
+
+void LaunchMatmulBatch(const tensor::Tensor &input,
+                       const tensor::Tensor &weight,
+                       const tensor::Tensor &output, int32_t batch, int32_t M,
+                       int32_t K, void *stream) {
+  constexpr int threads = 128;
+  const dim3 grid(K, batch);
+  cudaStream_t cuda_stream = static_cast<cudaStream_t>(stream);
+  MatmulBatchKernel<threads><<<grid, threads, 0, cuda_stream>>>(
+      input.data<float>(), weight.data<float>(),
+      const_cast<float *>(output.data<float>()), batch, M, K);
+  CHECK_CUDA(cudaGetLastError());
 }
 
 }  // namespace
 
 void MatmulCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
                 const tensor::Tensor &output, const float scale, void *stream) {
+  (void)scale;
   CHECK(!input.is_empty());
-  CHECK_EQ(input.dims_size(), 1);
+  CHECK_EQ(input.dims_size(), 2);
   CHECK(input.device_type() == base::DeviceType::kDeviceCUDA);
   CHECK(input.data_type() == base::DataType::kDataTypeFp32);
 
@@ -97,25 +98,17 @@ void MatmulCuda(const tensor::Tensor &input, const tensor::Tensor &weight,
   CHECK(weight.data_type() == base::DataType::kDataTypeFp32);
 
   CHECK(!output.is_empty());
-  CHECK_EQ(output.dims_size(), 1);
+  CHECK_EQ(output.dims_size(), 2);
   CHECK(output.device_type() == base::DeviceType::kDeviceCUDA);
   CHECK(output.data_type() == base::DataType::kDataTypeFp32);
 
-  const int32_t K = weight.get_dim(0);  // row
-  const int32_t M = weight.get_dim(1);  // col
+  const int32_t batch = input.get_dim(0);
+  const int32_t M = input.get_dim(1);
+  const int32_t K = weight.get_dim(0);
+  CHECK_EQ(weight.get_dim(1), M);
+  CHECK_EQ(output.get_dim(0), batch);
+  CHECK_EQ(output.get_dim(1), K);
 
-  CHECK_EQ(M, input.get_dim(0));
-  CHECK_EQ(K, output.get_dim(0));
-  cudaStream_t cuda_stream = static_cast<cudaStream_t>(stream);
-  if (cuda_stream != nullptr) {
-    MatmulKernel<128, 1><<<K, 128, 0, cuda_stream>>>(
-        input.data<float>(), weight.data<float>(),
-        const_cast<float *>(output.data<float>()), M, K);
-  } else {
-    MatmulKernel<128, 1><<<K, 128>>>(input.data<float>(), weight.data<float>(),
-                                     const_cast<float *>(output.data<float>()),
-                                     M, K);
-  }
-  CHECK_CUDA(cudaGetLastError());
+  LaunchMatmulBatch(input, weight, output, batch, M, K, stream);
 }
 }  // namespace kernel

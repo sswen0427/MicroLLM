@@ -29,11 +29,11 @@ TEST(RMSNormTest, NoStream) {
   int32_t size = 32 * 15;
 
   tensor::Tensor in_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
+      base::DataType::kDataTypeFp32, {1, size}, base::DeviceType::kDeviceCPU);
   tensor::Tensor wei_cpu = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
   tensor::Tensor out_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
+      base::DataType::kDataTypeFp32, {1, size}, base::DeviceType::kDeviceCPU);
 
   std::random_device rd;
   std::mt19937 mt(rd());
@@ -62,11 +62,11 @@ TEST(RMSNormTest, Stream2) {
   int32_t size = 32;
 
   tensor::Tensor in_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
+      base::DataType::kDataTypeFp32, {1, size}, base::DeviceType::kDeviceCPU);
   tensor::Tensor wei_cpu = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
   tensor::Tensor out_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
+      base::DataType::kDataTypeFp32, {1, size}, base::DeviceType::kDeviceCPU);
 
   std::random_device rd;
   std::mt19937 mt(rd());
@@ -99,11 +99,11 @@ TEST(RMSNormTest, Stream3) {
   int32_t size = 32 * 151 * 15;
 
   tensor::Tensor in_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
+      base::DataType::kDataTypeFp32, {1, size}, base::DeviceType::kDeviceCPU);
   tensor::Tensor wei_cpu = tensor::Tensor::allocate(
       base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
   tensor::Tensor out_cpu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {size}, base::DeviceType::kDeviceCPU);
+      base::DataType::kDataTypeFp32, {1, size}, base::DeviceType::kDeviceCPU);
 
   std::random_device rd;
   std::mt19937 mt(rd());

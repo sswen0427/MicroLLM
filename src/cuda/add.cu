@@ -28,13 +28,8 @@ void AddInPlaceCuda(tensor::Tensor &left, const tensor::Tensor &right,
   const int size = static_cast<int>(left.size());
   const int blocks = (size + threads - 1) / threads;
   cudaStream_t cuda_stream = static_cast<cudaStream_t>(stream);
-  if (cuda_stream != nullptr) {
-    AddInPlaceKernel<<<blocks, threads, 0, cuda_stream>>>(
-        left.data<float>(), right.data<float>(), size);
-  } else {
-    AddInPlaceKernel<<<blocks, threads>>>(left.data<float>(),
-                                          right.data<float>(), size);
-  }
+  AddInPlaceKernel<<<blocks, threads, 0, cuda_stream>>>(
+      left.data<float>(), right.data<float>(), size);
   CHECK_CUDA(cudaGetLastError());
 }
 

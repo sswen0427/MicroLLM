@@ -67,7 +67,7 @@ TEST(LlamaHfForwardTest, RunsOneTokenForward) {
   std::unique_ptr<model::LlamaBackend> backend =
       model::CreateLlamaBackend(model.config, base::DeviceType::kDeviceCPU);
 
-  auto result = backend->ForwardToken(model, 0, 0);
+  auto result = backend->Forward(model, {0}, 0);
 
   ASSERT_TRUE(result.ok()) << result.status();
   EXPECT_EQ(result->logits.size(), 3);
@@ -81,10 +81,29 @@ TEST(LlamaHfForwardTest, BackendStateKeepsKvCacheAcrossTokens) {
   std::unique_ptr<model::LlamaBackend> backend =
       model::CreateLlamaBackend(model.config, base::DeviceType::kDeviceCPU);
 
-  auto first = backend->ForwardToken(model, 0, 0);
+  auto first = backend->Forward(model, {0}, 0);
   ASSERT_TRUE(first.ok()) << first.status();
 
-  auto second = backend->ForwardToken(model, 1, 1);
+  auto second = backend->Forward(model, {1}, 1);
   ASSERT_TRUE(second.ok()) << second.status();
   EXPECT_EQ(second->next_token, 2);
+}
+
+TEST(LlamaHfForwardTest, TracksPrefillAndDecodeForwardPaths) {
+  model::LlamaHfModel model = MakeTinyForwardModel();
+  std::unique_ptr<model::LlamaBackend> backend =
+      model::CreateLlamaBackend(model.config, base::DeviceType::kDeviceCPU);
+
+  auto prefill = backend->Forward(model, {0, 1}, 0);
+  ASSERT_TRUE(prefill.ok()) << prefill.status();
+
+  auto decode = backend->Forward(model, {2}, 2);
+  ASSERT_TRUE(decode.ok()) << decode.status();
+
+  const model::LlamaForwardProfile &profile = backend->profile();
+  EXPECT_EQ(profile.forward_calls, 2);
+  EXPECT_EQ(profile.prefill_calls, 1);
+  EXPECT_EQ(profile.decode_calls, 1);
+  EXPECT_EQ(profile.prefill_tokens, 2);
+  EXPECT_EQ(profile.decode_tokens, 1);
 }

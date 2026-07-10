@@ -27,6 +27,10 @@ std::unique_ptr<LlamaBackend> CreateLlamaBackend(const HfLlamaConfig &config,
 void LlamaForwardProfile::Log() const {
   LOG(INFO) << "  Forward Stats:";
   LOG(INFO) << "    forward_calls=" << forward_calls;
+  LOG(INFO) << "    prefill_calls=" << prefill_calls;
+  LOG(INFO) << "    decode_calls=" << decode_calls;
+  LOG(INFO) << "    prefill_tokens=" << prefill_tokens;
+  LOG(INFO) << "    decode_tokens=" << decode_tokens;
   LOG(INFO) << "    Embedding & Attention:";
   LOG(INFO) << "      embedding_s=" << embedding_ms / 1000.0;
   LOG(INFO) << "      attention_norm_s=" << attention_norm_ms / 1000.0;
