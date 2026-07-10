@@ -1,0 +1,21 @@
+src/cuda/llama.cu
+  s_5311729d00f5aa::t_1f59cf5fdf7ea2 23-26,76-78,148-150
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4798552d6556c61b26c5968ee066fde790f02994",
+  "prompts": {},
+  "sessions": {
+    "s_5311729d00f5aa": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4656-fa00-7663-a226-488922f1bdd9",
+        "model": "unknown"
+      },
+      "human_author": "sswen0427 <799438891@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
