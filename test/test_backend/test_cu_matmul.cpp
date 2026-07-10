@@ -82,8 +82,7 @@ TEST(CudaMatmulTest, SupportsNonMultipleOfFourColumns) {
   constexpr int kRows = 3;
   constexpr int kCols = 5;
   tensor::Tensor input = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {1, kCols},
-      base::DeviceType::kDeviceCPU);
+      base::DataType::kDataTypeFp32, {1, kCols}, base::DeviceType::kDeviceCPU);
   tensor::Tensor weight =
       tensor::Tensor::allocate(base::DataType::kDataTypeFp32, {kRows, kCols},
                                base::DeviceType::kDeviceCPU);
@@ -101,8 +100,7 @@ TEST(CudaMatmulTest, SupportsNonMultipleOfFourColumns) {
   weight.to_cuda();
 
   tensor::Tensor out_cu = tensor::Tensor::allocate(
-      base::DataType::kDataTypeFp32, {1, kRows},
-      base::DeviceType::kDeviceCUDA);
+      base::DataType::kDataTypeFp32, {1, kRows}, base::DeviceType::kDeviceCUDA);
 
   kernel::MatmulCuda(input, weight, out_cu, 1.f, nullptr);
 

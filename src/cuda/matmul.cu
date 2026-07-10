@@ -69,7 +69,8 @@ __global__ void MatmulBatchKernel(const float *input, const float *weight,
   }
 }
 
-void LaunchMatmulBatch(const tensor::Tensor &input, const tensor::Tensor &weight,
+void LaunchMatmulBatch(const tensor::Tensor &input,
+                       const tensor::Tensor &weight,
                        const tensor::Tensor &output, int32_t batch, int32_t M,
                        int32_t K, void *stream) {
   constexpr int threads = 128;

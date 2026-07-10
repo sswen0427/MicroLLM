@@ -211,9 +211,9 @@ void LaunchRopeInPlace(tensor::Tensor &values, int32_t seq_len,
 }
 
 void LaunchStoreKvCache(const tensor::Tensor &key, const tensor::Tensor &value,
-                        tensor::Tensor &key_cache,
-                        tensor::Tensor &value_cache, int32_t start_position,
-                        int32_t seq_len, int32_t kv_dim, void *stream) {
+                        tensor::Tensor &key_cache, tensor::Tensor &value_cache,
+                        int32_t start_position, int32_t seq_len, int32_t kv_dim,
+                        void *stream) {
   constexpr int32_t threads = 128;
   const int32_t total = seq_len * kv_dim;
   const int32_t blocks = (total + threads - 1) / threads;
@@ -293,9 +293,9 @@ void AttentionWithCacheCuda(const tensor::Tensor &query,
                             const tensor::Tensor &key_cache,
                             const tensor::Tensor &value_cache,
                             const tensor::Tensor &output,
-                            int32_t start_position,
-                            int32_t head_count, int32_t head_size,
-                            int32_t kv_dim, int32_t kv_mul, void *stream) {
+                            int32_t start_position, int32_t head_count,
+                            int32_t head_size, int32_t kv_dim, int32_t kv_mul,
+                            void *stream) {
   CHECK(!query.is_empty());
   CHECK(!key_cache.is_empty());
   CHECK(!value_cache.is_empty());

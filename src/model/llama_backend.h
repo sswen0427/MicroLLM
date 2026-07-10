@@ -7,8 +7,8 @@
 #include <vector>
 
 #include "base/types.h"
-#include "model/llama_hf_model_loader.h"
 #include "model/kv_cache.h"
+#include "model/llama_hf_model_loader.h"
 #include "tensor/tensor.h"
 
 namespace model {

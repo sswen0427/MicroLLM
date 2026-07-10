@@ -32,10 +32,9 @@ LlamaForwardState CreateCudaForwardState(const HfLlamaConfig &config) {
     state.kv_mul = config.num_attention_heads / config.num_key_value_heads;
   }
 
-  state.kv_cache =
-      KvCache::Allocate(config.num_hidden_layers,
-                        config.max_position_embeddings, state.kv_dim,
-                        base::DeviceType::kDeviceCUDA);
+  state.kv_cache = KvCache::Allocate(
+      config.num_hidden_layers, config.max_position_embeddings, state.kv_dim,
+      base::DeviceType::kDeviceCUDA);
   return state;
 }
 
@@ -256,9 +255,9 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardTokens(
 
     {
       base::ScopedProfile profile(forward_state_.profile.attention_norm_ms);
-      norm = RmsNormTensor(hidden_state,
-                           Fp32CudaWeight(weights.input_layernorm),
-                           config.rms_norm_eps);
+      norm =
+          RmsNormTensor(hidden_state, Fp32CudaWeight(weights.input_layernorm),
+                        config.rms_norm_eps);
     }
     {
       base::ScopedProfile profile(forward_state_.profile.qkv_proj_ms);
@@ -340,8 +339,7 @@ absl::StatusOr<LlamaForwardResult> CudaLlamaBackend::ForwardTokens(
 
   {
     base::ScopedProfile profile(forward_state_.profile.final_norm_ms);
-    norm = RmsNormTensor(hidden_state,
-                         Fp32CudaWeight(model.weights.final_norm),
+    norm = RmsNormTensor(hidden_state, Fp32CudaWeight(model.weights.final_norm),
                          config.rms_norm_eps);
   }
 
